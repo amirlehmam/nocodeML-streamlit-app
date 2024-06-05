@@ -1,0 +1,47 @@
+/* Custom CSS for dark theme */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+header, .css-1aumxhk, .css-12oz5g7 {
+    background-color: #1e1e1e !important;
+}
+
+.css-1avcm0n {
+    color: #e0e0e0 !important;
+}
+
+h1, h2, h3, h4, h5, h6, p {
+    color: #e0e0e0;
+}
+
+.css-18e3th9 {
+    background-color: #1e1e1e;
+}
+
+.stButton>button {
+    background-color: #00adb5;
+    color: #ffffff;
+}
+
+.stButton>button:hover {
+    background-color: #007a7c;
+    color: #ffffff;
+}
+
+.css-10trblm {
+    color: #e0e0e0;
+}
+
+.css-14xtw13 {
+    color: #00adb5;
+}
+
+.css-184tjsw, .css-1cpxqw2, .css-ocqkz7 {
+    color: #00adb5;
+}
+
+.css-9ycgxx {
+    color: #e0e0e0;
+}
