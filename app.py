@@ -169,9 +169,7 @@ st.markdown(
 # Function to fetch user credentials from the database
 def fetch_user_credentials():
     conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('SELECT username, name, password FROM users')
-    users = c.fetchall()
+    df = pd.read_sql_query("SELECT * FROM users", conn)
     conn.close()
 
     credentials = {
@@ -180,10 +178,10 @@ def fetch_user_credentials():
         "passwords": {}
     }
 
-    for username, name, password in users:
-        credentials["usernames"][username] = username
-        credentials["names"][username] = name
-        credentials["passwords"][username] = password
+    for index, row in df.iterrows():
+        credentials["usernames"][row['username']] = row['username']
+        credentials["names"][row['username']] = row['name']
+        credentials["passwords"][row['username']] = row['password']
 
     return credentials
 
@@ -192,7 +190,7 @@ credentials = fetch_user_credentials()
 
 # Debugging: Print the credentials to verify their structure
 st.write("Credentials loaded:")
-st.write(credentials)
+st.json(credentials)  # Print as JSON for better readability
 
 # Define the cookie name and signature key for the authenticator
 cookie_name = 'nocodeML_cookie'
@@ -200,9 +198,7 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials["usernames"],
-    credentials["names"],
-    credentials["passwords"],
+    credentials,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
