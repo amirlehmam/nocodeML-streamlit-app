@@ -177,6 +177,7 @@ def fetch_user_credentials():
     
     credentials = {
         'usernames': {},
+        'password': {}
     }
     
     for username, name, password in users:
