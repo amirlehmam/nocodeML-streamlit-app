@@ -191,6 +191,10 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
+# Debugging: Print the credentials to verify their structure
+st.write("Credentials loaded:")
+st.write(credentials)
+
 # Define the cookie name and signature key for the authenticator
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
