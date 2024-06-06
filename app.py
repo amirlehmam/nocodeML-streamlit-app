@@ -199,7 +199,7 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials,
+    credentials["usernames"],  # The full nested dictionary for usernames
     cookie_name,
     signature_key,
     cookie_expiry_days=30
