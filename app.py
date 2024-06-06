@@ -293,7 +293,7 @@ if authentication_status:
         1. **Navigate through the Sidebar:** Access different sections of the app.
         2. **Ingest and Prepare Data:** Upload and prepare raw data files.
         3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-         4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+        4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
         5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
         6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
 
