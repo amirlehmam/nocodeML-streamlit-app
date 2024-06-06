@@ -173,18 +173,18 @@ def fetch_user_credentials():
     c.execute('SELECT username, name, password FROM users')
     users = c.fetchall()
     conn.close()
-    
+
     user_dict = {
         'usernames': {},
         'names': {},
         'passwords': {}
     }
-    
+
     for username, name, password in users:
         user_dict['usernames'][username] = username
         user_dict['names'][username] = name
         user_dict['passwords'][username] = password
-    
+
     return user_dict
 
 
@@ -209,7 +209,6 @@ authenticator = Authenticate(
 st.write("Updated credentials:")
 st.write(credentials)
 
-
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
 
@@ -222,14 +221,6 @@ if authentication_status:
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
         st.image(logo_path, width=200)
-    else:
-        st.warning("Logo file not found!")
-
-    # Load and display the logo in the center of the screen
-    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-    if os.path.exists(logo_path):
-        encoded_logo = load_image(logo_path)
-        st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{encoded_logo}' width='200'></div>", unsafe_allow_html=True)
     else:
         st.warning("Logo file not found!")
 
@@ -257,65 +248,65 @@ if authentication_status:
 
     if page == "Overview":
         st.write("""
-    ###  nocodeML Algorithmic Trading Optimization
+        ###  nocodeML Algorithmic Trading Optimization
 
-    #### Streamlined for Precision and Performance
+        #### Streamlined for Precision and Performance
 
-    ---
+        ---
 
-    **Key Features:**
+        **Key Features:**
 
-    **Data Ingestion and Preparation:**
-    - Import raw trading data effortlessly.
-    - Utilize cleaning and parsing utilities for ready-to-analyze data.
-    - Save prepared data for exploration and modeling.
+        **Data Ingestion and Preparation:**
+        - Import raw trading data effortlessly.
+        - Utilize cleaning and parsing utilities for ready-to-analyze data.
+        - Save prepared data for exploration and modeling.
 
-    **Advanced EDA on Indicators:**
-    - Perform in-depth analysis of trading indicators.
-    - Generate visualizations to understand trends, correlations, and anomalies.
-    - Use interactive plots to uncover hidden patterns.
+        **Advanced EDA on Indicators:**
+        - Perform in-depth analysis of trading indicators.
+        - Generate visualizations to understand trends, correlations, and anomalies.
+        - Use interactive plots to uncover hidden patterns.
 
-    **Optimal Win Ranges Identification:**
-    - Apply statistical techniques to determine profitable trading ranges.
-    - Visualize win ranges to enhance trading decisions.
-    - Summarize findings for quick insights.
+        **Optimal Win Ranges Identification:**
+        - Apply statistical techniques to determine profitable trading ranges.
+        - Visualize win ranges to enhance trading decisions.
+        - Summarize findings for quick insights.
 
-    **Model Development on % Away Indicators:**
-    - Build and optimize predictive models based on % away indicators.
-    - Utilize machine learning algorithms to forecast market movements.
-    - Evaluate model performance with comprehensive metrics.
+        **Model Development on % Away Indicators:**
+        - Build and optimize predictive models based on % away indicators.
+        - Utilize machine learning algorithms to forecast market movements.
+        - Evaluate model performance with comprehensive metrics.
 
-    **Focused Analysis on Specific Models:**
-    - Conduct deep dives into specific model performances.
-    - Analyze model behavior under various market conditions.
-    - Fine-tune parameters for optimal results.
+        **Focused Analysis on Specific Models:**
+        - Conduct deep dives into specific model performances.
+        - Analyze model behavior under various market conditions.
+        - Fine-tune parameters for optimal results.
 
-    **Advanced EDA on Specific Models:**
-    - Gain detailed understanding of models through comprehensive EDA.
-    - Visualize feature interactions and outcomes.
-    - Validate model assumptions with advanced statistical tests.
+        **Advanced EDA on Specific Models:**
+        - Gain detailed understanding of models through comprehensive EDA.
+        - Visualize feature interactions and outcomes.
+        - Validate model assumptions with advanced statistical tests.
 
-    **Win Ranges Analysis for Specific Models:**
-    - Determine optimal win ranges tailored to specific models.
-    - Enhance performance by focusing on profitable market conditions.
-    - Visualize results for informed trading decisions.
+        **Win Ranges Analysis for Specific Models:**
+        - Determine optimal win ranges tailored to specific models.
+        - Enhance performance by focusing on profitable market conditions.
+        - Visualize results for informed trading decisions.
 
-    ---
+        ---
 
-    **Getting Started:**
-    1. **Navigate through the Sidebar:** Access different sections of the app.
-    2. **Ingest and Prepare Data:** Upload and prepare raw data files.
-    3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-    4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
-    5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
-    6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
+        **Getting Started:**
+        1. **Navigate through the Sidebar:** Access different sections of the app.
+        2. **Ingest and Prepare Data:** Upload and prepare raw data files.
+        3. **Perform EDA:** Explore data and trading indicators with advanced tools.
+        4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+        5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
+        6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
 
-    ---
+        ---
 
-    Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
+        Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
 
-    **Two Plums for One**
-                
+        **Two Plums for One**
+                    
         """)
 
     elif page == "Data Ingestion and Preparation":
