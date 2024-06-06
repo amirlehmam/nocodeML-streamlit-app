@@ -220,6 +220,7 @@ if authentication_status:
 
     # Sidebar for navigation with icons
     st.sidebar.title("Navigation")
+
     def nav_button(label, page_name, icon):
         if st.sidebar.button(f"{icon} {label}"):
             st.session_state.page = page_name
