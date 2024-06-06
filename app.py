@@ -25,6 +25,7 @@ st.markdown(
     .main {
         background-color: #0E1117;
         color: #FAFAFA;
+        font-family: 'Arial', sans-serif;
     }
 
     /* Sidebar */
@@ -32,25 +33,6 @@ st.markdown(
         background-color: #262730;
     }
 
-    /* Title */
-    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
-        color: #FAFAFA;
-    }
-
-    /* Headers */
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        color: #FAFAFA;
-    }
-
-    /* Buttons */
-    .stButton button {
-        background-color: #1E88E5;
-        color: #FAFAFA;
-        border-radius: 5px;
-        width: 100%;
-        margin: 5px 0;
-    }
-    
     /* Sidebar button style */
     .sidebar-button {
         display: flex;
@@ -73,6 +55,36 @@ st.markdown(
         background-color: #1565C0;
     }
 
+    /* Title */
+    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+        color: #FAFAFA;
+    }
+
+    /* Headers */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        color: #FAFAFA;
+    }
+
+    /* Buttons */
+    .stButton button {
+        background-color: #1E88E5;
+        color: #FAFAFA;
+        border-radius: 5px;
+    }
+    
+    /* Dropdown */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+
+    /* Text Inputs */
+    .stTextInput div[data-baseweb="input"] > div {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+
+    /* Center logo */
     .center-logo {
         display: flex;
         justify-content: center;
@@ -80,6 +92,7 @@ st.markdown(
         margin-top: 20px;
     }
 
+    /* Footer */
     .footer {
         position: fixed;
         left: 0;
@@ -91,6 +104,7 @@ st.markdown(
         padding: 10px 0;
     }
 
+    /* Tooltip */
     .tooltip {
         position: relative;
         display: inline-block;
@@ -130,21 +144,21 @@ if os.path.exists(logo_path):
 else:
     st.warning("Logo file not found!")
 
-# Sidebar for navigation
+# Sidebar for navigation with icons
 st.sidebar.title("Navigation")
 
-def nav_button(label, page_name):
-    if st.sidebar.button(label):
+def nav_button(label, page_name, icon):
+    if st.sidebar.button(f"{icon} {label}"):
         st.session_state.page = page_name
 
-nav_button("Overview", "Overview")
-nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation")
-nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators")
-nav_button("Optimal Win Ranges", "Optimal Win Ranges")
-nav_button("Model on % Away Indicators", "Model on % Away Indicators")
-nav_button("Specific Model Focus", "Specific Model Focus")
-nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model")
-nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model")
+nav_button("Overview", "Overview", "🏠")
+nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
 
 # Initialize session state if not already done
 if 'page' not in st.session_state:
