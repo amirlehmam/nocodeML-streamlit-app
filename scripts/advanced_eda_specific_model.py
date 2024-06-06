@@ -81,6 +81,7 @@ def deep_dive_feature_analysis(data, feature, target='result', save_path=None):
         row=2, col=2
     )
     
+    
     fig.update_layout(
         title_text=f'Deep Dive Analysis of {feature}',
         height=800
@@ -93,7 +94,7 @@ def deep_dive_feature_analysis(data, feature, target='result', save_path=None):
 
 def run_advanced_eda_specific_model():
     st.subheader("Advanced EDA on Specific Model")
-    
+
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
 
