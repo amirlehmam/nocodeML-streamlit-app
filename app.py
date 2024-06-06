@@ -199,13 +199,16 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials,
-    cookie_name,
-    signature_key,
-    cookie_expiry_days=30
+    credentials["usernames"],  # usernames dictionary
+    credentials["names"],  # names dictionary
+    credentials["passwords"],  # passwords dictionary
+    cookie_name,  # cookie name
+    signature_key,  # signature key
+    cookie_expiry_days=30  # cookie expiry
 )
 
 name, authentication_status, username = authenticator.login('Login', 'main')
+
 
 # If login is successful
 if authentication_status:
