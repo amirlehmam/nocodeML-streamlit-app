@@ -350,3 +350,4 @@ elif authentication_status is False:
 # If login not attempted yet
 elif authentication_status is None:
     st.warning('Please enter your username and password')
+

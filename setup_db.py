@@ -1,33 +1,35 @@
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import declarative_base, sessionmaker
+# setup_db.py
+import sqlite3
 from werkzeug.security import generate_password_hash
 
-Base = declarative_base()
+conn = sqlite3.connect('users.db')
+c = conn.cursor()
 
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
-    name = Column(String, nullable=False)
+# Create users table
+c.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL
+)
+''')
 
-DATABASE_URL = "sqlite:///./users.db"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base.metadata.create_all(bind=engine)
+# Insert a user
+username = 'admin'
+name = 'Administrator'
+password = 'password123'
+hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
-db = SessionLocal()
+# Check if user already exists
+c.execute('SELECT * FROM users WHERE username=?', (username,))
+user = c.fetchone()
 
-# Check if the user already exists
-existing_user = db.query(User).filter_by(username='admin').first()
-
-if not existing_user:
-    hashed_password = generate_password_hash('password123', method='pbkdf2:sha256')
-    new_user = User(username='admin', password=hashed_password, name='Administrator')
-    db.add(new_user)
-    db.commit()
-    print("User 'admin' added to the database.")
+if user:
+    print("User already exists.")
 else:
-    print("User 'admin' already exists in the database.")
+    c.execute('INSERT INTO users (username, name, password) VALUES (?, ?, ?)', (username, name, hashed_password))
+    print("User created.")
 
-db.close()
+conn.commit()
+conn.close()
