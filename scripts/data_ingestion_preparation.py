@@ -249,7 +249,7 @@ if page == "Overview":
 
     ### Happy Trading!
 
-    **nocodeML 2024**
+    *nocodeML 2024*
     """)
 
 elif page == "Data Ingestion and Preparation":
