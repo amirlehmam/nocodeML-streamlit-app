@@ -191,20 +191,23 @@ credentials = fetch_user_credentials()
 
 # Debugging: Print the credentials to verify their structure
 st.write("Credentials loaded:")
-st.json(credentials)  # Print as JSON for better readability
+st.json(credentials)
 
 # Define the cookie name and signature key for the authenticator
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
 
+# Ensure the `streamlit_authenticator` is imported correctly
+st.write(f"Streamlit Authenticator version: {stauth.__version__}")
+
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials["usernames"],  # usernames dictionary
-    credentials["names"],  # names dictionary
-    credentials["passwords"],  # passwords dictionary
-    cookie_name,  # cookie name
-    signature_key,  # signature key
-    cookie_expiry_days=30  # cookie expiry
+    list(credentials["usernames"].values()),  # usernames list
+    list(credentials["names"].values()),  # names list
+    list(credentials["passwords"].values()),  # passwords list
+    cookie_name,
+    signature_key,
+    cookie_expiry_days=30
 )
 
 name, authentication_status, username = authenticator.login('Login', 'main')
