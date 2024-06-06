@@ -175,27 +175,19 @@ def fetch_user_credentials():
     users = c.fetchall()
     conn.close()
 
-    usernames = []
-    names = {}
-    passwords = {}
+    credentials = {}
 
     for username, name, password in users:
-        usernames.append(username)
-        names[username] = name
-        passwords[username] = password
+        credentials[username] = {"name": name, "password": password}
 
-    return usernames, names, passwords
+    return credentials
 
 # Fetch user credentials
-usernames, names, passwords = fetch_user_credentials()
+credentials = fetch_user_credentials()
 
 # Debugging: Print the credentials to verify their structure
 st.write("Credentials loaded:")
-st.write({
-    "usernames": usernames,
-    "names": names,
-    "passwords": passwords,
-})
+st.write(credentials)
 
 # Define the cookie name and signature key for the authenticator
 cookie_name = 'nocodeML_cookie'
@@ -203,16 +195,13 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    usernames,
-    names,
-    passwords,
+    credentials,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
 )
 
 name, authentication_status, username = authenticator.login('Login', 'main')
-
 
 # If login is successful
 if authentication_status:
