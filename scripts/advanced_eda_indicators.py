@@ -196,7 +196,7 @@ def run_advanced_eda_indicators():
     st.subheader("Advanced EDA on Indicators")
 
     if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "C:/Users/Administrator/Desktop/nocodeML/streamlit_app"
+        st.session_state.base_dir = "."
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_dir = os.path.join(base_dir, "data/processed")
