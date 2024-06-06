@@ -176,11 +176,15 @@ def fetch_user_credentials():
     conn.close()
     
     credentials_dict = {
-        'usernames': {}
+        'usernames': {},
+        'names': {},
+        'passwords': {}
     }
     
     for username, name, password in users:
-        credentials_dict['usernames'][username] = {'name': name, 'password': password}
+        credentials_dict['usernames'][username] = username
+        credentials_dict['names'][username] = name
+        credentials_dict['passwords'][username] = password
     
     st.write("Credentials loaded:", credentials_dict)  # Debug statement
     return credentials_dict
@@ -188,17 +192,11 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
-# Update the credentials dictionary to match the required format
-credentials_dict = {
-    'usernames': credentials['usernames']
-}
-
-# Debug print statements
-st.write("Updated credentials:", credentials_dict)
-
 # Create an authenticator object
 authenticator = Authenticate(
-    usernames=credentials_dict['usernames'],
+    usernames=credentials['usernames'],
+    names=credentials['names'],
+    passwords=credentials['passwords'],
     cookie_name="nocodeML",
     key="some_random_key",  # You should use a more secure key
     cookie_expiry_days=30
