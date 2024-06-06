@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS
+# Custom CSS for enhanced design
 st.markdown(
     """
     <style>
@@ -53,31 +53,41 @@ st.markdown(
         background-color: #262730;
         color: #FAFAFA;
     }
+
+    /* Center logo */
+    .center-logo {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Display the logo
+# Display the logo in the center of the screen
 logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
 if os.path.exists(logo_path):
-    st.image(logo_path, width=200)
+    st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{st.image(logo_path, width=200, use_column_width='auto')._repr_html_()}'></div>", unsafe_allow_html=True)
 else:
     st.warning("Logo file not found!")
 
 # Sidebar for navigation
 st.sidebar.title("Navigation")
-pages = [
-    "Overview",
-    "Data Ingestion and Preparation",
-    "Advanced EDA on Indicators",
-    "Optimal Win Ranges",
-    "Model on % Away Indicators",
-    "Specific Model Focus",
-    "Advanced EDA on Specific Model",
-    "Win Ranges for Specific Model"
-]
-page = st.sidebar.selectbox("Choose a page", pages)
+page = st.sidebar.radio(
+    "Choose a page:",
+    [
+        "Overview",
+        "Data Ingestion and Preparation",
+        "Advanced EDA on Indicators",
+        "Optimal Win Ranges",
+        "Model on % Away Indicators",
+        "Specific Model Focus",
+        "Advanced EDA on Specific Model",
+        "Win Ranges for Specific Model"
+    ]
+)
 
 if page == "Overview":
     st.write("""
