@@ -190,7 +190,7 @@ credentials = fetch_user_credentials()
 
 # Create an authenticator object
 authenticator = Authenticate(
-    credentials['usernames'],
+    usernames=credentials['usernames'],
     cookie_name="nocodeML",
     key="some_random_key",  # You should use a more secure key
     cookie_expiry_days=30
