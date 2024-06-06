@@ -176,8 +176,7 @@ def fetch_user_credentials():
     conn.close()
     
     user_dict = {
-        'usernames': {},
-        'passwords': {}
+        'usernames': {}
     }
     
     for username, name, password in users:
@@ -188,7 +187,7 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
-# Check the structure of the credentials dictionary
+# Debugging: Check the structure of the credentials dictionary
 st.write("Credentials:", credentials)
 
 # Create an authenticator object
