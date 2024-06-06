@@ -177,8 +177,6 @@ def fetch_user_credentials():
 
     user_dict = {
         'usernames': {},
-        'names': {},
-        'passwords': {}
     }
 
     for username, name, password in users:
@@ -189,21 +187,19 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
-# Debug: Print loaded credentials
-st.write("Credentials loaded:")
-st.write(credentials)
-
 # Define the cookie name and signature key for the authenticator
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
-authenticator = stauth.Authenticate(credentials, cookie_name, signature_key, cookie_expiry_days=30)
+authenticator = stauth.Authenticate(
+    credentials=credentials['usernames'],
+    cookie_name=cookie_name,
+    key=signature_key,
+    cookie_expiry_days=30
+)
 
 name, authentication_status, username = authenticator.login('Login', 'main')
-
-# Debug print statements
-st.write(f"name: {name}, authentication_status: {authentication_status}, username: {username}")
 
 # If login is successful
 if authentication_status:
