@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 
 # Insert a user
-username = 'admin'
+username = 'amir'
 name = 'Administrator'
-password = 'azerty123'
+password = 'amir123'
 hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
 # Check if user already exists
