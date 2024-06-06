@@ -61,7 +61,7 @@ st.markdown(
 # Display the logo
 logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
 if os.path.exists(logo_path):
-    st.image(logo_path, width=1000)
+    st.image(logo_path, width=200)
 else:
     st.warning("Logo file not found!")
 
