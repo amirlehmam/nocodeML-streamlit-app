@@ -72,12 +72,50 @@ st.markdown(
     .sidebar-button:hover {
         background-color: #1565C0;
     }
-    
+
     .center-logo {
         display: flex;
         justify-content: center;
         align-items: center;
         margin-top: 20px;
+    }
+
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #0E1117;
+        color: #FAFAFA;
+        text-align: center;
+        padding: 10px 0;
+    }
+
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 120px;
+        background-color: #1E88E5;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%; 
+        left: 50%;
+        margin-left: -60px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
     }
     </style>
     """,
@@ -200,3 +238,13 @@ elif page == "Advanced EDA on Specific Model":
 elif page == "Win Ranges for Specific Model":
     from scripts.win_ranges_specific_model import run_win_ranges_specific_model
     run_win_ranges_specific_model()
+
+# Footer
+st.markdown(
+    """
+    <div class='footer'>
+        <p>&copy; 2024 nocodeML. All rights reserved.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
