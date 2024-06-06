@@ -80,7 +80,6 @@ pages = [
 page = st.sidebar.selectbox("Choose a page", pages)
 
 if page == "Overview":
-    st.header("Project Overview")
     st.write("""
     ## Welcome to the nocodeML Algorithmic Trading Optimization App
 
