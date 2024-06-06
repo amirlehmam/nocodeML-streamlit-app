@@ -197,9 +197,6 @@ st.json(credentials)
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
 
-# Ensure the `streamlit_authenticator` is imported correctly
-st.write(f"Streamlit Authenticator version: {stauth.__version__}")
-
 # Create an authenticator object
 authenticator = stauth.Authenticate(
     list(credentials["usernames"].values()),  # usernames list
