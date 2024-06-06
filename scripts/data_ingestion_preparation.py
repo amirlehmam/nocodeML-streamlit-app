@@ -227,8 +227,11 @@ def verify_trade_parsing(data_dir, output_dir):
 
 def run_data_ingestion_preparation():
     st.subheader("Data Ingestion and Preparation")
+    
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML/streamlit_app")
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_output_dir = get_file_path(base_dir, "data/processed")
     raw_data_dir = get_file_path(base_dir, "data/raw")
 

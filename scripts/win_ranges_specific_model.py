@@ -62,8 +62,11 @@ def identify_winning_ranges(data, feature, target='result'):
 
 def run_win_ranges_specific_model():
     st.subheader("Win Ranges for Specific Model")
+    
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML/streamlit_app")
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_path = get_file_path(base_dir, "data/processed/merged_trade_indicator_event.csv")
 
     if 'loaded_data' not in st.session_state:

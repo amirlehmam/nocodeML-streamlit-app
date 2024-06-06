@@ -99,7 +99,10 @@ def load_data(data_path):
 def run_optimal_win_ranges():
     st.subheader("Calculate Optimal Win Ranges")
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML/streamlit_app")
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
+
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_path = get_file_path(base_dir, "data/processed/merged_trade_indicator_event.csv")
 
     if 'loaded_data' not in st.session_state:

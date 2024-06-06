@@ -198,7 +198,10 @@ def advanced_eda_percent_away(data, feature_importances, target='result', save_p
 def run_model_percentage_away():
     st.subheader("Model on % Away Indicators")
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML")
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
+
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_dir = os.path.join(base_dir, "data/processed")
 
     if st.button("Load Data"):
