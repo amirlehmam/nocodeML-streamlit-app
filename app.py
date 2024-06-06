@@ -23,7 +23,7 @@ st.markdown(
     <style>
     /* Main Layout */
     .main {
-        background-color: #0E1117;
+        background: url('https://www.transparenttextures.com/patterns/cubes.png');
         color: #FAFAFA;
         font-family: 'Arial', sans-serif;
     }
@@ -131,6 +131,33 @@ st.markdown(
         visibility: visible;
         opacity: 1;
     }
+
+    /* Collapsible */
+    .collapsible {
+        background-color: #1E88E5;
+        color: white;
+        cursor: pointer;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+    }
+
+    .active, .collapsible:hover {
+        background-color: #1565C0;
+    }
+
+    .content {
+        padding: 0 18px;
+        display: none;
+        overflow: hidden;
+        background-color: #262730;
+        border-radius: 5px;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -221,8 +248,7 @@ if page == "Overview":
     Our goal is to empower you with the tools and insights needed to achieve excellence in algorithmic trading. Harness the power of machine learning and data science to unlock new opportunities and enhance your trading performance.
 
     ### Happy Trading!
-
-    *nocodeML 2024*
+             
     """)
 
 elif page == "Data Ingestion and Preparation":
@@ -251,7 +277,6 @@ elif page == "Advanced EDA on Specific Model":
 
 elif page == "Win Ranges for Specific Model":
     from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-    run_win_ranges_specific_model()
 
 # Footer
 st.markdown(
