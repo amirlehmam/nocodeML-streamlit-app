@@ -167,6 +167,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Function to fetch user credentials from the database
 def fetch_user_credentials():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
