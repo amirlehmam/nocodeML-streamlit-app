@@ -188,6 +188,9 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
+# Check the structure of the credentials dictionary
+st.write("Credentials:", credentials)
+
 # Create an authenticator object
 authenticator = Authenticate(
     credentials,
