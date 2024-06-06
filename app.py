@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit_authenticator as stauth
 import sqlite3
-import pandas as pd
 from pathlib import Path
 import os
 import base64
@@ -201,11 +200,11 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    usernames=credentials["usernames"],
-    names=credentials["names"],
-    passwords=credentials["passwords"],
-    cookie_name=cookie_name,
-    key=signature_key,
+    credentials["usernames"],
+    credentials["names"],
+    credentials["passwords"],
+    cookie_name,
+    signature_key,
     cookie_expiry_days=30
 )
 
