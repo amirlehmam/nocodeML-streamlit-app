@@ -135,7 +135,7 @@ if page == "Overview":
 
     ### Happy Trading!
 
-    *The nocodeML Team*
+    *nocodeML 2024*
     """)
 
 elif page == "Data Ingestion and Preparation":
