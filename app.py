@@ -175,25 +175,30 @@ def fetch_user_credentials():
     users = c.fetchall()
     conn.close()
     
-    usernames = {}
-    names = {}
-    passwords = {}
+    credentials_dict = {
+        'usernames': {}
+    }
     
     for username, name, password in users:
-        usernames[username] = username
-        names[username] = name
-        passwords[username] = password
+        credentials_dict['usernames'][username] = {'name': name, 'password': password}
     
-    return usernames, names, passwords
+    st.write("Credentials loaded:", credentials_dict)  # Debug statement
+    return credentials_dict
 
 # Fetch user credentials
-usernames, names, passwords = fetch_user_credentials()
+credentials = fetch_user_credentials()
+
+# Update the credentials dictionary to match the required format
+credentials_dict = {
+    'usernames': credentials['usernames']
+}
+
+# Debug print statements
+st.write("Updated credentials:", credentials_dict)
 
 # Create an authenticator object
 authenticator = Authenticate(
-    usernames=usernames,
-    names=names,
-    passwords=passwords,
+    usernames=credentials_dict['usernames'],
     cookie_name="nocodeML",
     key="some_random_key",  # You should use a more secure key
     cookie_expiry_days=30
@@ -201,6 +206,9 @@ authenticator = Authenticate(
 
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
+
+# Debug print statements
+st.write("Authentication status:", authentication_status)
 
 # If login is successful
 if authentication_status:
