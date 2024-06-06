@@ -23,14 +23,15 @@ st.markdown(
     <style>
     /* Main Layout */
     .main {
-        background: url('https://www.transparenttextures.com/patterns/grey_wash_wall.png');
+        background: url('https://www.transparenttextures.com/patterns/black-linen.png');
         color: #FAFAFA;
         font-family: 'Arial', sans-serif;
     }
 
     /* Sidebar */
     .css-1d391kg {
-        background: url('https://www.transparenttextures.com/patterns/black-paper.png');
+        background: url('https://www.transparenttextures.com/patterns/black-linen.png');
+        color: #FAFAFA;
     }
 
     /* Sidebar button style */
