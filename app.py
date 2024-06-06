@@ -187,6 +187,7 @@ def fetch_user_credentials():
     
     return user_dict
 
+
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
@@ -207,6 +208,7 @@ authenticator = Authenticate(
 # Debug: Print updated credentials
 st.write("Updated credentials:")
 st.write(credentials)
+
 
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
