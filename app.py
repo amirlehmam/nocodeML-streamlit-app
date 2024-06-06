@@ -176,14 +176,15 @@ def fetch_user_credentials():
     conn.close()
 
     credentials = {
-        "usernames": {}
+        "usernames": {},
+        "names": {},
+        "passwords": {}
     }
 
     for username, name, password in users:
-        credentials["usernames"][username] = {
-            "name": name,
-            "password": password
-        }
+        credentials["usernames"][username] = username
+        credentials["names"][username] = name
+        credentials["passwords"][username] = password
 
     return credentials
 
@@ -200,9 +201,11 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials["usernames"], 
-    cookie_name, 
-    signature_key, 
+    usernames=credentials["usernames"],
+    names=credentials["names"],
+    passwords=credentials["passwords"],
+    cookie_name=cookie_name,
+    key=signature_key,
     cookie_expiry_days=30
 )
 
@@ -210,6 +213,12 @@ name, authentication_status, username = authenticator.login('Login', 'main')
 
 # If login is successful
 if authentication_status:
+        st.write(f'Welcome {name}')
+    elif authentication_status is False:
+        st.error('Username/password is incorrect')
+    elif authentication_status is None:
+        st.warning('Please enter your username and password')
+
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
