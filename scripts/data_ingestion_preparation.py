@@ -1,274 +1,290 @@
-import pandas as pd
-import os
 import streamlit as st
+from pathlib import Path
+import os
+import base64
 
-def get_file_path(base_dir, relative_path):
-    return os.path.join(base_dir, relative_path)
+# Set page config
+st.set_page_config(
+    page_title="nocodeML",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-def clean_and_parse_data(file_path):
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-    
-    with open(file_path, 'r', encoding='utf-8-sig') as file:
-        lines = file.readlines()
-    
-    header = lines[0].strip().split(';')
-    data_lines = lines[1:]
+# Function to load and encode image
+def load_image(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
+    return encoded_image
 
-    trade_data = []
-    indicator_data = []
-    event_data = []
-    signal_data = []
-
-    for line in data_lines:
-        parts = line.strip().split(';')
-        if len(parts) < 2:
-            print(f"Error parsing line: {line}")
-            continue
-        
-        timestamp = parts[0]
-        event_type = parts[1]
-
-        if event_type == 'Indicator':
-            indicators = parts[7:]
-            for i in range(0, len(indicators), 2):
-                if i + 1 < len(indicators):
-                    indicator_name = indicators[i]
-                    indicator_value = indicators[i + 1].replace(',', '.')
-                    if indicator_name and indicator_value:  # Ensure both name and value are not empty
-                        indicator_data.append([timestamp, indicator_name, float(indicator_value)])
-        elif event_type == 'Signal':
-            signals = parts[8:]
-            row = [timestamp, 'Signal']
-            for i in range(0, len(signals), 2):
-                if i + 1 < len(signals):
-                    signal_name = signals[i]
-                    signal_value = signals[i + 1].replace(',', '.')
-                    row.extend([signal_name, signal_value])
-            signal_data.append(row)
-        elif event_type in ('LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', "SE4", 'SE5', 'SX', 'Profit target', 'Parabolic stop'):
-            trade_data.append([timestamp, event_type, parts[2], parts[3].replace(',', '.')])
-        else:
-            event = parts[1]
-            amount = parts[-1].replace(',', '.')
-            event_data.append([timestamp, event, amount])
-    
-    trade_columns = ['time', 'event', 'qty', 'price']
-    trade_df = pd.DataFrame(trade_data, columns=trade_columns)
-    
-    indicator_df = pd.DataFrame(indicator_data, columns=['time', 'indicator_name', 'indicator_value'])
-    
-    event_columns = ['time', 'event', 'amount']
-    event_df = pd.DataFrame(event_data, columns=event_columns)
-
-    max_signal_length = max(len(row) for row in signal_data)
-    signal_columns = ['time', 'event'] + [f'signal_name{i//2+1}' if i % 2 == 0 else 'value' for i in range(max_signal_length - 2)]
-    signal_df = pd.DataFrame(signal_data, columns=signal_columns)
-
-    return {
-        'trade_data': trade_df, 
-        'indicator_data': indicator_df, 
-        'event_data': event_df, 
-        'signal_data': signal_df
+# Custom CSS for enhanced design
+st.markdown(
+    """
+    <style>
+    /* Main Layout */
+    .main {
+        background: url('https://www.transparenttextures.com/patterns/cubes.png');
+        color: #FAFAFA;
+        font-family: 'Arial', sans-serif;
     }
 
-def calculate_indicators(data):
-    trade_df = data['trade_data']
-    indicator_df = data['indicator_data']
+    /* Sidebar */
+    .css-1d391kg {
+        background-color: #262730;
+    }
 
-    market_value_indicators = indicator_df[indicator_df['indicator_value'] > 10000]
-
-    merged_df = pd.merge(market_value_indicators, trade_df[['time', 'price']], on='time', how='left')
-
-    merged_df['price'] = pd.to_numeric(merged_df['price'], errors='coerce')
-    merged_df['indicator_value'] = pd.to_numeric(merged_df['indicator_value'], errors='coerce')
-
-    merged_df = merged_df.dropna(subset=['price', 'indicator_value'])
-
-    merged_df['binary_indicator'] = (merged_df['price'] > merged_df['indicator_value']).astype(int)
-    merged_df['percent_away'] = ((merged_df['price'] - merged_df['indicator_value']) / merged_df['indicator_value']) * 100
-
-    non_market_value_indicators = indicator_df[indicator_df['indicator_value'] <= 10000].copy()
-    non_market_value_indicators.loc[:, 'binary_indicator'] = None
-    non_market_value_indicators.loc[:, 'percent_away'] = None
-
-    merged_df = merged_df.dropna(axis=1, how='all')
-    non_market_value_indicators = non_market_value_indicators.dropna(axis=1, how='all')
-
-    final_indicator_df = pd.concat([merged_df, non_market_value_indicators])
-
-    final_indicator_df = final_indicator_df.sort_values(by='time').reset_index(drop=True)
-
-    return final_indicator_df
-
-def save_dataframes(data, output_dir):
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    trade_path = os.path.join(output_dir, "trade_data.csv")
-    data['trade_data'].to_csv(trade_path, index=False)
-    print(f"Saved trade data to {trade_path}")
-
-    indicator_path = os.path.join(output_dir, "indicator_data.csv")
-    data['indicator_data'].to_csv(indicator_path, index=False)
-    print(f"Saved indicator data to {indicator_path}")
-
-    event_path = os.path.join(output_dir, "event_data.csv")
-    data['event_data'].to_csv(event_path, index=False)
-    print(f"Saved event data to {event_path}")
-
-    signal_path = os.path.join(output_dir, "signal_data.csv")
-    data['signal_data'].to_csv(signal_path, index=False)
-    print(f"Saved signal data to {signal_path}")
-
-def parse_parameters(file_path):
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-
-    parameters = []
-    with open(file_path, 'r', encoding='utf-8-sig') as file:
-        for line in file:
-            line = line.strip()
-            if not line:
-                continue
-            key, value = line.split(': ', 1)
-            parameters.append([key, value.replace(',', '.')])
-
-    parameters_df = pd.DataFrame(parameters, columns=['Parameter', 'Value'])
-    return parameters_df
-
-def save_parameters(parameters_df, output_path):
-    parameters_df.to_csv(output_path, index=False)
-    print(f"Saved parameters to {output_path}")
-
-def load_data(data_dir):
-    indicator_data = pd.read_csv(os.path.join(data_dir, "indicator_data.csv"))
-    trade_data = pd.read_csv(os.path.join(data_dir, "trade_data.csv"))
-    event_data = pd.read_csv(os.path.join(data_dir, "event_data.csv"))
-
-    indicator_data['time'] = pd.to_datetime(indicator_data['time'])
-    trade_data['time'] = pd.to_datetime(trade_data['time'])
-    event_data['time'] = pd.to_datetime(event_data['time'])
-
-    return {'indicator_data': indicator_data, 'trade_data': trade_data, 'event_data': event_data}
-
-def preprocess_events(event_data):
-    relevant_events = ['Profit', 'Loss']
-    event_data = event_data[event_data['event'].str.contains('|'.join(relevant_events))]
-    return event_data
-
-def identify_trade_results(trade_data, event_data):
-    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
-    trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
+    /* Sidebar button style */
+    .sidebar-button {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 10px 20px;
+        margin: 5px 0;
+        font-size: 18px;
+        font-weight: bold;
+        color: #FAFAFA;
+        background-color: #1E88E5;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+    }
     
-    trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
+    .sidebar-button:hover {
+        background-color: #1565C0;
+    }
 
-    def classify_trade(row):
-        if pd.notna(row['event_event']):
-            if 'Profit' in row['event_event']:
-                return 'win'
-            elif 'Loss' in row['event_event']:
-                return 'loss'
-        return 'unknown'
+    /* Title */
+    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+        color: #FAFAFA;
+    }
+
+    /* Headers */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        color: #FAFAFA;
+    }
+
+    /* Buttons */
+    .stButton button {
+        background-color: #1E88E5;
+        color: #FAFAFA;
+        border-radius: 5px;
+    }
     
-    trade_event_data['result'] = trade_event_data.apply(classify_trade, axis=1)
+    /* Dropdown */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+
+    /* Text Inputs */
+    .stTextInput div[data-baseweb="input"] > div {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+
+    /* Center logo */
+    .center-logo {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    /* Footer */
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #0E1117;
+        color: #FAFAFA;
+        text-align: center;
+        padding: 10px 0;
+    }
+
+    /* Tooltip */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 120px;
+        background-color: #1E88E5;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%; 
+        left: 50%;
+        margin-left: -60px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Collapsible */
+    .collapsible {
+        background-color: #1E88E5;
+        color: white;
+        cursor: pointer;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+    }
+
+    .active, .collapsible:hover {
+        background-color: #1565C0;
+    }
+
+    .content {
+        padding: 0 18px;
+        display: none;
+        overflow: hidden;
+        background-color: #262730;
+        border-radius: 5px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Load and display the logo in the center of the screen
+logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+if os.path.exists(logo_path):
+    encoded_logo = load_image(logo_path)
+    st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{encoded_logo}' width='200'></div>", unsafe_allow_html=True)
+else:
+    st.warning("Logo file not found!")
+
+# Sidebar for navigation with icons
+st.sidebar.title("Navigation")
+
+def nav_button(label, page_name, icon):
+    if st.sidebar.button(f"{icon} {label}"):
+        st.session_state.page = page_name
+
+nav_button("Overview", "Overview", "🏠")
+nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
+# Initialize session state if not already done
+if 'page' not in st.session_state:
+    st.session_state.page = "Overview"
+
+page = st.session_state.page
+
+if page == "Overview":
+    st.write("""
+    ## Welcome to the nocodeML Algorithmic Trading Optimization App
+
+    This application offers a robust and user-friendly platform for enhancing your algorithmic trading strategies through advanced machine learning and data analysis techniques. Explore, visualize, and refine your trading algorithms with our comprehensive suite of tools.
+
+    ### Key Features:
     
-    trade_event_data = trade_event_data[trade_event_data['result'] != 'unknown']
-    return trade_event_data
+    - **Data Ingestion and Preparation**: 
+      - Effortlessly import your raw trading data.
+      - Utilize our cleaning and parsing utilities to ensure your data is ready for analysis.
+      - Save the prepared data for further exploration and modeling.
 
-def preprocess_indicator_data(indicator_data):
-    indicator_data_agg = indicator_data.groupby(['time', 'indicator_name']).mean().reset_index()
-    return indicator_data_agg
+    - **Advanced Exploratory Data Analysis (EDA) on Indicators**:
+      - Perform in-depth analysis of various trading indicators.
+      - Generate insightful visualizations to understand trends, correlations, and anomalies.
+      - Use interactive plots to drill down into specific data points and uncover hidden patterns.
 
-def merge_with_indicators(trade_event_data, indicator_data):
-    indicator_data = preprocess_indicator_data(indicator_data)
-    
-    market_value_indicators = indicator_data[indicator_data['indicator_value'] > 10000]
-    other_indicators = indicator_data[indicator_data['indicator_value'] <= 10000]
-    
-    indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='indicator_value').reset_index()
-    binary_indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='binary_indicator').reset_index()
-    percent_away_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='percent_away').reset_index()
-    
-    merged_data = pd.merge_asof(trade_event_data.sort_values('time'), indicator_pivot.sort_values('time'), on='time', direction='nearest')
-    merged_data = pd.merge_asof(merged_data, binary_indicator_pivot.sort_values('time'), on='time', direction='nearest', suffixes=('', '_binary'))
-    merged_data = pd.merge_asof(merged_data, percent_away_pivot.sort_values('time'), on='time', direction='nearest', suffixes=('', '_percent_away'))
+    - **Optimal Win Ranges Identification**:
+      - Apply sophisticated statistical techniques to determine the most profitable trading ranges.
+      - Visualize the optimal win ranges to enhance your trading decisions.
+      - Summarize the findings to quickly identify key insights.
 
-    market_value_columns = market_value_indicators['indicator_name'].unique()
-    merged_data.drop(columns=market_value_columns, inplace=True)
+    - **Model Development on % Away Indicators**:
+      - Build and optimize predictive models based on percentage away indicators.
+      - Utilize machine learning algorithms to forecast market movements.
+      - Evaluate model performance with a suite of metrics to ensure accuracy and reliability.
 
-    other_indicator_pivot = other_indicators.pivot(index='time', columns='indicator_name', values='indicator_value').reset_index()
-    merged_data = pd.merge_asof(merged_data, other_indicator_pivot.sort_values('time'), on='time', direction='nearest', suffixes=('', '_other'))
+    - **Focused Analysis on Specific Models**:
+      - Conduct a deep dive into the performance of specific models.
+      - Analyze model behavior under various market conditions.
+      - Fine-tune model parameters to achieve optimal results.
 
-    return merged_data
+    - **Advanced EDA on Specific Models**:
+      - Gain a comprehensive understanding of your models through detailed EDA.
+      - Visualize the interplay between different model features and outcomes.
+      - Use advanced statistical tests to validate model assumptions and hypotheses.
 
-def verify_trade_parsing(data_dir, output_dir):
-    data = load_data(data_dir)
-    trade_data = data['trade_data']
-    event_data = preprocess_events(data['event_data'])
-    indicator_data = data['indicator_data']
+    - **Win Ranges Analysis for Specific Models**:
+      - Determine the optimal win ranges tailored to your specific models.
+      - Enhance model performance by focusing on the most profitable market conditions.
+      - Visualize and interpret the results to make informed trading decisions.
 
-    trade_event_data = identify_trade_results(trade_data, event_data)
+    ### Getting Started:
 
-    merged_data = merge_with_indicators(trade_event_data, indicator_data)
+    1. **Navigate through the Sidebar**: Use the sidebar to access different sections of the app.
+    2. **Ingest and Prepare Data**: Begin by uploading your raw data files and preparing them for analysis.
+    3. **Perform EDA**: Explore your data and trading indicators with our advanced EDA tools.
+    4. **Identify Optimal Win Ranges**: Use statistical methods to find the best trading ranges.
+    5. **Develop and Optimize Models**: Build, train, and evaluate machine learning models to improve your trading strategies.
+    6. **Deep Dive into Specific Models**: Analyze the performance and characteristics of your models in detail.
 
-    result_distribution = merged_data['result'].value_counts()
+    Our goal is to empower you with the tools and insights needed to achieve excellence in algorithmic trading. Harness the power of machine learning and data science to unlock new opportunities and enhance your trading performance.
 
-    st.write(f"\nDistribution of trade results:\n{result_distribution}")
+    ### Happy Trading!
 
-    sample_size = 10
-    sample_classified_trades = merged_data.sample(n=sample_size)
-    st.write(f"\nSample of classified trades (showing {sample_size}):")
-    st.write(sample_classified_trades)
+    *nocodeML 2024*
+    """)
 
-    output_file = os.path.join(output_dir, "merged_trade_indicator_event.csv")
-    merged_data.to_csv(output_file, index=False)
-    st.write(f"Saved merged data to {output_file}")
+elif page == "Data Ingestion and Preparation":
+    from scripts.data_ingestion_preparation import run_data_ingestion_preparation
+    run_data_ingestion_preparation()
 
-def run_data_ingestion_preparation():
-    st.subheader("Data Ingestion and Preparation")
-    
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "."
+elif page == "Advanced EDA on Indicators":
+    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+    run_advanced_eda_indicators()
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
-    data_output_dir = get_file_path(base_dir, "data/processed")
-    raw_data_dir = get_file_path(base_dir, "data/raw")
+elif page == "Optimal Win Ranges":
+    from scripts.optimal_win_ranges import run_optimal_win_ranges
+    run_optimal_win_ranges()
 
-    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
-    if uploaded_file is not None:
-        raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
-        with open(raw_file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
+elif page == "Model on % Away Indicators":
+    from scripts.model_percentage_away import run_model_percentage_away
+    run_model_percentage_away()
 
-    file_dropdown = st.selectbox("Select a raw data file", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
-    if file_dropdown:
-        file_path = get_file_path(raw_data_dir, file_dropdown)
-        data = clean_and_parse_data(file_path)
-        st.write(data['trade_data'].head(15))
-        st.write(data['indicator_data'].head(15))
-        st.write(data['event_data'].head(15))
-        st.write(data['signal_data'].head(15))
-        
-        data['indicator_data'] = calculate_indicators(data)
-        save_dataframes(data, data_output_dir)
-        
-        st.success("Data successfully parsed and saved.")
+elif page == "Specific Model Focus":
+    from scripts.specific_model_focus import run_specific_model_focus
+    run_specific_model_focus()
 
-    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params", type=["csv", "txt"])
-    if uploaded_param_file is not None:
-        param_file_path = os.path.join(raw_data_dir, "params", uploaded_param_file.name)
-        with open(param_file_path, "wb") as f:
-            f.write(uploaded_param_file.getbuffer())
-        st.success(f"Parameter file {uploaded_param_file.name} uploaded successfully to {param_file_path}")
+elif page == "Advanced EDA on Specific Model":
+    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+    run_advanced_eda_specific_model()
 
-        parameters_df = parse_parameters(param_file_path)
-        st.write(parameters_df)
-        
-        save_parameters(parameters_df, os.path.join(data_output_dir, "parameters.csv"))
-        
-        st.success("Parameters successfully parsed and saved.")
-    
-    if st.button("Verify Trade Parsing"):
-        verify_trade_parsing(data_output_dir, data_output_dir)
+elif page == "Win Ranges for Specific Model":
+    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+
+# Footer
+st.markdown(
+    """
+    <div class='footer'>
+        <p>&copy; 2024 nocodeML. All rights reserved.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
