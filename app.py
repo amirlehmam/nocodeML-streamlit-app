@@ -202,7 +202,6 @@ authenticator = Authenticate(
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
 
-
 # If login is successful
 if authentication_status:
     # Display the logo
@@ -275,7 +274,7 @@ if authentication_status:
     **Focused Analysis on Specific Models:**
     - Conduct deep dives into specific model performances.
     - Analyze model behavior under various market conditions.
-    - Fine-tune parameters for optimal results.
+    - Fine-tune parameters for optimal results
 
     **Advanced EDA on Specific Models:**
     - Gain detailed understanding of models through comprehensive EDA.
