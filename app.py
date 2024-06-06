@@ -176,14 +176,13 @@ def fetch_user_credentials():
 
     credentials = {
         "usernames": {},
-        "names": {},
-        "passwords": {}
     }
 
     for username, name, password in users:
-        credentials["usernames"][username] = username
-        credentials["names"][username] = name
-        credentials["passwords"][username] = password
+        credentials["usernames"][username] = {
+            "name": name,
+            "password": password
+        }
 
     return credentials
 
@@ -200,9 +199,7 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials["usernames"],
-    credentials["names"],
-    credentials["passwords"],
+    credentials,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
@@ -213,7 +210,7 @@ name, authentication_status, username = authenticator.login('Login', 'main')
 # If login is successful
 if authentication_status:
     st.write(f'Welcome {name}')
-    
+
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
@@ -223,7 +220,6 @@ if authentication_status:
 
     # Sidebar for navigation with icons
     st.sidebar.title("Navigation")
-
     def nav_button(label, page_name, icon):
         if st.sidebar.button(f"{icon} {label}"):
             st.session_state.page = page_name
