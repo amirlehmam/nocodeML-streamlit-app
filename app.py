@@ -175,21 +175,25 @@ def fetch_user_credentials():
     users = c.fetchall()
     conn.close()
     
-    credentials_dict = {
-        'usernames': {}
-    }
+    usernames = {}
+    names = {}
+    passwords = {}
     
     for username, name, password in users:
-        credentials_dict['usernames'][username] = {'name': name, 'password': password}
+        usernames[username] = username
+        names[username] = name
+        passwords[username] = password
     
-    return credentials_dict
+    return usernames, names, passwords
 
 # Fetch user credentials
-credentials = fetch_user_credentials()
+usernames, names, passwords = fetch_user_credentials()
 
 # Create an authenticator object
 authenticator = Authenticate(
-    usernames=credentials['usernames'],
+    usernames=usernames,
+    names=names,
+    passwords=passwords,
     cookie_name="nocodeML",
     key="some_random_key",  # You should use a more secure key
     cookie_expiry_days=30
