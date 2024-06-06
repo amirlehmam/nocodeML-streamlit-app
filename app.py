@@ -214,7 +214,6 @@ authenticator = Authenticate(
     cookie_expiry_days=30
 )
 
-
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
 
