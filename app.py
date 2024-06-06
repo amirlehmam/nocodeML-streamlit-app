@@ -197,7 +197,9 @@ credentials_dict = {
     'usernames': {
         username: {'name': credentials['names'][username], 'password': credentials['passwords'][username]}
         for username in credentials['usernames']
-    }
+    },
+    'names': credentials['names'],
+    'passwords': credentials['passwords']
 }
 
 st.write("Updated credentials:", credentials_dict)  # Debug statement
@@ -205,10 +207,13 @@ st.write("Updated credentials:", credentials_dict)  # Debug statement
 # Create an authenticator object
 authenticator = Authenticate(
     usernames=credentials_dict['usernames'],
+    names=credentials_dict['names'],
+    passwords=credentials_dict['passwords'],
     cookie_name="nocodeML",
     key="some_random_key",  # You should use a more secure key
     cookie_expiry_days=30
 )
+
 
 # Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
