@@ -12,9 +12,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from scipy import stats
 
-def get_file_path(base_dir, relative_path):
-    return os.path.join(base_dir, relative_path)
-
 def load_data(data_dir):
     indicator_data = pd.read_csv(os.path.join(data_dir, "indicator_data.csv"))
     trade_data = pd.read_csv(os.path.join(data_dir, "trade_data.csv"))
@@ -198,31 +195,37 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
 def run_advanced_eda_indicators():
     st.subheader("Advanced EDA on Indicators")
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML/streamlit_app")
-    data_dir = get_file_path(base_dir, "data/processed")
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "C:/Users/Administrator/Desktop/nocodeML/streamlit_app"
 
-    if 'loaded_data' not in st.session_state:
-        st.session_state.loaded_data = False
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    data_dir = os.path.join(base_dir, "data/processed")
 
     if st.button("Load Data"):
-        (X_train, X_test, y_train, y_test), merged_data = load_and_prepare_data(data_dir)
-        models, results, feature_importances = train_and_evaluate_models(X_train, X_test, y_train, y_test)
-        st.session_state.X_train = X_train
-        st.session_state.X_test = X_test
-        st.session_state.y_train = y_train
-        st.session_state.y_test = y_test
-        st.session_state.merged_data = merged_data
-        st.session_state.models = models
-        st.session_state.results = results
-        st.session_state.feature_importances = feature_importances
-        st.session_state.loaded_data = True
-        st.success("Data Loaded Successfully")
+        st.session_state.base_dir = base_dir
 
-    if st.session_state.loaded_data:
+        if not os.path.exists(data_dir):
+            st.write("Data directory not found. Please check the directory path.")
+            return
+
+        try:
+            (X_train, X_test, y_train, y_test), merged_data = load_and_prepare_data(data_dir)
+            models, results, feature_importances = train_and_evaluate_models(X_train, X_test, y_train, y_test)
+
+            st.session_state.merged_data = merged_data
+            st.session_state.feature_importances = feature_importances
+            st.session_state.models = models
+            st.session_state.results = results
+            st.success("Data loaded successfully.")
+        except Exception as e:
+            st.write(f"Error loading data: {e}")
+            return
+
+    if "merged_data" in st.session_state:
         trade_type = st.selectbox("Select Trade Type", ["Long Only", "Short Only", "Long & Short"])
         model_name = st.selectbox("Select Model", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM"])
         top_n = st.selectbox("Select Top N Indicators", [None, 10, 5, 3, "ALL"])
-        individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.feature_importances[model_name]['feature'].tolist())
+        individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.feature_importances[model_name]['feature'])
 
         if st.button("Run EDA"):
             advanced_eda(st.session_state.merged_data, st.session_state.feature_importances, trade_type=trade_type, model_name=model_name, top_n=top_n, individual_indicator=individual_indicator)
