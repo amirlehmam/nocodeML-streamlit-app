@@ -176,11 +176,15 @@ def fetch_user_credentials():
     conn.close()
 
     user_dict = {
-        'usernames': {},
+        'usernames': [],
+        'names': {},
+        'passwords': {}
     }
 
     for username, name, password in users:
-        user_dict['usernames'][username] = {"name": name, "password": password}
+        user_dict['usernames'].append(username)
+        user_dict['names'][username] = name
+        user_dict['passwords'][username] = password
 
     return user_dict
 
@@ -193,9 +197,11 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials=credentials['usernames'],
-    cookie_name=cookie_name,
-    key=signature_key,
+    credentials['usernames'],
+    credentials['names'],
+    credentials['passwords'],
+    cookie_name,
+    signature_key,
     cookie_expiry_days=30
 )
 
@@ -283,7 +289,7 @@ if authentication_status:
         1. **Navigate through the Sidebar:** Access different sections of the app.
         2. **Ingest and Prepare Data:** Upload and prepare raw data files.
         3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-        4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+         4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
         5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
         6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
 
