@@ -47,21 +47,32 @@ st.markdown(
         background-color: #1E88E5;
         color: #FAFAFA;
         border-radius: 5px;
+        width: 100%;
+        margin: 5px 0;
     }
     
-    /* Dropdown */
-    .stSelectbox div[data-baseweb="select"] {
-        background-color: #262730;
+    /* Sidebar button style */
+    .sidebar-button {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 10px 20px;
+        margin: 5px 0;
+        font-size: 18px;
+        font-weight: bold;
         color: #FAFAFA;
+        background-color: #1E88E5;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
     }
-
-    /* Text Inputs */
-    .stTextInput div[data-baseweb="input"] > div {
-        background-color: #262730;
-        color: #FAFAFA;
+    
+    .sidebar-button:hover {
+        background-color: #1565C0;
     }
-
-    /* Center logo */
+    
     .center-logo {
         display: flex;
         justify-content: center;
@@ -83,19 +94,25 @@ else:
 
 # Sidebar for navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio(
-    "Choose a page:",
-    [
-        "Overview",
-        "Data Ingestion and Preparation",
-        "Advanced EDA on Indicators",
-        "Optimal Win Ranges",
-        "Model on % Away Indicators",
-        "Specific Model Focus",
-        "Advanced EDA on Specific Model",
-        "Win Ranges for Specific Model"
-    ]
-)
+
+def nav_button(label, page_name):
+    if st.sidebar.button(label):
+        st.session_state.page = page_name
+
+nav_button("Overview", "Overview")
+nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation")
+nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators")
+nav_button("Optimal Win Ranges", "Optimal Win Ranges")
+nav_button("Model on % Away Indicators", "Model on % Away Indicators")
+nav_button("Specific Model Focus", "Specific Model Focus")
+nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model")
+nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model")
+
+# Initialize session state if not already done
+if 'page' not in st.session_state:
+    st.session_state.page = "Overview"
+
+page = st.session_state.page
 
 if page == "Overview":
     st.write("""
