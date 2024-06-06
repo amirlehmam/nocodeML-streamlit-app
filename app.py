@@ -175,10 +175,15 @@ def fetch_user_credentials():
     users = c.fetchall()
     conn.close()
 
-    credentials = {}
+    credentials = {
+        "usernames": {}
+    }
 
     for username, name, password in users:
-        credentials[username] = {"name": name, "password": password}
+        credentials["usernames"][username] = {
+            "name": name,
+            "password": password
+        }
 
     return credentials
 
@@ -195,9 +200,9 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials,
-    cookie_name,
-    signature_key,
+    credentials["usernames"], 
+    cookie_name, 
+    signature_key, 
     cookie_expiry_days=30
 )
 
