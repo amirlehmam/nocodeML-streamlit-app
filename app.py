@@ -175,15 +175,17 @@ def fetch_user_credentials():
     users = c.fetchall()
     conn.close()
     
-    user_dict = {
-        'usernames': {}
-    }
+    usernames = {}
+    names = {}
+    passwords = {}
     
-    for user in users:
-        username, name, password = user
-        user_dict['usernames'][username] = {'name': name, 'password': password}
+    for username, name, password in users:
+        usernames[username] = username
+        names[username] = name
+        passwords[username] = password
     
-    return user_dict
+    return usernames, names, passwords
+
 
 # Fetch user credentials
 credentials = fetch_user_credentials()
