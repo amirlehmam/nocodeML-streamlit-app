@@ -1,7 +1,20 @@
 import streamlit as st
+from streamlit_authenticator import Authenticate
 import streamlit_authenticator as stauth
 import sqlite3
+from werkzeug.security import check_password_hash
+from pathlib import Path
 import pandas as pd
+import os
+import base64
+
+# Set page config
+st.set_page_config(
+    page_title="nocodeML",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # Load credentials from database
 conn = sqlite3.connect('users.db')
@@ -15,7 +28,12 @@ credentials = {
     "usernames": {user: {"name": names[user], "password": passwords[user]} for user in usernames}
 }
 
-authenticator = stauth.Authenticate(credentials, 'cookie_name', 'signature_key', cookie_expiry_days=30)
+# Define the cookie name and signature key for the authenticator
+cookie_name = 'your_cookie_name'
+signature_key = 'your_signature_key'
+
+# Instantiate the authenticator with the updated credentials
+authenticator = stauth.Authenticate(credentials, cookie_name, signature_key, cookie_expiry_days=30)
 
 name, authentication_status, username = authenticator.login('Login', 'main')
 
@@ -25,16 +43,6 @@ elif authentication_status == False:
     st.error('Username/password is incorrect')
 elif authentication_status == None:
     st.warning('Please enter your username and password')
-
-
-
-# Set page config
-st.set_page_config(
-    page_title="nocodeML",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # Function to load and encode image
 def load_image(image_path):
