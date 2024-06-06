@@ -213,12 +213,8 @@ name, authentication_status, username = authenticator.login('Login', 'main')
 
 # If login is successful
 if authentication_status:
-        st.write(f'Welcome {name}')
-    elif authentication_status is False:
-        st.error('Username/password is incorrect')
-    elif authentication_status is None:
-        st.warning('Please enter your username and password')
-
+    st.write(f'Welcome {name}')
+    
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
