@@ -2,10 +2,11 @@
 import sqlite3
 from werkzeug.security import generate_password_hash
 
+# Connect to the database
 conn = sqlite3.connect('users.db')
 c = conn.cursor()
 
-# Create users table
+# Create the users table
 c.execute('''
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
 # Insert a user
 username = 'admin'
 name = 'Administrator'
-password = 'password123'
+password = 'azerty123'
 hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
 # Check if user already exists
@@ -31,5 +32,6 @@ else:
     c.execute('INSERT INTO users (username, name, password) VALUES (?, ?, ?)', (username, name, hashed_password))
     print("User created.")
 
+# Commit the changes and close the connection
 conn.commit()
 conn.close()
