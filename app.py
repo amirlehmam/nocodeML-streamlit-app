@@ -1,10 +1,8 @@
 import streamlit as st
-from streamlit_authenticator import Authenticate
 import streamlit_authenticator as stauth
 import sqlite3
-from werkzeug.security import check_password_hash
-from pathlib import Path
 import pandas as pd
+from pathlib import Path
 import os
 import base64
 
@@ -15,34 +13,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# Load credentials from database
-conn = sqlite3.connect('users.db')
-df = pd.read_sql_query("SELECT * from users", conn)
-usernames = df['username'].tolist()
-names = df.set_index('username')['name'].to_dict()
-passwords = df.set_index('username')['password'].to_dict()
-
-# Update the structure to match expected format
-credentials = {
-    "usernames": {user: {"name": names[user], "password": passwords[user]} for user in usernames}
-}
-
-# Define the cookie name and signature key for the authenticator
-cookie_name = 'your_cookie_name'
-signature_key = 'your_signature_key'
-
-# Instantiate the authenticator with the updated credentials
-authenticator = stauth.Authenticate(credentials, cookie_name, signature_key, cookie_expiry_days=30)
-
-name, authentication_status, username = authenticator.login('Login', 'main')
-
-if authentication_status:
-    st.write(f'Welcome {name}')
-elif authentication_status == False:
-    st.error('Username/password is incorrect')
-elif authentication_status == None:
-    st.warning('Please enter your username and password')
 
 # Function to load and encode image
 def load_image(image_path):
@@ -212,9 +182,7 @@ def fetch_user_credentials():
     }
 
     for username, name, password in users:
-        user_dict['usernames'][username] = username
-        user_dict['names'][username] = name
-        user_dict['passwords'][username] = password
+        user_dict['usernames'][username] = {"name": name, "password": password}
 
     return user_dict
 
@@ -225,21 +193,13 @@ credentials = fetch_user_credentials()
 st.write("Credentials loaded:")
 st.write(credentials)
 
+# Define the cookie name and signature key for the authenticator
+cookie_name = 'nocodeML_cookie'
+signature_key = 'some_random_key'  # You should use a more secure key
+
 # Create an authenticator object
-authenticator = Authenticate(
-    usernames=credentials['usernames'],
-    names=credentials['names'],
-    passwords=credentials['passwords'],
-    cookie_name="nocodeML",
-    key="some_random_key",  # You should use a more secure key
-    cookie_expiry_days=30
-)
+authenticator = stauth.Authenticate(credentials, cookie_name, signature_key, cookie_expiry_days=30)
 
-# Debug: Print updated credentials
-st.write("Updated credentials:")
-st.write(credentials)
-
-# Create the login form
 name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Debug print statements
