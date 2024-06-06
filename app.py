@@ -208,35 +208,35 @@ if authentication_status:
     else:
         st.warning("Logo file not found!")
 
-# Load and display the logo in the center of the screen
-logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-if os.path.exists(logo_path):
-    encoded_logo = load_image(logo_path)
-    st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{encoded_logo}' width='200'></div>", unsafe_allow_html=True)
-else:
-    st.warning("Logo file not found!")
+    # Load and display the logo in the center of the screen
+    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    if os.path.exists(logo_path):
+        encoded_logo = load_image(logo_path)
+        st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{encoded_logo}' width='200'></div>", unsafe_allow_html=True)
+    else:
+        st.warning("Logo file not found!")
 
-# Sidebar for navigation with icons
-st.sidebar.title("Navigation")
+    # Sidebar for navigation with icons
+    st.sidebar.title("Navigation")
 
-def nav_button(label, page_name, icon):
-    if st.sidebar.button(f"{icon} {label}"):
-        st.session_state.page = page_name
+    def nav_button(label, page_name, icon):
+        if st.sidebar.button(f"{icon} {label}"):
+            st.session_state.page = page_name
 
-nav_button("Overview", "Overview", "🏠")
-nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+    nav_button("Overview", "Overview", "🏠")
+    nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+    nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+    nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+    nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+    nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+    nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+    nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
 
-# Initialize session state if not already done
-if 'page' not in st.session_state:
-    st.session_state.page = "Overview"
+    # Initialize session state if not already done
+    if 'page' not in st.session_state:
+        st.session_state.page = "Overview"
 
-page = st.session_state.page
+    page = st.session_state.page
 
     if page == "Overview":
         st.write("""
@@ -333,6 +333,16 @@ page = st.session_state.page
     if st.sidebar.button('Logout'):
         authenticator.logout('Logout', 'sidebar')
 
+    # Footer
+    st.markdown(
+        """
+        <div class='footer'>
+            <p>&copy; 2024 nocodeML. All rights reserved.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 # If login fails
 elif authentication_status is False:
     st.error('Username or password is incorrect')
@@ -340,13 +350,3 @@ elif authentication_status is False:
 # If login not attempted yet
 elif authentication_status is None:
     st.warning('Please enter your username and password')
-
-# Footer
-st.markdown(
-    """
-    <div class='footer'>
-        <p>&copy; 2024 nocodeML. All rights reserved.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
