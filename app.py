@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import sqlite3
 from pathlib import Path
+import pandas as pd
 import os
 import base64
 
