@@ -93,8 +93,11 @@ def deep_dive_feature_analysis(data, feature, target='result', save_path=None):
 
 def run_advanced_eda_specific_model():
     st.subheader("Advanced EDA on Specific Model")
+    
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
 
-    base_dir = st.text_input("Base Directory", "C:/Users/Administrator/Desktop/nocodeML/streamlit_app")
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     data_path = get_file_path(base_dir, "data/processed/merged_trade_indicator_event.csv")
 
     if 'loaded_data' not in st.session_state:
