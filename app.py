@@ -23,14 +23,14 @@ st.markdown(
     <style>
     /* Main Layout */
     .main {
-        background: url('https://www.transparenttextures.com/patterns/cubes.png');
+        background: url('https://www.transparenttextures.com/patterns/grey_wash_wall.png');
         color: #FAFAFA;
         font-family: 'Arial', sans-serif;
     }
 
     /* Sidebar */
     .css-1d391kg {
-        background-color: #262730;
+        background: url('https://www.transparenttextures.com/patterns/black-paper.png');
     }
 
     /* Sidebar button style */
@@ -282,6 +282,7 @@ elif page == "Advanced EDA on Specific Model":
 
 elif page == "Win Ranges for Specific Model":
     from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+    run_win_ranges_specific_model()
 
 # Footer
 st.markdown(
