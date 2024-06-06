@@ -83,25 +83,59 @@ if page == "Overview":
     st.write("""
     ## Welcome to the nocodeML Algorithmic Trading Optimization App
 
-    This app is designed to provide an intuitive and powerful interface for optimizing algorithmic trading strategies. Using advanced machine learning and data analysis techniques, you can explore, visualize, and fine-tune your trading algorithms with ease. Here's what you can do with this app:
+    This application offers a robust and user-friendly platform for enhancing your algorithmic trading strategies through advanced machine learning and data analysis techniques. Explore, visualize, and refine your trading algorithms with our comprehensive suite of tools.
 
-    ### Features:
+    ### Key Features:
     
-    - **Data Ingestion and Preparation**: Seamlessly import and clean your trading data, preparing it for in-depth analysis.
-    - **Advanced EDA on Indicators**: Perform detailed Exploratory Data Analysis on various trading indicators to uncover valuable insights.
-    - **Optimal Win Ranges**: Identify the most profitable trading ranges using sophisticated statistical techniques.
-    - **Model on % Away Indicators**: Develop and optimize models based on percentage away indicators to enhance your trading strategies.
-    - **Specific Model Focus**: Dive deep into specific models to understand their performance and behavior.
-    - **Advanced EDA on Specific Model**: Conduct comprehensive EDA on specific models to gain a deeper understanding of their characteristics.
-    - **Win Ranges for Specific Model**: Determine the optimal win ranges for your specific trading models to maximize profitability.
+    - **Data Ingestion and Preparation**: 
+      - Effortlessly import your raw trading data.
+      - Utilize our cleaning and parsing utilities to ensure your data is ready for analysis.
+      - Save the prepared data for further exploration and modeling.
+
+    - **Advanced Exploratory Data Analysis (EDA) on Indicators**:
+      - Perform in-depth analysis of various trading indicators.
+      - Generate insightful visualizations to understand trends, correlations, and anomalies.
+      - Use interactive plots to drill down into specific data points and uncover hidden patterns.
+
+    - **Optimal Win Ranges Identification**:
+      - Apply sophisticated statistical techniques to determine the most profitable trading ranges.
+      - Visualize the optimal win ranges to enhance your trading decisions.
+      - Summarize the findings to quickly identify key insights.
+
+    - **Model Development on % Away Indicators**:
+      - Build and optimize predictive models based on percentage away indicators.
+      - Utilize machine learning algorithms to forecast market movements.
+      - Evaluate model performance with a suite of metrics to ensure accuracy and reliability.
+
+    - **Focused Analysis on Specific Models**:
+      - Conduct a deep dive into the performance of specific models.
+      - Analyze model behavior under various market conditions.
+      - Fine-tune model parameters to achieve optimal results.
+
+    - **Advanced EDA on Specific Models**:
+      - Gain a comprehensive understanding of your models through detailed EDA.
+      - Visualize the interplay between different model features and outcomes.
+      - Use advanced statistical tests to validate model assumptions and hypotheses.
+
+    - **Win Ranges Analysis for Specific Models**:
+      - Determine the optimal win ranges tailored to your specific models.
+      - Enhance model performance by focusing on the most profitable market conditions.
+      - Visualize and interpret the results to make informed trading decisions.
 
     ### Getting Started:
 
-    Use the sidebar to navigate through the different sections of the app. Each section provides tools and visualizations to help you optimize your trading strategies effectively. Start by ingesting and preparing your data, then move on to exploratory data analysis and model optimization.
+    1. **Navigate through the Sidebar**: Use the sidebar to access different sections of the app.
+    2. **Ingest and Prepare Data**: Begin by uploading your raw data files and preparing them for analysis.
+    3. **Perform EDA**: Explore your data and trading indicators with our advanced EDA tools.
+    4. **Identify Optimal Win Ranges**: Use statistical methods to find the best trading ranges.
+    5. **Develop and Optimize Models**: Build, train, and evaluate machine learning models to improve your trading strategies.
+    6. **Deep Dive into Specific Models**: Analyze the performance and characteristics of your models in detail.
 
-    We hope this app helps you achieve your trading goals with the power of machine learning and data science!
+    Our goal is to empower you with the tools and insights needed to achieve excellence in algorithmic trading. Harness the power of machine learning and data science to unlock new opportunities and enhance your trading performance.
 
-    Happy Trading!
+    ### Happy Trading!
+
+    *The nocodeML Team*
     """)
 
 elif page == "Data Ingestion and Preparation":
