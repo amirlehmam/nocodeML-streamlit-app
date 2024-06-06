@@ -1,6 +1,7 @@
 import streamlit as st
 from pathlib import Path
 import os
+import base64
 
 # Set page config
 st.set_page_config(
@@ -9,6 +10,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Function to load and encode image
+def load_image(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
+    return encoded_image
 
 # Custom CSS for enhanced design
 st.markdown(
@@ -66,10 +73,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Display the logo in the center of the screen
+# Load and display the logo in the center of the screen
 logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
 if os.path.exists(logo_path):
-    st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{st.image(logo_path, width=200, use_column_width='auto')._repr_html_()}'></div>", unsafe_allow_html=True)
+    encoded_logo = load_image(logo_path)
+    st.markdown(f"<div class='center-logo'><img src='data:image/png;base64,{encoded_logo}' width='200'></div>", unsafe_allow_html=True)
 else:
     st.warning("Logo file not found!")
 
