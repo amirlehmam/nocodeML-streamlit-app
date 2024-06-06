@@ -207,8 +207,20 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
+# Debugging: Print the user input credentials
+username_input = st.text_input("Username")
+password_input = st.text_input("Password", type="password")
+
+st.write(f"Input username: {username_input}")
+st.write(f"Input password: {password_input}")
+
+# Authenticate
 name, authentication_status, username = authenticator.login('Login', 'main')
 
+# Debugging: Print the authentication status
+st.write(f"Authentication status: {authentication_status}")
+st.write(f"Authenticated name: {name}")
+st.write(f"Authenticated username: {username}")
 
 # If login is successful
 if authentication_status:
