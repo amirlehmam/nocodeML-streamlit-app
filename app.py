@@ -1,10 +1,32 @@
 import streamlit as st
-from streamlit_authenticator import Authenticate
+import streamlit_authenticator as stauth
 import sqlite3
-from werkzeug.security import check_password_hash
-from pathlib import Path
-import os
-import base64
+import pandas as pd
+
+# Load credentials from database
+conn = sqlite3.connect('users.db')
+df = pd.read_sql_query("SELECT * from users", conn)
+usernames = df['username'].tolist()
+names = df.set_index('username')['name'].to_dict()
+passwords = df.set_index('username')['password'].to_dict()
+
+# Update the structure to match expected format
+credentials = {
+    "usernames": {user: {"name": names[user], "password": passwords[user]} for user in usernames}
+}
+
+authenticator = stauth.Authenticate(credentials, 'cookie_name', 'signature_key', cookie_expiry_days=30)
+
+name, authentication_status, username = authenticator.login('Login', 'main')
+
+if authentication_status:
+    st.write(f'Welcome {name}')
+elif authentication_status == False:
+    st.error('Username/password is incorrect')
+elif authentication_status == None:
+    st.warning('Please enter your username and password')
+
+
 
 # Set page config
 st.set_page_config(
@@ -187,7 +209,6 @@ def fetch_user_credentials():
         user_dict['passwords'][username] = password
 
     return user_dict
-
 
 # Fetch user credentials
 credentials = fetch_user_credentials()
