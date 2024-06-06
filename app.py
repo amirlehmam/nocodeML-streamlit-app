@@ -1,4 +1,7 @@
 import streamlit as st
+from streamlit_authenticator import Authenticate
+import sqlite3
+from werkzeug.security import check_password_hash
 from pathlib import Path
 import os
 import base64
@@ -164,6 +167,47 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Function to fetch user credentials from the database
+def fetch_user_credentials():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('SELECT username, name, password FROM users')
+    users = c.fetchall()
+    conn.close()
+    
+    user_dict = {
+        'usernames': {},
+        'passwords': {}
+    }
+    
+    for username, name, password in users:
+        user_dict['usernames'][username] = {'name': name, 'password': password}
+    
+    return user_dict
+
+# Fetch user credentials
+credentials = fetch_user_credentials()
+
+# Create an authenticator object
+authenticator = Authenticate(
+    credentials,
+    cookie_name="nocodeML",
+    key="some_random_key",  # You should use a more secure key
+    cookie_expiry_days=30
+)
+
+# Create the login form
+name, authentication_status, username = authenticator.login('Login', 'main')
+
+# If login is successful
+if authentication_status:
+    # Display the logo
+    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=200)
+    else:
+        st.warning("Logo file not found!")
+
 # Load and display the logo in the center of the screen
 logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
 if os.path.exists(logo_path):
@@ -194,96 +238,108 @@ if 'page' not in st.session_state:
 
 page = st.session_state.page
 
-if page == "Overview":
-    st.write("""
-###  nocodeML Algorithmic Trading Optimization
+    if page == "Overview":
+        st.write("""
+    ###  nocodeML Algorithmic Trading Optimization
 
-#### Streamlined for Precision and Performance
+    #### Streamlined for Precision and Performance
 
----
+    ---
 
-**Key Features:**
+    **Key Features:**
 
-**Data Ingestion and Preparation:**
-- Import raw trading data effortlessly.
-- Utilize cleaning and parsing utilities for ready-to-analyze data.
-- Save prepared data for exploration and modeling.
+    **Data Ingestion and Preparation:**
+    - Import raw trading data effortlessly.
+    - Utilize cleaning and parsing utilities for ready-to-analyze data.
+    - Save prepared data for exploration and modeling.
 
-**Advanced EDA on Indicators:**
-- Perform in-depth analysis of trading indicators.
-- Generate visualizations to understand trends, correlations, and anomalies.
-- Use interactive plots to uncover hidden patterns.
+    **Advanced EDA on Indicators:**
+    - Perform in-depth analysis of trading indicators.
+    - Generate visualizations to understand trends, correlations, and anomalies.
+    - Use interactive plots to uncover hidden patterns.
 
-**Optimal Win Ranges Identification:**
-- Apply statistical techniques to determine profitable trading ranges.
-- Visualize win ranges to enhance trading decisions.
-- Summarize findings for quick insights.
+    **Optimal Win Ranges Identification:**
+    - Apply statistical techniques to determine profitable trading ranges.
+    - Visualize win ranges to enhance trading decisions.
+    - Summarize findings for quick insights.
 
-**Model Development on % Away Indicators:**
-- Build and optimize predictive models based on % away indicators.
-- Utilize machine learning algorithms to forecast market movements.
-- Evaluate model performance with comprehensive metrics.
+    **Model Development on % Away Indicators:**
+    - Build and optimize predictive models based on % away indicators.
+    - Utilize machine learning algorithms to forecast market movements.
+    - Evaluate model performance with comprehensive metrics.
 
-**Focused Analysis on Specific Models:**
-- Conduct deep dives into specific model performances.
-- Analyze model behavior under various market conditions.
-- Fine-tune parameters for optimal results.
+    **Focused Analysis on Specific Models:**
+    - Conduct deep dives into specific model performances.
+    - Analyze model behavior under various market conditions.
+    - Fine-tune parameters for optimal results.
 
-**Advanced EDA on Specific Models:**
-- Gain detailed understanding of models through comprehensive EDA.
-- Visualize feature interactions and outcomes.
-- Validate model assumptions with advanced statistical tests.
+    **Advanced EDA on Specific Models:**
+    - Gain detailed understanding of models through comprehensive EDA.
+    - Visualize feature interactions and outcomes.
+    - Validate model assumptions with advanced statistical tests.
 
-**Win Ranges Analysis for Specific Models:**
-- Determine optimal win ranges tailored to specific models.
-- Enhance performance by focusing on profitable market conditions.
-- Visualize results for informed trading decisions.
+    **Win Ranges Analysis for Specific Models:**
+    - Determine optimal win ranges tailored to specific models.
+    - Enhance performance by focusing on profitable market conditions.
+    - Visualize results for informed trading decisions.
 
----
+    ---
 
-**Getting Started:**
-1. **Navigate through the Sidebar:** Access different sections of the app.
-2. **Ingest and Prepare Data:** Upload and prepare raw data files.
-3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
-5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
-6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
+    **Getting Started:**
+    1. **Navigate through the Sidebar:** Access different sections of the app.
+    2. **Ingest and Prepare Data:** Upload and prepare raw data files.
+    3. **Perform EDA:** Explore data and trading indicators with advanced tools.
+    4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+    5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
+    6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
 
----
+    ---
 
-Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
+    Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
 
-**Two Plums for One**
-             
-    """)
+    **Two Plums for One**
+                
+        """)
 
-elif page == "Data Ingestion and Preparation":
-    from scripts.data_ingestion_preparation import run_data_ingestion_preparation
-    run_data_ingestion_preparation()
+    elif page == "Data Ingestion and Preparation":
+        from scripts.data_ingestion_preparation import run_data_ingestion_preparation
+        run_data_ingestion_preparation()
 
-elif page == "Advanced EDA on Indicators":
-    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-    run_advanced_eda_indicators()
+    elif page == "Advanced EDA on Indicators":
+        from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+        run_advanced_eda_indicators()
 
-elif page == "Optimal Win Ranges":
-    from scripts.optimal_win_ranges import run_optimal_win_ranges
-    run_optimal_win_ranges()
+    elif page == "Optimal Win Ranges":
+        from scripts.optimal_win_ranges import run_optimal_win_ranges
+        run_optimal_win_ranges()
 
-elif page == "Model on % Away Indicators":
-    from scripts.model_percentage_away import run_model_percentage_away
-    run_model_percentage_away()
+    elif page == "Model on % Away Indicators":
+        from scripts.model_percentage_away import run_model_percentage_away
+        run_model_percentage_away()
 
-elif page == "Specific Model Focus":
-    from scripts.specific_model_focus import run_specific_model_focus
-    run_specific_model_focus()
+    elif page == "Specific Model Focus":
+        from scripts.specific_model_focus import run_specific_model_focus
+        run_specific_model_focus()
 
-elif page == "Advanced EDA on Specific Model":
-    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-    run_advanced_eda_specific_model()
+    elif page == "Advanced EDA on Specific Model":
+        from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+        run_advanced_eda_specific_model()
 
-elif page == "Win Ranges for Specific Model":
-    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-    run_win_ranges_specific_model()
+    elif page == "Win Ranges for Specific Model":
+        from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+        run_win_ranges_specific_model()
+
+    # Add logout button
+    if st.sidebar.button('Logout'):
+        authenticator.logout('Logout', 'sidebar')
+
+# If login fails
+elif authentication_status is False:
+    st.error('Username or password is incorrect')
+
+# If login not attempted yet
+elif authentication_status is None:
+    st.warning('Please enter your username and password')
 
 # Footer
 st.markdown(
