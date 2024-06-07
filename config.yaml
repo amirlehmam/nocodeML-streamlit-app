@@ -1,3 +1,7 @@
+cookie:
+  expiry_days: 30
+  key: some_signature_key
+  name: some_cookie_name
 credentials:
   usernames:
     admin:
@@ -5,17 +9,13 @@ credentials:
       failed_login_attempts: 0
       logged_in: false
       name: admin
-      password: pbkdf2:sha256:600000$Nf3S4VVZuRfq5DCU$8926688ad5ab7278c4d462842d63dd8f69369b75b11d0c97b5d13d66f9476582
+      password: pbkdf2:sha256:600000$hj89sDg2XMTbKyvW$edcb00d62506c84709ac6a24ccbcb81115b1b9932e9485e74683604888c664c2
     test_user:
       email: test@gmail.com
       failed_login_attempts: 0
       logged_in: false
       name: Testing Guy
-      password: pbkdf2:sha256:600000$lw55HEBXaqnSzNFh$e299ce640cd3b83353524455bd8197d32919a7198e063fd1f8f230c21e93c1b9
-cookie:
-  expiry_days: 30
-  key: some_signature_key
-  name: some_cookie_name
+      password: pbkdf2:sha256:600000$OfYd5h3B8cIlEneu$1b07e0573a3ae3f0df7c903040c6e3fcfbdb8129f1a9f0cecb2e4c126482d1b1
 preauthorized:
   emails:
   - praloumi@gmail.com
