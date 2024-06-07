@@ -6,13 +6,12 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import xgboost as xgb
 import lightgbm as lgb
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report
-from sklearn.model_selection import train_test_split, ParameterGrid
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.impute import SimpleImputer
 import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-import time
 
 # Load data
 def load_data(data_dir):
@@ -31,59 +30,42 @@ def prepare_percent_away_data(merged_data):
     
     return train_test_split(X_imputed, y, test_size=0.3, random_state=42), percent_away_features
 
-# Grid search with simple print progress
-def grid_search_model(model, param_grid, X_train, y_train, X_test, y_test):
-    n_iter = np.prod([len(v) for v in param_grid.values()])
-    
-    best_estimator = None
-    best_score = -np.inf
-    start_time = time.time()
-
-    for i, params in enumerate(ParameterGrid(param_grid), 1):
-        model.set_params(**params)
-        model.fit(X_train, y_train)
-        score = model.score(X_test, y_test)
-        
-        if score > best_score:
-            best_score = score
-            best_estimator = model
-        
-        elapsed_time = time.time() - start_time
-        remaining_time = (elapsed_time / i) * (n_iter - i)
-        print(f"Iteration {i}/{n_iter}, Best Score: {best_score:.4f}, Elapsed Time: {elapsed_time:.2f}s, Remaining Time: {remaining_time:.2f}s")
-    
-    return best_estimator
+# Randomized search with cross-validation
+def randomized_search_model(model, param_distributions, X_train, y_train, n_iter=10):
+    random_search = RandomizedSearchCV(model, param_distributions, n_iter=n_iter, cv=3, scoring='accuracy', n_jobs=-1, random_state=42)
+    random_search.fit(X_train, y_train)
+    return random_search.best_estimator_
 
 # Train models with hyperparameter tuning
-def train_models(X_train, y_train, X_test, y_test):
-    param_grid_rf = {
-        'n_estimators': [100, 200],
-        'max_depth': [None, 10],
-        'min_samples_split': [2, 5]
+def train_models(X_train, y_train):
+    param_distributions_rf = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5, 10]
     }
 
-    param_grid_gb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'max_depth': [3, 5]
+    param_distributions_gb = {
+        'n_estimators': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'max_depth': [3, 5, 7]
     }
 
-    param_grid_xgb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'max_depth': [3, 5]
+    param_distributions_xgb = {
+        'n_estimators': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'max_depth': [3, 5, 7]
     }
 
-    param_grid_lgb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'num_leaves': [31, 50]
+    param_distributions_lgb = {
+        'n_estimators': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'num_leaves': [31, 50, 100]
     }
 
-    best_rf = grid_search_model(RandomForestClassifier(random_state=42), param_grid_rf, X_train, y_train, X_test, y_test)
-    best_gb = grid_search_model(GradientBoostingClassifier(random_state=42), param_grid_gb, X_train, y_train, X_test, y_test)
-    best_xgb = grid_search_model(xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), param_grid_xgb, X_train, y_train, X_test, y_test)
-    best_lgb = grid_search_model(lgb.LGBMClassifier(random_state=42), param_grid_lgb, X_train, y_train, X_test, y_test)
+    best_rf = randomized_search_model(RandomForestClassifier(random_state=42), param_distributions_rf, X_train, y_train)
+    best_gb = randomized_search_model(GradientBoostingClassifier(random_state=42), param_distributions_gb, X_train, y_train)
+    best_xgb = randomized_search_model(xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), param_distributions_xgb, X_train, y_train)
+    best_lgb = randomized_search_model(lgb.LGBMClassifier(random_state=42), param_distributions_lgb, X_train, y_train)
     
     return {
         'Random Forest': best_rf,
@@ -163,23 +145,6 @@ def advanced_eda_percent_away(data, feature_importances, target='result', save_p
         if save_path:
             plt.savefig(os.path.join(save_path, f'{feature}_distribution.png'))
         plt.close()
-
-        win_values = data[data[target] == 0][feature]
-        loss_values = data[data[target] == 1][feature]
-        st.write(f"\n{feature} Statistics:")
-        st.write(f"Mean (Win): {win_values.mean():.2f}, Mean (Loss): {loss_values.mean():.2f}")
-        st.write(f"Median (Win): {win_values.median():.2f}, Median (Loss): {loss_values.median():.2f}")
-        st.write(f"Standard Deviation (Win): {win_values.std():.2f}, Standard Deviation (Loss): {loss_values.std():.2f}")
-        st.write(f"Skewness (Win): {win_values.skew():.2f}, Skewness (Loss): {loss_values.skew():.2f}")
-        st.write(f"Kurtosis (Win): {win_values.kurtosis():.2f}, Kurtosis (Loss): {loss_values.kurtosis():.2f}")
-        
-        t_stat, p_value = stats.ttest_ind(win_values, loss_values, equal_var=False)
-        st.write(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
-        
-        sns.kdeplot(win_values, label='Win', fill=True)
-        sns.kdeplot(loss_values, label='Loss', fill=True)
-        plt.title(f'KDE Plot of {feature} for Win and Loss')
-        plt.legend()
         
         if save_path:
             plt.savefig(os.path.join(save_path, f'{feature}_kde_plot.png'))
@@ -200,7 +165,7 @@ def run_model_percentage_away():
         (X_train, X_test, y_train, y_test), percent_away_features = prepare_percent_away_data(merged_data)
         
         st.write("Training models with hyperparameter tuning...")
-        models = train_models(X_train, y_train, X_test, y_test)
+        models = train_models(X_train, y_train)
         
         st.write("Evaluating models...")
         results = {name: evaluate_model(model, X_test, y_test) for name, model in models.items()}
