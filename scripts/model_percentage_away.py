@@ -127,28 +127,6 @@ def advanced_eda_percent_away(data, feature_importances, model_name, target='res
             plt.savefig(os.path.join(save_path, f'{feature}_distribution.png'))
         plt.close()
 
-        win_values = data[data[target] == 0][feature]
-        loss_values = data[data[target] == 1][feature]
-        st.write(f"\n{feature} Statistics ({model_name}):")
-        st.write(f"Mean (Win): {win_values.mean():.2f}, Mean (Loss): {loss_values.mean():.2f}")
-        st.write(f"Median (Win): {win_values.median():.2f}, Median (Loss): {loss_values.median():.2f}")
-        st.write(f"Standard Deviation (Win): {win_values.std():.2f}, Standard Deviation (Loss): {loss_values.std():.2f}")
-        st.write(f"Skewness (Win): {win_values.skew():.2f}, Skewness (Loss): {loss_values.skew():.2f}")
-        st.write(f"Kurtosis (Win): {win_values.kurtosis():.2f}, Kurtosis (Loss): {loss_values.kurtosis():.2f}")
-        
-        t_stat, p_value = stats.ttest_ind(win_values, loss_values, equal_var=False)
-        st.write(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
-        
-        sns.kdeplot(win_values, label='Win', fill=True)
-        sns.kdeplot(loss_values, label='Loss', fill=True)
-        plt.title(f'KDE Plot of {feature} for Win and Loss ({model_name})')
-        plt.legend()
-        
-        if save_path:
-            plt.savefig(os.path.join(save_path, f'{feature}_kde_plot.png'))
-        st.pyplot(plt.gcf())
-        plt.close()
-
 def run_model_percentage_away():
     st.subheader("Model on % Away Indicators")
 
