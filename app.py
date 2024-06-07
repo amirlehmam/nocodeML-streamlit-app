@@ -214,20 +214,27 @@ st.json(formatted_credentials)
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    list(credentials["usernames"].values()),  # usernames list
-    list(credentials["names"].values()),  # names list
-    list(credentials["passwords"].values()),  # passwords list
+    formatted_credentials,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
 )
 
+# Render the login form and get the input credentials
 name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Debugging: Print the authentication status
 st.write(f"Authentication status: {authentication_status}")
 st.write(f"Authenticated name: {name}")
 st.write(f"Authenticated username: {username}")
+
+# Check if authentication was successful
+if authentication_status:
+    st.write(f'Welcome {name}')
+elif authentication_status is False:
+    st.error('Username/password is incorrect')
+elif authentication_status is None:
+    st.warning('Please enter your username and password')
 
 # If login is successful
 if authentication_status:
