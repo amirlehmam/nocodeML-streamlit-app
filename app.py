@@ -197,14 +197,24 @@ st.json(credentials)
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
 
-# Convert credentials to the format expected by stauth
-usernames = {u: {'name': credentials['names'][u], 'password': credentials['passwords'][u]} for u in credentials['usernames']}
-st.write("Formatted usernames for authenticator:")
-st.json(usernames)
+# Format the credentials for the authenticator
+formatted_credentials = {
+    "usernames": {
+        user: {
+            "name": credentials["names"][user],
+            "password": credentials["passwords"][user]
+        }
+        for user in credentials["usernames"]
+    }
+}
+
+# Debugging: Print the formatted credentials
+st.write("Formatted credentials for authenticator:")
+st.json(formatted_credentials)
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    usernames,
+    formatted_credentials,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
