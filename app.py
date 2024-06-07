@@ -1,10 +1,7 @@
 import streamlit as st
 import streamlit_authenticator as stauth
-import sqlite3
-from pathlib import Path
 import yaml
 from yaml.loader import SafeLoader
-import pandas as pd
 import os
 import base64
 
@@ -183,12 +180,12 @@ authenticator = stauth.Authenticate(
 )
 
 # Render the login module
-authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Check the authentication status
-if st.session_state.get("authentication_status"):
-    authenticator.logout('Logout')
-    st.write(f'Welcome *{st.session_state["name"]}*')
+if authentication_status:
+    authenticator.logout('Logout', 'sidebar')
+    st.write(f'Welcome *{name}*')
     st.title('Some content')
 
     # Display the logo

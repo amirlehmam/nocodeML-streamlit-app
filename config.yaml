@@ -10,12 +10,6 @@ credentials:
       logged_in: false
       name: admin
       password: pbkdf2:sha256:600000$w77b3K2w4iLULTKx$397c061162a4471e18c78894cbca28a26d79fe310ecb9b0bd3aa7412f5be265f
-    rbriggs:
-      email: rbriggs@gmail.com
-      failed_login_attempts: 0
-      logged_in: false
-      name: Rebecca Briggs
-      password: def
 preauthorized:
   emails:
   - melsby@gmail.com
