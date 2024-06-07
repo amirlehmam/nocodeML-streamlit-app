@@ -2,9 +2,6 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
-import sqlite3
-from pathlib import Path
-import pandas as pd
 import os
 import base64
 
@@ -29,7 +26,12 @@ authenticator = stauth.Authenticate(
 )
 
 # Creating the login widget
-name, authentication_status, username = authenticator.login('form_name')
+name, authentication_status, username = authenticator.login('Login', 'main')
+
+# Debug: Print login status
+st.write(f"Authentication status: {authentication_status}")
+st.write(f"Name: {name}")
+st.write(f"Username: {username}")
 
 # Function to load and encode image
 def load_image(image_path):
