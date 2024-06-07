@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import os
 import base64
+from werkzeug.security import check_password_hash
 
 # Set page config
 st.set_page_config(
@@ -189,14 +190,11 @@ def fetch_user_credentials():
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
-# Hash the passwords
-hashed_passwords = stauth.Hasher(credentials["passwords"]).generate()
-
 # Create an authenticator object
 authenticator = stauth.Authenticate(
     names=credentials["names"],
     usernames=credentials["usernames"],
-    passwords=hashed_passwords,
+    passwords=credentials["passwords"],
     cookie_name='nocodeML_cookie',
     key='some_random_key',
     cookie_expiry_days=30
