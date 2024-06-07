@@ -199,13 +199,11 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Format the credentials for the authenticator
 formatted_credentials = {
-    "usernames": {
-        user: {
-            "name": credentials["names"][user],
-            "password": credentials["passwords"][user]
-        }
-        for user in credentials["usernames"]
+    user: {
+        "name": credentials["names"][user],
+        "password": credentials["passwords"][user]
     }
+    for user in credentials["usernames"]
 }
 
 # Debugging: Print the formatted credentials
@@ -220,7 +218,6 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# Render the login form and get the input credentials
 name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Debugging: Print the authentication status
@@ -235,15 +232,7 @@ elif authentication_status is False:
     st.error('Username/password is incorrect')
 elif authentication_status is None:
     st.warning('Please enter your username and password')
-
-# Check if authentication was successful
-if authentication_status:
-    st.write(f'Welcome {name}')
-elif authentication_status is False:
-    st.error('Username/password is incorrect')
-elif authentication_status is None:
-    st.warning('Please enter your username and password')
-
+    
 # If login is successful
 if authentication_status:
     st.write(f'Welcome {name}')
