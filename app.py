@@ -199,11 +199,13 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Format the credentials for the authenticator
 formatted_credentials = {
-    user: {
-        "name": credentials["names"][user],
-        "password": credentials["passwords"][user]
+    "usernames": {
+        user: {
+            "name": credentials["names"][user],
+            "password": credentials["passwords"][user]
+        }
+        for user in credentials["usernames"]
     }
-    for user in credentials["usernames"]
 }
 
 # Debugging: Print the formatted credentials
@@ -226,14 +228,6 @@ st.write(f"Authenticated name: {name}")
 st.write(f"Authenticated username: {username}")
 
 # Check if authentication was successful
-if authentication_status:
-    st.write(f'Welcome {name}')
-elif authentication_status is False:
-    st.error('Username/password is incorrect')
-elif authentication_status is None:
-    st.warning('Please enter your username and password')
-    
-# If login is successful
 if authentication_status:
     st.write(f'Welcome {name}')
 
