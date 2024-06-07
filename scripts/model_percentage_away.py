@@ -12,7 +12,6 @@ import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-from tqdm.auto import tqdm  # Use tqdm.auto for better compatibility
 import time
 
 # Load data
@@ -32,10 +31,9 @@ def prepare_percent_away_data(merged_data):
     
     return train_test_split(X_imputed, y, test_size=0.3, random_state=42), percent_away_features
 
-# Grid search with progress bar
+# Grid search with simple print progress
 def grid_search_model(model, param_grid, X_train, y_train, X_test, y_test):
     n_iter = np.prod([len(v) for v in param_grid.values()])
-    pbar = tqdm(total=n_iter, desc="Hyperparameter Tuning")
     
     best_estimator = None
     best_score = -np.inf
@@ -52,15 +50,8 @@ def grid_search_model(model, param_grid, X_train, y_train, X_test, y_test):
         
         elapsed_time = time.time() - start_time
         remaining_time = (elapsed_time / i) * (n_iter - i)
-        pbar.set_postfix({
-            'Best Score': best_score,
-            'Elapsed Time': f'{elapsed_time:.2f}s',
-            'Remaining Time': f'{remaining_time:.2f}s'
-        })
-        
-        pbar.update(1)
+        print(f"Iteration {i}/{n_iter}, Best Score: {best_score:.4f}, Elapsed Time: {elapsed_time:.2f}s, Remaining Time: {remaining_time:.2f}s")
     
-    pbar.close()
     return best_estimator
 
 # Train models with hyperparameter tuning
