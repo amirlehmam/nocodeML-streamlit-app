@@ -14,19 +14,32 @@ st.set_page_config(
 )
 
 # Load configuration file
-with open('config.yaml') as file:
-    config = yaml.load(file, Loader=SafeLoader)
+config_path = 'config.yaml'
 
-# Debug: Print config to ensure it's loaded correctly
-st.write(config)
+# Check if config file exists
+if not os.path.exists(config_path):
+    st.error(f"Configuration file {config_path} not found!")
+else:
+    with open(config_path) as file:
+        try:
+            config = yaml.load(file, Loader=SafeLoader)
+            st.write(config)  # Debug: Print config to ensure it's loaded correctly
+        except Exception as e:
+            st.error(f"Error loading configuration file: {e}")
+            st.stop()
 
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['preauthorized']
-)
+# Initialize authenticator
+try:
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+        config['preauthorized']
+    )
+except Exception as e:
+    st.error(f"Error initializing authenticator: {e}")
+    st.stop()
 
 # Creating the login widget
 name, authentication_status, username = authenticator.login('Login', 'main')
@@ -38,9 +51,13 @@ st.write(f"Username: {username}")
 
 # Function to load and encode image
 def load_image(image_path):
-    with open(image_path, "rb") as image_file:
-        encoded_image = base64.b64encode(image_file.read()).decode()
-    return encoded_image
+    try:
+        with open(image_path, "rb") as image_file:
+            encoded_image = base64.b64encode(image_file.read()).decode()
+        return encoded_image
+    except FileNotFoundError:
+        st.warning(f"Image file {image_path} not found!")
+        return None
 
 # Custom CSS for enhanced design
 st.markdown(
@@ -175,7 +192,7 @@ st.markdown(
 
 # Display the logo
 logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-if os.path.exists(logo_path):
+if logo_path:
     st.image(logo_path, width=200)
 else:
     st.warning("Logo file not found!")
