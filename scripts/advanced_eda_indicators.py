@@ -167,7 +167,7 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
         loss_values = data[data[target] == 1][feature]
         st.write(f"\n{feature} Statistics ({model_name}):")
         st.write(f"Mean (Win): {win_values.mean():.2f}, Mean (Loss): {loss_values.mean():.2f}")
-        st.write(f"Median (Win): {win_values.median():.2f}, Median (Loss): {loss_values.median():.2f}")
+        st.write(f"Median (Win): {win_values.median()::.2f}, Median (Loss): {loss_values.median():.2f}")
         st.write(f"Standard Deviation (Win): {win_values.std():.2f}, Standard Deviation (Loss): {loss_values.std():.2f}")
         st.write(f"Skewness (Win): {win_values.skew():.2f}, Skewness (Loss): {loss_values.skew():.2f}")
         st.write(f"Kurtosis (Win): {win_values.kurtosis():.2f}, Kurtosis (Loss): {loss_values.kurtosis():.2f}")
@@ -222,10 +222,10 @@ def run_advanced_eda_indicators():
             return
 
     if "merged_data" in st.session_state:
-        trade_type = st.selectbox("Select Trade Type", ["Long Only", "Short Only", "Long & Short"])
-        model_name = st.selectbox("Select Model", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM"])
-        top_n = st.selectbox("Select Top N Indicators", [None, 10, 5, 3, "ALL"])
-        individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.feature_importances[model_name]['feature'])
+        trade_type = st.selectbox("Select Trade Type", sorted(["Long Only", "Short Only", "Long & Short"]))
+        model_name = st.selectbox("Select Model", sorted(["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM"]))
+        top_n = st.selectbox("Select Top N Indicators", sorted([None, 10, 5, 3, "ALL"], key=lambda x: (str(x) if x is not None else "")))
+        individual_indicator = st.selectbox("Select Individual Indicator", sorted(st.session_state.feature_importances[model_name]['feature']))
 
         if st.button("Run EDA"):
             advanced_eda(st.session_state.merged_data, st.session_state.feature_importances, trade_type=trade_type, model_name=model_name, top_n=top_n, individual_indicator=individual_indicator)
