@@ -66,8 +66,13 @@ def evaluate_model(model, X_test, y_test):
 # SHAP feature importance
 def plot_shap_importance(model, X_train, percent_away_features, model_name):
     try:
-        explainer = shap.TreeExplainer(model)
+        if isinstance(model, (RandomForestClassifier, GradientBoostingClassifier)):
+            explainer = shap.TreeExplainer(model)
+        else:
+            explainer = shap.KernelExplainer(model.predict, X_train, nsamples=100)
+        
         shap_values = explainer.shap_values(X_train)
+        
         shap.summary_plot(shap_values, X_train, plot_type="bar", feature_names=percent_away_features)
         plt.title(f'SHAP Feature Importance - {model_name}')
         st.pyplot(plt.gcf())
