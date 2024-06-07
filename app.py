@@ -170,7 +170,7 @@ st.markdown(
 )
 
 
-## Load the configuration file
+# Load the configuration file
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
@@ -184,10 +184,10 @@ authenticator = stauth.Authenticate(
 )
 
 # Render the login module
-authenticator.login()
+authenticator.login('Login', 'main')
 
 # Check the authentication status
-if st.session_state["authentication_status"]:
+if st.session_state.get("authentication_status"):
     authenticator.logout('Logout')
     st.write(f'Welcome *{st.session_state["name"]}*')
     st.title('Some content')
