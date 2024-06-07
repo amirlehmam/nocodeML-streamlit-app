@@ -29,7 +29,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Creating the login widget
-name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login('form_name')
 
 # Function to load and encode image
 def load_image(image_path):
