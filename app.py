@@ -33,7 +33,6 @@ authenticator = stauth.Authenticate(
 authenticator.login()
 
 if st.session_state["authentication_status"]:
-    authenticator.logout()
     st.markdown(
         """
         <style>
@@ -176,10 +175,13 @@ if st.session_state["authentication_status"]:
             border-radius: 5px;
         }
 
-        .logout-button {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
+        /* Logout button */
+        .sidebar .logout-button {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 10px 0;
+            text-align: center;
         }
         </style>
         """,
@@ -189,7 +191,14 @@ if st.session_state["authentication_status"]:
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
-        st.image(logo_path, width=200, use_column_width='auto')
+        st.markdown(
+            f"""
+            <div class="center-logo">
+                <img src="data:image/png;base64,{load_image(logo_path)}" width="200">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         st.warning("Logo file not found!")
 
@@ -208,6 +217,18 @@ if st.session_state["authentication_status"]:
     nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
     nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
     nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
+    # Logout button at the bottom of the sidebar
+    st.sidebar.markdown(
+        """
+        <div class="logout-button">
+            <form action='/logout'>
+                <button type='submit' class="sidebar-button">Logout</button>
+            </form>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Initialize session state if not already done
     if 'page' not in st.session_state:
@@ -311,18 +332,6 @@ if st.session_state["authentication_status"]:
         """
         <div class='footer'>
             <p>&copy; 2024 nocodeML. All rights reserved.</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Logout button at the bottom right
-    st.markdown(
-        """
-        <div class='logout-button'>
-            <form action='/logout'>
-                <button type='submit'>Logout</button>
-            </form>
         </div>
         """,
         unsafe_allow_html=True
