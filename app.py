@@ -17,6 +17,9 @@ st.set_page_config(
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
+# Debug: Print config to ensure it's loaded correctly
+st.write(config)
+
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -26,7 +29,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Creating the login widget
-name, authentication_status, username = authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login('Login', 'form_name')
 
 # Debug: Print login status
 st.write(f"Authentication status: {authentication_status}")
@@ -291,13 +294,19 @@ if authentication_status:
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-# Reset password widget
+# Handle authentication state
 if authentication_status:
     try:
         if authenticator.reset_password(st.session_state["username"]):
             st.success('Password modified successfully')
     except Exception as e:
         st.error(e)
+
+elif authentication_status is False:
+    st.error('Username/password is incorrect')
+
+elif authentication_status is None:
+    st.warning('Please enter your username and password')
 
 # Footer
 st.markdown(
