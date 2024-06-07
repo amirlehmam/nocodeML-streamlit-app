@@ -180,7 +180,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Render the login module
-name, authentication_status, username = authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login('Login')
 
 # Check the authentication status
 if authentication_status:
