@@ -199,31 +199,15 @@ signature_key = 'some_random_key'  # You should use a more secure key
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    credentials,  # Pass the entire credentials dictionary
+    list(credentials["usernames"].values()),  # usernames list
+    list(credentials["names"].values()),  # names list
+    list(credentials["passwords"].values()),  # passwords list
     cookie_name,
     signature_key,
     cookie_expiry_days=30
 )
 
-# Debugging: Print the user input credentials
-username_input = st.text_input("Username")
-password_input = st.text_input("Password", type="password")
-
-st.write(f"Input username: {username_input}")
-st.write(f"Input password: {password_input}")
-
-# Verify the hashed password
-if username_input in credentials["usernames"]:
-    stored_password_hash = credentials["passwords"][username_input]
-    password_valid = check_password_hash(stored_password_hash, password_input)
-    st.write(f"Password valid: {password_valid}")
-
 name, authentication_status, username = authenticator.login('Login', 'main')
-
-# Debugging: Print the authentication status
-st.write(f"Authentication status: {authentication_status}")
-st.write(f"Authenticated name: {name}")
-st.write(f"Authenticated username: {username}")
 
 
 # If login is successful
