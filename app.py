@@ -200,6 +200,7 @@ nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "ðŸ
 if 'page' not in st.session_state:
     st.session_state.page = "Overview"
 
+# Handle authentication state
 if authentication_status:
     page = st.session_state.page
 
@@ -293,14 +294,6 @@ if authentication_status:
     elif page == "Win Ranges for Specific Model":
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
-
-# Handle authentication state
-if authentication_status:
-    try:
-        if authenticator.reset_password(st.session_state["username"]):
-            st.success('Password modified successfully')
-    except Exception as e:
-        st.error(e)
 
 elif authentication_status is False:
     st.error('Username/password is incorrect')

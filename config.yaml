@@ -5,13 +5,13 @@ credentials:
       failed_login_attempts: 0
       logged_in: false
       name: admin
-      password: $2b$12$Bb4OvTNJw1IDMcTmHYgViOC52eaQX.BfPjRiWcYmcOVWmdzNOSN3W
+      password: $2b$12$URTz11NxRZQFF.GktCNkX.L7Gxfbqq3tO.S44T3WpYtQ3JxIJRwgi
     test_user:
       email: test@gmail.com
       failed_login_attempts: 0
       logged_in: false
       name: Testing Guy
-      password: $2b$12$5J.eWbV0RTdqIUUP4bX8F.dDjqnXURaii.BgrM8pgTupnz0Kpp4Iu
+      password: $2b$12$WX5kjbwO9P6DgYqcFgnls.Q0JQqFQKbrYwIebtzyTSP0PwycD898K
 
 cookie:
   expiry_days: 30
