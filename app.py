@@ -35,8 +35,6 @@ authenticator.login()
 if st.session_state["authentication_status"]:
     authenticator.logout()
     st.write(f'Welcome *{st.session_state["name"]}*')
-    st.title('Some content')
-
 
     # Custom CSS for enhanced design
     st.markdown(
