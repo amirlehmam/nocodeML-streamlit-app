@@ -31,7 +31,7 @@ def prepare_percent_away_data(merged_data):
     return train_test_split(X_imputed, y, test_size=0.3, random_state=42), percent_away_features
 
 # Randomized search with cross-validation
-def randomized_search_model(model, param_distributions, X_train, y_train, n_iter=5):
+def randomized_search_model(model, param_distributions, X_train, y_train, n_iter=2):
     random_search = RandomizedSearchCV(model, param_distributions, n_iter=n_iter, cv=3, scoring='accuracy', n_jobs=1, random_state=42)
     random_search.fit(X_train, y_train)
     return random_search.best_estimator_
