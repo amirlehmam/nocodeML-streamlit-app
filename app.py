@@ -101,12 +101,11 @@ if st.session_state["authentication_status"]:
         }
 
         /* Center logo */
-        .sidebar-logo {
+        .center-logo {
             display: flex;
             justify-content: center;
             align-items: center;
             margin-top: 20px;
-            margin-bottom: 20px;
         }
 
         /* Footer */
@@ -177,7 +176,9 @@ if st.session_state["authentication_status"]:
         }
 
         /* Logout button */
-        .logout-button {
+        .sidebar .logout-button {
+            position: absolute;
+            bottom: 0;
             width: 100%;
             padding: 10px 0;
             text-align: center;
@@ -186,6 +187,20 @@ if st.session_state["authentication_status"]:
         """,
         unsafe_allow_html=True
     )
+
+    # Display the logo
+    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    if os.path.exists(logo_path):
+        st.markdown(
+            f"""
+            <div class="center-logo">
+                <img src="data:image/png;base64,{load_image(logo_path)}" width="200">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.warning("Logo file not found!")
 
     # Sidebar for navigation with icons
     st.sidebar.title("Navigation")
@@ -202,6 +217,18 @@ if st.session_state["authentication_status"]:
     nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
     nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
     nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
+    # Logout button at the bottom of the sidebar
+    st.sidebar.markdown(
+        """
+        <div class="logout-button">
+            <form action='/logout'>
+                <button type='submit' class="sidebar-button">Logout</button>
+            </form>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Initialize session state if not already done
     if 'page' not in st.session_state:
@@ -299,32 +326,6 @@ if st.session_state["authentication_status"]:
     elif page == "Win Ranges for Specific Model":
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
-
-    # Logout button at the bottom of the sidebar
-    st.sidebar.markdown(
-        """
-        <div class="logout-button">
-            <form>
-                <button type='submit' class="sidebar-button" onclick="fetch('/_stcore/authenticate/logout').then(window.location.reload()); return false;">Logout</button>
-            </form>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Display the logo at the bottom of the sidebar
-    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-    if os.path.exists(logo_path):
-        st.sidebar.markdown(
-            f"""
-            <div class="sidebar-logo">
-                <img src="data:image/png;base64,{load_image(logo_path)}" width="100">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        st.warning("Logo file not found!")
 
     # Footer
     st.markdown(
