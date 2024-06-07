@@ -175,14 +175,6 @@ if st.session_state["authentication_status"]:
             border-radius: 5px;
         }
 
-        /* Logout button */
-        .sidebar .logout-button {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            padding: 10px 0;
-            text-align: center;
-        }
         </style>
         """,
         unsafe_allow_html=True
@@ -326,6 +318,8 @@ if st.session_state["authentication_status"]:
     elif page == "Win Ranges for Specific Model":
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
+
+    authenticator.logout()
 
     # Footer
     st.markdown(
