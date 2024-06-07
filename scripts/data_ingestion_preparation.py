@@ -30,7 +30,7 @@ def clean_and_parse_data(file_path):
         event_type = parts[1]
 
         if event_type == 'Indicator':
-            indicators = parts[8:]
+            indicators = parts[7:]
             for i in range(0, len(indicators), 2):
                 if i + 1 < len(indicators):
                     indicator_name = indicators[i]
@@ -38,7 +38,7 @@ def clean_and_parse_data(file_path):
                     if indicator_name and indicator_value:  # Ensure both name and value are not empty
                         indicator_data.append([timestamp, indicator_name, float(indicator_value)])
         elif event_type == 'Signal':
-            signals = parts[9:]
+            signals = parts[8:]
             row = [timestamp, 'Signal']
             for i in range(0, len(signals), 2):
                 if i + 1 < len(signals):
@@ -271,4 +271,3 @@ def run_data_ingestion_preparation():
     
     if st.button("Verify Trade Parsing"):
         verify_trade_parsing(data_output_dir, data_output_dir)
-
