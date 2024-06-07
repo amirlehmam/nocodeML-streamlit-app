@@ -2,8 +2,26 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+import sqlite3
+from pathlib import Path
+import pandas as pd
 import os
 import base64
+
+# Load configuration file
+with open('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
+
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+    config['pre-authorized']
+)
+
+# Creating the login widget
+name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Set page config
 st.set_page_config(
@@ -29,13 +47,11 @@ st.markdown(
         color: #FAFAFA;
         font-family: 'Arial', sans-serif;
     }
-
     /* Sidebar */
     .css-1d391kg {
         background: url('https://www.transparenttextures.com/patterns/black-linen.png');
         color: #FAFAFA;
     }
-
     /* Sidebar button style */
     .sidebar-button {
         display: flex;
@@ -53,40 +69,33 @@ st.markdown(
         width: 100%;
         text-align: left;
     }
-    
     .sidebar-button:hover {
         background-color: #1565C0;
     }
-
     /* Title */
     .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
         color: #FAFAFA;
     }
-
     /* Headers */
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
         color: #FAFAFA;
     }
-
     /* Buttons */
     .stButton button {
         background-color: #1E88E5;
         color: #FAFAFA;
         border-radius: 5px;
     }
-    
     /* Dropdown */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #262730;
         color: #FAFAFA;
     }
-
     /* Text Inputs */
     .stTextInput div[data-baseweb="input"] > div {
         background-color: #262730;
         color: #FAFAFA;
     }
-
     /* Center logo */
     .center-logo {
         display: flex;
@@ -94,7 +103,6 @@ st.markdown(
         align-items: center;
         margin-top: 20px;
     }
-
     /* Footer */
     .footer {
         position: fixed;
@@ -106,13 +114,11 @@ st.markdown(
         text-align: center;
         padding: 10px 0;
     }
-
     /* Tooltip */
     .tooltip {
         position: relative;
         display: inline-block;
     }
-
     .tooltip .tooltiptext {
         visibility: hidden;
         width: 120px;
@@ -129,12 +135,10 @@ st.markdown(
         opacity: 0;
         transition: opacity 0.3s;
     }
-
     .tooltip:hover .tooltiptext {
         visibility: visible;
         opacity: 1;
     }
-
     /* Collapsible */
     .collapsible {
         background-color: #1E88E5;
@@ -149,11 +153,9 @@ st.markdown(
         border-radius: 5px;
         margin-bottom: 5px;
     }
-
     .active, .collapsible:hover {
         background-color: #1565C0;
     }
-
     .content {
         padding: 0 18px;
         display: none;
@@ -166,54 +168,34 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Load the configuration file
-with open('config.yaml') as file:
-    config = yaml.load(file, Loader=SafeLoader)
+# Display the logo
+logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+if os.path.exists(logo_path):
+    st.image(logo_path, width=200)
+else:
+    st.warning("Logo file not found!")
 
-# Create an authenticator object
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['preauthorized']
-)
+# Sidebar for navigation with icons
+st.sidebar.title("Navigation")
 
-# Render the login module
-name, authentication_status, username = authenticator.login()
+def nav_button(label, page_name, icon):
+    if st.sidebar.button(f"{icon} {label}"):
+        st.session_state.page = page_name
 
-# Check the authentication status
-if st.session_state["authentication_status"]:
-    st.write(f'Welcome *{st.session_state["name"]}*')
-    st.title('Some content')
+nav_button("Overview", "Overview", "🏠")
+nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
 
-    # Display the logo
-    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=200)
-    else:
-        st.warning("Logo file not found!")
+# Initialize session state if not already done
+if 'page' not in st.session_state:
+    st.session_state.page = "Overview"
 
-    # Sidebar for navigation with icons
-    st.sidebar.title("Navigation")
-
-    def nav_button(label, page_name, icon):
-        if st.sidebar.button(f"{icon} {label}"):
-            st.session_state.page = page_name
-
-    nav_button("Overview", "Overview", "🏠")
-    nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-    nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-    nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-    nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-    nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-    nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-    nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
-
-    # Initialize session state if not already done
-    if 'page' not in st.session_state:
-        st.session_state.page = "Overview"
-
+if authentication_status:
     page = st.session_state.page
 
     if page == "Overview":
@@ -307,24 +289,20 @@ if st.session_state["authentication_status"]:
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-    # Add logout button
-    if st.sidebar.button('Logout'):
-        authenticator.logout('Logout', 'sidebar')
+# Reset password widget
+if authentication_status:
+    try:
+        if authenticator.reset_password(st.session_state["username"]):
+            st.success('Password modified successfully')
+    except Exception as e:
+        st.error(e)
 
-    # Footer
-    st.markdown(
-        """
-        <div class='footer'>
-            <p>&copy; 2024 nocodeML. All rights reserved.</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-# If login fails
-elif st.session_state["authentication_status"] is False:
-    st.error('Username or password is incorrect')
-
-# If login not attempted yet
-elif st.session_state["authentication_status"] is None:
-    st.warning('Please enter your username and password')
+# Footer
+st.markdown(
+    """
+    <div class='footer'>
+        <p>&copy; 2024 nocodeML. All rights reserved.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
