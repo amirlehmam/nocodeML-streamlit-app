@@ -186,7 +186,7 @@ if st.session_state["authentication_status"]:
         st.markdown(
             f"""
             <div class="center-logo">
-                <img src="data:image/png;base64,{load_image(logo_path)}" width="200">
+                <img src="data:image/png;base64,{load_image(logo_path)}" width="280">
             </div>
             """,
             unsafe_allow_html=True
