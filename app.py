@@ -219,7 +219,6 @@ if st.session_state["authentication_status"]:
         ###  nocodeML Algorithmic Trading Optimization
 
         #### Streamlined for Precision and Performance
-
         ---
 
         **Key Features:**
