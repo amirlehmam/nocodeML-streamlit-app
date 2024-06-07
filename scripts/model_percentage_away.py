@@ -32,7 +32,7 @@ def prepare_percent_away_data(merged_data):
 
 # Randomized search with cross-validation
 def randomized_search_model(model, param_distributions, X_train, y_train, n_iter=10):
-    random_search = RandomizedSearchCV(model, param_distributions, n_iter=n_iter, cv=3, scoring='accuracy', n_jobs=-1, random_state=42)
+    random_search = RandomizedSearchCV(model, param_distributions, n_iter=n_iter, cv=3, scoring='accuracy', n_jobs=1, random_state=42)
     random_search.fit(X_train, y_train)
     return random_search.best_estimator_
 
@@ -144,11 +144,6 @@ def advanced_eda_percent_away(data, feature_importances, target='result', save_p
         
         if save_path:
             plt.savefig(os.path.join(save_path, f'{feature}_distribution.png'))
-        plt.close()
-        
-        if save_path:
-            plt.savefig(os.path.join(save_path, f'{feature}_kde_plot.png'))
-        st.pyplot(plt.gcf())
         plt.close()
 
 def run_model_percentage_away():
