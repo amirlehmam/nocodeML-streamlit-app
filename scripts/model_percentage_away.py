@@ -62,10 +62,21 @@ def train_models(X_train, y_train):
         'num_leaves': [31, 50, 100]
     }
 
+    st.write("Starting Random Forest tuning...")
     best_rf = randomized_search_model(RandomForestClassifier(random_state=42), param_distributions_rf, X_train, y_train)
+    st.write("Random Forest tuning completed.")
+
+    st.write("Starting Gradient Boosting tuning...")
     best_gb = randomized_search_model(GradientBoostingClassifier(random_state=42), param_distributions_gb, X_train, y_train)
+    st.write("Gradient Boosting tuning completed.")
+
+    st.write("Starting XGBoost tuning...")
     best_xgb = randomized_search_model(xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), param_distributions_xgb, X_train, y_train)
+    st.write("XGBoost tuning completed.")
+
+    st.write("Starting LightGBM tuning...")
     best_lgb = randomized_search_model(lgb.LGBMClassifier(random_state=42), param_distributions_lgb, X_train, y_train)
+    st.write("LightGBM tuning completed.")
     
     return {
         'Random Forest': best_rf,
