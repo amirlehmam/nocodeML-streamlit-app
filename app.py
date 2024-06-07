@@ -33,10 +33,6 @@ authenticator = stauth.Authenticate(
 authenticator.login()
 
 if st.session_state["authentication_status"]:
-    authenticator.logout()
-    st.write(f'Welcome *{st.session_state["name"]}*')
-
-    # Custom CSS for enhanced design
     st.markdown(
         """
         <style>
@@ -178,16 +174,21 @@ if st.session_state["authentication_status"]:
             background-color: #262730;
             border-radius: 5px;
         }
+
+        .logout-button {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+        }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
-        st.image(logo_path, width=200)
+        st.image(logo_path, width=200, use_column_width='auto')
     else:
         st.warning("Logo file not found!")
 
@@ -304,7 +305,6 @@ if st.session_state["authentication_status"]:
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-
     # Footer
     st.markdown(
         """
@@ -314,6 +314,19 @@ if st.session_state["authentication_status"]:
         """,
         unsafe_allow_html=True
     )
+
+    # Logout button at the bottom right
+    st.markdown(
+        """
+        <div class='logout-button'>
+            <form action='/logout'>
+                <button type='submit'>Logout</button>
+            </form>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 elif st.session_state["authentication_status"] is False:
     st.error('Username/password is incorrect')
 elif st.session_state["authentication_status"] is None:
