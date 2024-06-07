@@ -65,12 +65,15 @@ def evaluate_model(model, X_test, y_test):
 
 # SHAP feature importance
 def plot_shap_importance(model, X_train, percent_away_features, model_name):
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_train)
-    shap.summary_plot(shap_values, X_train, plot_type="bar", feature_names=percent_away_features)
-    plt.title(f'SHAP Feature Importance - {model_name}')
-    st.pyplot(plt.gcf())
-    plt.close()
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_train)
+        shap.summary_plot(shap_values, X_train, plot_type="bar", feature_names=percent_away_features)
+        plt.title(f'SHAP Feature Importance - {model_name}')
+        st.pyplot(plt.gcf())
+        plt.close()
+    except Exception as e:
+        st.error(f"An error occurred while plotting SHAP feature importance: {e}")
 
 # Plot top features
 def plot_top_features(model, feature_names, num_features=10, model_name=None):
@@ -190,4 +193,3 @@ def run_model_percentage_away():
 
 if __name__ == "__main__":
     run_model_percentage_away()
-
