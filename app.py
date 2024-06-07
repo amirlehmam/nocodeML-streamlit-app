@@ -30,7 +30,7 @@ authenticator = stauth.Authenticate(
     config['pre-authorized']
 )
 
-authenticator.login('Login', 'main')
+authenticator.login()
 
 if st.session_state["authentication_status"]:
     authenticator.logout()

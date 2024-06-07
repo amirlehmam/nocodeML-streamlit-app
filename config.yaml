@@ -1,10 +1,10 @@
 credentials:
   usernames:
-    jsmith:
+    admin:
       email: jsmith@gmail.com
       failed_login_attempts: 0 # Will be managed automatically
       logged_in: False # Will be managed automatically
-      name: John Smith
+      name: Admin
       password: abc # Will be hashed automatically
     rbriggs:
       email: rbriggs@gmail.com
