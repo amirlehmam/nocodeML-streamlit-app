@@ -197,11 +197,14 @@ st.json(credentials)
 cookie_name = 'nocodeML_cookie'
 signature_key = 'some_random_key'  # You should use a more secure key
 
+# Convert credentials to the format expected by stauth
+usernames = {u: {'name': credentials['names'][u], 'password': credentials['passwords'][u]} for u in credentials['usernames']}
+st.write("Formatted usernames for authenticator:")
+st.json(usernames)
+
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    list(credentials["usernames"].values()),  # usernames list
-    list(credentials["names"].values()),  # names list
-    list(credentials["passwords"].values()),  # passwords list
+    usernames,
     cookie_name,
     signature_key,
     cookie_expiry_days=30
@@ -209,6 +212,10 @@ authenticator = stauth.Authenticate(
 
 name, authentication_status, username = authenticator.login('Login', 'main')
 
+# Debugging: Print the authentication status
+st.write(f"Authentication status: {authentication_status}")
+st.write(f"Authenticated name: {name}")
+st.write(f"Authenticated username: {username}")
 
 # If login is successful
 if authentication_status:
