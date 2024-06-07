@@ -33,6 +33,7 @@ authenticator = stauth.Authenticate(
 authenticator.login()
 
 if st.session_state["authentication_status"]:
+    authenticator.logout()
     st.markdown(
         """
         <style>
