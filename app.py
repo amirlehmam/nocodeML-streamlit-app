@@ -19,8 +19,7 @@ def load_image(image_path):
         encoded_image = base64.b64encode(image_file.read()).decode()
     return encoded_image
 
-# Load configuration
-with open('config.yaml') as file:
+with open('./config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 authenticator = stauth.Authenticate(
@@ -28,13 +27,18 @@ authenticator = stauth.Authenticate(
     config['cookie']['name'],
     config['cookie']['key'],
     config['cookie']['expiry_days'],
-    config['preauthorized']
+    config['pre-authorized']
 )
 
-# User authentication
-name, authentication_status, username = authenticator.login('Login', 'main')
+authenticator.login()
 
-if authentication_status:
+if st.session_state["authentication_status"]:
+    authenticator.logout()
+    st.write(f'Welcome *{st.session_state["name"]}*')
+    st.title('Some content')
+
+
+    # Custom CSS for enhanced design
     st.markdown(
         """
         <style>
@@ -181,6 +185,7 @@ if authentication_status:
         unsafe_allow_html=True
     )
 
+
     # Display the logo
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
@@ -311,8 +316,7 @@ if authentication_status:
         """,
         unsafe_allow_html=True
     )
-elif authentication_status == False:
+elif st.session_state["authentication_status"] is False:
     st.error('Username/password is incorrect')
-elif authentication_status == None:
+elif st.session_state["authentication_status"] is None:
     st.warning('Please enter your username and password')
-
