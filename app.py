@@ -24,11 +24,11 @@ with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 authenticator = stauth.Authenticate(
-    credentials=config['credentials'],
-    cookie_name=config['cookie']['name'],
-    key=config['cookie']['key'],
-    expiry_days=config['cookie']['expiry_days'],
-    preauthorized=config['preauthorized']
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+    config['preauthorized']
 )
 
 # User authentication
