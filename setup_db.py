@@ -1,36 +1,17 @@
-import sqlite3
+import yaml
+from yaml.loader import SafeLoader
 from werkzeug.security import generate_password_hash
 
-# Connect to the database
-conn = sqlite3.connect('users.db')
-c = conn.cursor()
+# Load existing config
+with open('config.yaml', 'r') as file:
+    config = yaml.load(file, Loader=SafeLoader)
 
-# Create the users table
-c.execute('''
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    password TEXT NOT NULL
-)
-''')
+# Hash the password
+hashed_password = generate_password_hash('admin123', method='pbkdf2:sha256')
 
-# Insert a user
-username = 'test'
-name = 'test'
-password = 'test123'
-hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+# Update the config with hashed password
+config['credentials']['usernames']['admin']['password'] = hashed_password
 
-# Check if user already exists
-c.execute('SELECT * FROM users WHERE username=?', (username,))
-user = c.fetchone()
-
-if user:
-    print("User already exists.")
-else:
-    c.execute('INSERT INTO users (username, name, password) VALUES (?, ?, ?)', (username, name, hashed_password))
-    print("User created.")
-
-# Commit the changes and close the connection
-conn.commit()
-conn.close()
+# Save the updated config
+with open('config.yaml', 'w') as file:
+    yaml.dump(config, file)

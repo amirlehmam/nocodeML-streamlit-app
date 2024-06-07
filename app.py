@@ -169,7 +169,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # Load the configuration file
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
