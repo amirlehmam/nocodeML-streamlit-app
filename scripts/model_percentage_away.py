@@ -12,7 +12,7 @@ import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-from tqdm import tqdm
+from tqdm.auto import tqdm  # Use tqdm.auto for better compatibility
 import time
 
 # Load data
@@ -232,3 +232,5 @@ def run_model_percentage_away():
         analysis_save_path = os.path.join(data_dir, "ml_analysis_percent_away")
         advanced_eda_percent_away(merged_data, {'LightGBM': pd.DataFrame({'feature': percent_away_features, 'importance': models['LightGBM'].feature_importances_})}, save_path=analysis_save_path)
 
+if __name__ == "__main__":
+    run_model_percentage_away()
