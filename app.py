@@ -174,49 +174,31 @@ def fetch_user_credentials():
     conn.close()
 
     credentials = {
-        "usernames": {},
-        "names": {},
-        "passwords": {}
+        "usernames": [],
+        "names": [],
+        "passwords": []
     }
 
     for index, row in df.iterrows():
-        credentials["usernames"][row['username']] = row['username']
-        credentials["names"][row['username']] = row['name']
-        credentials["passwords"][row['username']] = row['password']
+        credentials["usernames"].append(row['username'])
+        credentials["names"].append(row['name'])
+        credentials["passwords"].append(row['password'])
 
     return credentials
 
 # Fetch user credentials
 credentials = fetch_user_credentials()
 
-# Debugging: Print the credentials to verify their structure
-st.write("Credentials loaded:")
-st.json(credentials)
-
-# Define the cookie name and signature key for the authenticator
-cookie_name = 'nocodeML_cookie'
-signature_key = 'some_random_key'  # You should use a more secure key
-
-# Format the credentials for the authenticator
-formatted_credentials = {
-    "usernames": {
-        user: {
-            "name": credentials["names"][user],
-            "password": credentials["passwords"][user]
-        }
-        for user in credentials["usernames"]
-    }
-}
-
-# Debugging: Print the formatted credentials
-st.write("Formatted credentials for authenticator:")
-st.json(formatted_credentials)
+# Hash the passwords
+hashed_passwords = stauth.Hasher(credentials["passwords"]).generate()
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    formatted_credentials,
-    cookie_name,
-    signature_key,
+    names=credentials["names"],
+    usernames=credentials["usernames"],
+    passwords=hashed_passwords,
+    cookie_name='nocodeML_cookie',
+    key='some_random_key',
     cookie_expiry_days=30
 )
 
@@ -227,7 +209,7 @@ st.write(f"Authentication status: {authentication_status}")
 st.write(f"Authenticated name: {name}")
 st.write(f"Authenticated username: {username}")
 
-# Check if authentication was successful
+# If login is successful
 if authentication_status:
     st.write(f'Welcome {name}')
 
