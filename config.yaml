@@ -1,17 +1,17 @@
 credentials:
   usernames:
-    admin:
+    amir:
       email: jsmith@gmail.com
       failed_login_attempts: 0 # Will be managed automatically
       logged_in: False # Will be managed automatically
-      name: Admin
-      password: abc # Will be hashed automatically
-    rbriggs:
-      email: rbriggs@gmail.com
+      name: Amir
+      password: Gdze_94400 # Will be hashed automatically
+    SiiX:
+      email: s@siix.com
       failed_login_attempts: 0 # Will be managed automatically
       logged_in: False # Will be managed automatically
-      name: Rebecca Briggs
-      password: def # Will be hashed automatically
+      name: The one and only "SiiX"
+      password: R4PBKrvsDdMe-.RDr6jFgajXBNd9e # Will be hashed automatically
 cookie:
   expiry_days: 30
   key: some_signature_key # Must be string
