@@ -26,7 +26,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Creating the login widget
-form_name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login('form_name')
 
 # If the user is authenticated, show the rest of the app
 if authentication_status:
