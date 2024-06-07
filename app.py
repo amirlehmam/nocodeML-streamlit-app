@@ -2,6 +2,9 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+import sqlite3
+from pathlib import Path
+import pandas as pd
 import os
 import base64
 
@@ -13,212 +16,200 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Load configuration file
-config_path = 'config.yaml'
-
-# Check if config file exists
-if not os.path.exists(config_path):
-    st.error(f"Configuration file {config_path} not found!")
-else:
-    with open(config_path) as file:
-        try:
-            config = yaml.load(file, Loader=SafeLoader)
-            st.write(config)  # Debug: Print config to ensure it's loaded correctly
-        except Exception as e:
-            st.error(f"Error loading configuration file: {e}")
-            st.stop()
-
-# Initialize authenticator
-try:
-    authenticator = stauth.Authenticate(
-        config['credentials'],
-        config['cookie']['name'],
-        config['cookie']['key'],
-        config['cookie']['expiry_days'],
-        config['preauthorized']
-    )
-except Exception as e:
-    st.error(f"Error initializing authenticator: {e}")
-    st.stop()
-
-# Creating the login widget
-name, authentication_status, username = authenticator.login('Login', 'main')
-
-# Debug: Print login status
-st.write(f"Authentication status: {authentication_status}")
-st.write(f"Name: {name}")
-st.write(f"Username: {username}")
-
 # Function to load and encode image
 def load_image(image_path):
-    try:
-        with open(image_path, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode()
-        return encoded_image
-    except FileNotFoundError:
-        st.warning(f"Image file {image_path} not found!")
-        return None
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
+    return encoded_image
 
-# Custom CSS for enhanced design
-st.markdown(
-    """
-    <style>
-    /* Main Layout */
-    .main {
-        background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-        color: #FAFAFA;
-        font-family: 'Arial', sans-serif;
-    }
-    /* Sidebar */
-    .css-1d391kg {
-        background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-        color: #FAFAFA;
-    }
-    /* Sidebar button style */
-    .sidebar-button {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        padding: 10px 20px;
-        margin: 5px 0;
-        font-size: 18px;
-        font-weight: bold;
-        color: #FAFAFA;
-        background-color: #1E88E5;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        width: 100%;
-        text-align: left;
-    }
-    .sidebar-button:hover {
-        background-color: #1565C0;
-    }
-    /* Title */
-    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
-        color: #FAFAFA;
-    }
-    /* Headers */
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        color: #FAFAFA;
-    }
-    /* Buttons */
-    .stButton button {
-        background-color: #1E88E5;
-        color: #FAFAFA;
-        border-radius: 5px;
-    }
-    /* Dropdown */
-    .stSelectbox div[data-baseweb="select"] {
-        background-color: #262730;
-        color: #FAFAFA;
-    }
-    /* Text Inputs */
-    .stTextInput div[data-baseweb="input"] > div {
-        background-color: #262730;
-        color: #FAFAFA;
-    }
-    /* Center logo */
-    .center-logo {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-top: 20px;
-    }
-    /* Footer */
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #0E1117;
-        color: #FAFAFA;
-        text-align: center;
-        padding: 10px 0;
-    }
-    /* Tooltip */
-    .tooltip {
-        position: relative;
-        display: inline-block;
-    }
-    .tooltip .tooltiptext {
-        visibility: hidden;
-        width: 120px;
-        background-color: #1E88E5;
-        color: #fff;
-        text-align: center;
-        border-radius: 6px;
-        padding: 5px 0;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%; 
-        left: 50%;
-        margin-left: -60px;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-    .tooltip:hover .tooltiptext {
-        visibility: visible;
-        opacity: 1;
-    }
-    /* Collapsible */
-    .collapsible {
-        background-color: #1E88E5;
-        color: white;
-        cursor: pointer;
-        padding: 10px;
-        width: 100%;
-        border: none;
-        text-align: left;
-        outline: none;
-        font-size: 15px;
-        border-radius: 5px;
-        margin-bottom: 5px;
-    }
-    .active, .collapsible:hover {
-        background-color: #1565C0;
-    }
-    .content {
-        padding: 0 18px;
-        display: none;
-        overflow: hidden;
-        background-color: #262730;
-        border-radius: 5px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
+# Load configuration
+with open('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
+
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+    config['preauthorized']
 )
 
-# Display the logo
-logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-if logo_path:
-    st.image(logo_path, width=200)
-else:
-    st.warning("Logo file not found!")
+# User authentication
+name, authentication_status, username = authenticator.login('Login', 'main')
 
-# Sidebar for navigation with icons
-st.sidebar.title("Navigation")
-
-def nav_button(label, page_name, icon):
-    if st.sidebar.button(f"{icon} {label}"):
-        st.session_state.page = page_name
-
-nav_button("Overview", "Overview", "🏠")
-nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
-
-# Initialize session state if not already done
-if 'page' not in st.session_state:
-    st.session_state.page = "Overview"
-
-# Handle authentication state
 if authentication_status:
+    st.markdown(
+        """
+        <style>
+        /* Main Layout */
+        .main {
+            background: url('https://www.transparenttextures.com/patterns/black-linen.png');
+            color: #FAFAFA;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Sidebar */
+        .css-1d391kg {
+            background: url('https://www.transparenttextures.com/patterns/black-linen.png');
+            color: #FAFAFA;
+        }
+
+        /* Sidebar button style */
+        .sidebar-button {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 10px 20px;
+            margin: 5px 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: #FAFAFA;
+            background-color: #1E88E5;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+        
+        .sidebar-button:hover {
+            background-color: #1565C0;
+        }
+
+        /* Title */
+        .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+            color: #FAFAFA;
+        }
+
+        /* Headers */
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+            color: #FAFAFA;
+        }
+
+        /* Buttons */
+        .stButton button {
+            background-color: #1E88E5;
+            color: #FAFAFA;
+            border-radius: 5px;
+        }
+        
+        /* Dropdown */
+        .stSelectbox div[data-baseweb="select"] {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+
+        /* Text Inputs */
+        .stTextInput div[data-baseweb="input"] > div {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+
+        /* Center logo */
+        .center-logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background-color: #0E1117;
+            color: #FAFAFA;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #1E88E5;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; 
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Collapsible */
+        .collapsible {
+            background-color: #1E88E5;
+            color: white;
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+
+        .active, .collapsible:hover {
+            background-color: #1565C0;
+        }
+
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: #262730;
+            border-radius: 5px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Display the logo
+    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=200)
+    else:
+        st.warning("Logo file not found!")
+
+    # Sidebar for navigation with icons
+    st.sidebar.title("Navigation")
+
+    def nav_button(label, page_name, icon):
+        if st.sidebar.button(f"{icon} {label}"):
+            st.session_state.page = page_name
+
+    nav_button("Overview", "Overview", "🏠")
+    nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+    nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+    nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+    nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+    nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+    nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+    nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
+    # Initialize session state if not already done
+    if 'page' not in st.session_state:
+        st.session_state.page = "Overview"
+
     page = st.session_state.page
 
     if page == "Overview":
@@ -312,18 +303,19 @@ if authentication_status:
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-elif authentication_status is False:
-    st.error('Username/password is incorrect')
 
-elif authentication_status is None:
+    # Footer
+    st.markdown(
+        """
+        <div class='footer'>
+            <p>&copy; 2024 nocodeML. All rights reserved.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+elif authentication_status == False:
+    st.error('Username/password is incorrect')
+elif authentication_status == None:
     st.warning('Please enter your username and password')
 
-# Footer
-st.markdown(
-    """
-    <div class='footer'>
-        <p>&copy; 2024 nocodeML. All rights reserved.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+authenticator.logout('Logout', 'main')

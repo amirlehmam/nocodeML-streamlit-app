@@ -2,16 +2,12 @@ credentials:
   usernames:
     admin:
       email: aeonthings@gmail.com
-      failed_login_attempts: 0
-      logged_in: false
       name: admin
-      password: $2b$12$glO.BLWwHbEflojRSomLnO1JKe.8wxWbi/KZIZe2Rj7Kpj5NOHFmm
+      password: abc
     test_user:
       email: test@gmail.com
-      failed_login_attempts: 0
-      logged_in: false
       name: Testing Guy
-      password: $2b$12$u917eht94cO8.8syC9FRuuurBZ0N.Zd86ryEE5ObV7fQm2Ns2dynO
+      password: edf
 
 cookie:
   expiry_days: 30
