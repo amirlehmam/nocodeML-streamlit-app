@@ -9,7 +9,13 @@ credentials:
       failed_login_attempts: 0
       logged_in: false
       name: admin
-      password: pbkdf2:sha256:600000$w77b3K2w4iLULTKx$397c061162a4471e18c78894cbca28a26d79fe310ecb9b0bd3aa7412f5be265f
+      password: pbkdf2:sha256:600000$Nf3S4VVZuRfq5DCU$8926688ad5ab7278c4d462842d63dd8f69369b75b11d0c97b5d13d66f9476582
+    test_user:
+      email: test@gmail.com
+      failed_login_attempts: 0
+      logged_in: false
+      name: Testing Guy
+      password: pbkdf2:sha256:600000$lw55HEBXaqnSzNFh$e299ce640cd3b83353524455bd8197d32919a7198e063fd1f8f230c21e93c1b9
 preauthorized:
   emails:
-  - melsby@gmail.com
+  - praloumi@gmail.com
