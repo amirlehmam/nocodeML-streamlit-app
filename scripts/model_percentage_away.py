@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import xgboost as xgb
 import lightgbm as lgb
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 import shap
 import matplotlib.pyplot as plt
@@ -30,60 +30,24 @@ def prepare_percent_away_data(merged_data):
     
     return train_test_split(X_imputed, y, test_size=0.3, random_state=42), percent_away_features
 
-# Randomized search with cross-validation
-def randomized_search_model(model, param_distributions, X_train, y_train, n_iter=2):
-    random_search = RandomizedSearchCV(model, param_distributions, n_iter=n_iter, cv=3, scoring='accuracy', n_jobs=1, random_state=42)
-    random_search.fit(X_train, y_train)
-    return random_search.best_estimator_
-
-# Train models with hyperparameter tuning
+# Train models with default parameters
 def train_models(X_train, y_train):
-    param_distributions_rf = {
-        'n_estimators': [100, 200],
-        'max_depth': [None, 10],
-        'min_samples_split': [2, 5]
-    }
-
-    param_distributions_gb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'max_depth': [3, 5]
-    }
-
-    param_distributions_xgb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'max_depth': [3, 5]
-    }
-
-    param_distributions_lgb = {
-        'n_estimators': [100, 200],
-        'learning_rate': [0.01, 0.1],
-        'num_leaves': [31, 50]
-    }
-
-    st.write("Starting Random Forest tuning...")
-    best_rf = randomized_search_model(RandomForestClassifier(random_state=42), param_distributions_rf, X_train, y_train)
-    st.write("Random Forest tuning completed.")
-
-    st.write("Starting Gradient Boosting tuning...")
-    best_gb = randomized_search_model(GradientBoostingClassifier(random_state=42), param_distributions_gb, X_train, y_train)
-    st.write("Gradient Boosting tuning completed.")
-
-    st.write("Starting XGBoost tuning...")
-    best_xgb = randomized_search_model(xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), param_distributions_xgb, X_train, y_train)
-    st.write("XGBoost tuning completed.")
-
-    st.write("Starting LightGBM tuning...")
-    best_lgb = randomized_search_model(lgb.LGBMClassifier(random_state=42), param_distributions_lgb, X_train, y_train)
-    st.write("LightGBM tuning completed.")
+    rf = RandomForestClassifier(random_state=42)
+    gb = GradientBoostingClassifier(random_state=42)
+    xgb_model = xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss')
+    lgb_model = lgb.LGBMClassifier(random_state=42)
     
-    return {
-        'Random Forest': best_rf,
-        'Gradient Boosting': best_gb,
-        'XGBoost': best_xgb,
-        'LightGBM': best_lgb
+    models = {
+        'Random Forest': rf,
+        'Gradient Boosting': gb,
+        'XGBoost': xgb_model,
+        'LightGBM': lgb_model
     }
+    
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+    
+    return models
 
 # Evaluate model
 def evaluate_model(model, X_test, y_test):
@@ -195,7 +159,7 @@ def run_model_percentage_away():
         merged_data = load_data(data_dir)
         (X_train, X_test, y_train, y_test), percent_away_features = prepare_percent_away_data(merged_data)
         
-        st.write("Training models with hyperparameter tuning...")
+        st.write("Training models with default parameters...")
         models = train_models(X_train, y_train)
         
         st.write("Evaluating models...")
@@ -226,3 +190,4 @@ def run_model_percentage_away():
 
 if __name__ == "__main__":
     run_model_percentage_away()
+
