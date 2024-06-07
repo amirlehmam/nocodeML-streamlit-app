@@ -1,7 +1,7 @@
 credentials:
   usernames:
     amir:
-      email: jsmith@gmail.com
+      email: aeonthings@gmail.com
       failed_login_attempts: 0 # Will be managed automatically
       logged_in: False # Will be managed automatically
       name: Amir
@@ -18,4 +18,4 @@ cookie:
   name: some_cookie_name
 pre-authorized:
   emails:
-  - melsby@gmail.com
+  - praloumi@gmail.com
