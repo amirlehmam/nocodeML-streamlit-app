@@ -29,7 +29,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Creating the login widget
-name, authentication_status, username = authenticator.login('Login', 'form_name')
+name, authentication_status, username = authenticator.login('Login', 'main')
 
 # Debug: Print login status
 st.write(f"Authentication status: {authentication_status}")
