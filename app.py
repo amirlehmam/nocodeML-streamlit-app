@@ -180,12 +180,11 @@ authenticator = stauth.Authenticate(
 )
 
 # Render the login module
-name, authentication_status, username = authenticator.login('Login')
+name, authentication_status, username = authenticator.login()
 
 # Check the authentication status
-if authentication_status:
-    authenticator.logout('Logout', 'sidebar')
-    st.write(f'Welcome *{name}*')
+if st.session_state["authentication_status"]:
+    st.write(f'Welcome *{st.session_state["name"]}*')
     st.title('Some content')
 
     # Display the logo
