@@ -177,18 +177,33 @@ if st.session_state["authentication_status"]:
 
         .logout-button {
             position: fixed;
-            bottom: 10px;
+            bottom: 50px;
             right: 10px;
+        }
+
+        .center-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+            flex-direction: column;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    # Display the logo
+    # Center logo and page content
     logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
     if os.path.exists(logo_path):
-        st.image(logo_path, width=200, use_column_width='auto')
+        st.markdown(
+            f"""
+            <div class="center-content">
+                <img src="data:image/png;base64,{load_image(logo_path)}" width="200"/>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         st.warning("Logo file not found!")
 
