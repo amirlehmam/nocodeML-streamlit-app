@@ -34,7 +34,6 @@ authenticator.login()
 
 if st.session_state["authentication_status"]:
     authenticator.logout()
-    st.write(f'Welcome **{st.session_state["name"]}**')
     st.markdown(
         """
         <style>
@@ -217,6 +216,7 @@ if st.session_state["authentication_status"]:
     page = st.session_state.page
 
     if page == "Overview":
+        st.write(f'Welcome **{st.session_state["name"]}**')
         st.write("""
         ###  nocodeML Algorithmic Trading Optimization
 
