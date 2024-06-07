@@ -3,7 +3,7 @@ credentials:
     admin:
       email: aeonthings@gmail.com
       name: admin
-      password: abc
+      password: $2b$12$AumEn4Ow3kmQpLtxqemiEOiuN4rrHPCL3IdUHxr/Jy76N0C7/FzVO
     test_user:
       email: test@gmail.com
       name: Testing Guy

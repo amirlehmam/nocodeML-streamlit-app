@@ -32,7 +32,7 @@ authenticator = stauth.Authenticate(
 )
 
 # User authentication
-name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login('Login', 'main')
 
 if authentication_status:
     st.markdown(
