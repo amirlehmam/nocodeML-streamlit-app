@@ -216,10 +216,13 @@ def verify_trade_parsing(data_dir, output_dir):
 
     st.write(f"\nDistribution of trade results:\n{result_distribution}")
 
-    sample_size = 10
-    sample_classified_trades = merged_data.sample(n=sample_size)
-    st.write(f"\nSample of classified trades (showing {sample_size}):")
-    st.write(sample_classified_trades)
+    sample_size = min(10, len(merged_data))  # Adjust sample size
+    if sample_size > 0:
+        sample_classified_trades = merged_data.sample(n=sample_size)
+        print(f"\nSample of classified trades (showing {sample_size}):")
+        print(sample_classified_trades)
+    else:
+        print("\nNo classified trades available for sampling.")
 
     output_file = os.path.join(output_dir, "merged_trade_indicator_event.csv")
     merged_data.to_csv(output_file, index=False)
