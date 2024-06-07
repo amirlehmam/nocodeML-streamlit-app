@@ -214,7 +214,9 @@ st.json(formatted_credentials)
 
 # Create an authenticator object
 authenticator = stauth.Authenticate(
-    formatted_credentials,
+    list(credentials["usernames"].values()),  # usernames list
+    list(credentials["names"].values()),  # names list
+    list(credentials["passwords"].values()),  # passwords list
     cookie_name,
     signature_key,
     cookie_expiry_days=30
