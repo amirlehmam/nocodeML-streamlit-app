@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash
 with open('config.yaml', 'r') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
-# Hash the password
+# Hash the passwords
 hashed_password_admin = generate_password_hash('Azerty_94400', method='pbkdf2:sha256')
 hashed_password_test_user = generate_password_hash('Azerty_94', method='pbkdf2:sha256')
 
