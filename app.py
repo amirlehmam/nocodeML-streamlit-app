@@ -210,18 +210,6 @@ if st.session_state["authentication_status"]:
     nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
     nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
 
-    # Logout button at the bottom of the sidebar
-    st.sidebar.markdown(
-        """
-        <div class="logout-button">
-            <form action='/logout'>
-                <button type='submit' class="sidebar-button">Logout</button>
-            </form>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
     # Initialize session state if not already done
     if 'page' not in st.session_state:
         st.session_state.page = "Overview"
