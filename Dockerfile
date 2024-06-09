@@ -41,6 +41,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Ensure the .streamlit directory and config.toml are copied
+COPY .streamlit /root/.streamlit
 
 COPY .streamlit /root/.streamlit
 
