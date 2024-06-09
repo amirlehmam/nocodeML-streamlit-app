@@ -1,24 +1,12 @@
 version: '3'
-
-
 services:
-
   streamlit:
-
     build: .
-
     ports:
-
       - "8501:8501"
-
     networks:
-
-      - default
-
+      - nocode_ml_network
 
 networks:
-
-  default:
-
+  nocode_ml_network:
     driver: bridge
-
