@@ -6,7 +6,9 @@ services:
       - "8501:8501"
     networks:
       - nocode_ml_network
+    container_name: streamlit_container
 
 networks:
   nocode_ml_network:
     driver: bridge
+
