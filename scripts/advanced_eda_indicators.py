@@ -186,7 +186,7 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
 
 
 def run_advanced_eda_indicators():
-    st.subheader("Advanced EDAs=TEST on Indicators")
+    st.subheader("Advanced EDAs=TEST on Indicators 2")
 
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
