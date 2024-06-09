@@ -1045,3 +1045,446 @@ WARNING: This is a development server. Do not use it in a production deployment.
 Press CTRL+C to quit
 sh: line 1: ./update_and_restart.sh: No such file or directory
 140.82.115.173 - - [09/Jun/2024 04:48:15] "POST /payload HTTP/1.1" 200 -
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.83 - - [09/Jun/2024 05:17:44] "POST /payload HTTP/1.1" 200 -
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.26.15.154:5000
+Press CTRL+C to quit
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.115 - - [09/Jun/2024 15:31:35] "POST /payload HTTP/1.1" 200 -
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.111 - - [09/Jun/2024 15:38:13] "POST /payload HTTP/1.1" 200 -
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.45 - - [09/Jun/2024 15:44:09] "POST /payload HTTP/1.1" 200 -
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.253 - - [09/Jun/2024 15:47:25] "POST /payload HTTP/1.1" 200 -
+sh: line 1: ./update_and_restart.sh: No such file or directory
+140.82.115.62 - - [09/Jun/2024 15:48:51] "POST /payload HTTP/1.1" 200 -
+35.203.211.47 - - [09/Jun/2024 16:07:27] code 400, message Bad request syntax ("\x16\x03\x01\x00î\x01\x00\x00ê\x03\x03qpÖqÊ\x12\x86z'\x88\x9eÈ{y=_åªgMô±ñ")
+35.203.211.47 - - [09/Jun/2024 16:07:27] "\x16\x03\x01\x00î\x01\x00\x00ê\x03\x03qpÖqÊ\x12\x86z'\x88\x9eÈ{y=_åªgMô±ñ" HTTPStatus.BAD_REQUEST -
+35.203.211.47 - - [09/Jun/2024 16:07:27] code 400, message Bad HTTP/0.9 request type ('\x16\x03\x01\x00Ê\x01\x00\x00Æ\x03\x03°úàe!³&¹W')
+35.203.211.47 - - [09/Jun/2024 16:07:27] "\x16\x03\x01\x00Ê\x01\x00\x00Æ\x03\x03°úàe!³&¹W\x0c\x1a!Þ\x99\x93\x8f\x164\x92ÅÔ¬ÍD|\x8b5\x84Q " HTTPStatus.BAD_REQUEST -
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+[?2004h)0[1;24r[m[4l[?7h[39;49m[?25l[?1c[39;49m[m[H[J[22;34H[0;10;7m[ Reading... ][m[22;32H[0;10;7m[ Read 38 lines ][m[H[0;10;7m      /home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh               [1;79H[m[23d[0;10;7m^G[m Help[14G[0;10;7m^O[m Write Out [0;10;7m^W[m Where Is  [0;10;7m^K[m Cut[53G[0;10;7m^T[m Execute   [0;10;7m^C[m Location[24d[0;10;7m^X[m Exit[14G[0;10;7m^R[m Read File [0;10;7m^\[m Replace   [0;10;7m^U[m Paste     [0;10;7m^J[m Justify   [0;10;7m^/[m Go To Line[2d[36m# Ensure the update script is properly updated[4d[39m[mnano ~/nocodeML-streamlit-app/update_and_restart.sh[7d[36m# Add the logging and other contents to the script[9d# Save: CTRL + O, Enter[11d# Exit: CTRL + X[14d# Make the script executable[16d[0;10;1m[34mchmod[39m[m +x ~/nocodeML-streamlit-app/update_and_restart.sh[19d[36m# Restart the webhook listener[21d[39m[mpkill[0;10;1m[35m -f[39m[m webhook_listener.py[2d[?25h[?0c * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+[24;1H[?2004lToo many errors from stdin
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 29: unexpected EOF while looking for matching `"'
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 28: $LOGFILE: ambiguous redirect
+/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh: line 31: $LOGFILE: ambiguous redirect
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
+ * Serving Flask app 'webhook_listener'
+ * Debug mode: off
