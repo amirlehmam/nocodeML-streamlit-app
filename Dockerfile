@@ -44,8 +44,6 @@ COPY . .
 # Ensure the .streamlit directory and config.toml are copied
 COPY .streamlit /root/.streamlit
 
-COPY .streamlit /root/.streamlit
-
 
 # Expose the port Streamlit runs on
 
