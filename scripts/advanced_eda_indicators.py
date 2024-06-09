@@ -167,13 +167,14 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
         loss_values = data[data[target] == 1][feature]
         st.write(f"\n{feature} Statistics ({model_name}):")
         st.write(f"Mean (Win): {win_values.mean():.2f}, Mean (Loss): {loss_values.mean():.2f}")
-        st.write(f"Median (Win): {win_values.median()::.2f}, Median (Loss): {loss_values.median():.2f}")
+        st.write(f"Median (Win): {win_values.median():.2f}, Median (Loss): {loss_values.median():.2f}")
         st.write(f"Standard Deviation (Win): {win_values.std():.2f}, Standard Deviation (Loss): {loss_values.std():.2f}")
         st.write(f"Skewness (Win): {win_values.skew():.2f}, Skewness (Loss): {loss_values.skew():.2f}")
         st.write(f"Kurtosis (Win): {win_values.kurtosis():.2f}, Kurtosis (Loss): {loss_values.kurtosis():.2f}")
-        
+
         t_stat, p_value = stats.ttest_ind(win_values, loss_values, equal_var=False)
         st.write(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
+
 
         fig = go.Figure()
         fig.add_trace(go.Violin(x=data[target], y=data[feature], box_visible=True, meanline_visible=True))
