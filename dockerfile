@@ -31,18 +31,23 @@ RUN apt-get update && \
 
 COPY requirements.txt requirements.txt
 
-
+# Ensure the necessary SSL configuration file is copied into the container
 # Install the dependencies
+FROM nginx:latest
 
 RUN pip install --no-cache-dir -r requirements.txt
+COPY /etc/letsencrypt/options-ssl-nginx.conf /etc/letsencrypt/options-ssl-nginx.conf
 
 
 # Copy the rest of the application
 
+
 COPY . .
+COPY ./nginx.conf /etc/nginx/nginx.conf
 
 
 # Expose the port Streamlit runs on
+COPY ./conf.d/nocode-ml.com.conf /etc/nginx/conf.d/nocode-ml.com.conf
 
 EXPOSE 8501
 
