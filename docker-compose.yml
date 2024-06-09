@@ -1,24 +1,38 @@
 version: '3'
+
 services:
+
   streamlit:
+
     build: .
+
     ports:
+
       - "8501:8501"
+
     networks:
+
       - nocode_ml_network
+
     container_name: streamlit_container
 
+
   nginx:
+
     image: nginx:latest
-    ports:
-      - "80:80"
-      - "443:443"
+
     volumes:
+
       - ./nginx/conf.d:/etc/nginx/conf.d
+
       - ./nginx/certs:/etc/letsencrypt
+
     network_mode: "host"
 
+
 networks:
+
   nocode_ml_network:
+
     driver: bridge
 
