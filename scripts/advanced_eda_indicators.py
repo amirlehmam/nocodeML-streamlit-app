@@ -140,7 +140,7 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
         return
 
     top_features = [feature for feature in top_features if feature in data.columns]
-    
+
     if not top_features:
         st.write("No matching features found in the data.")
         return
@@ -175,23 +175,15 @@ def advanced_eda(data, feature_importances, trade_type, model_name, top_n=None, 
         t_stat, p_value = stats.ttest_ind(win_values, loss_values, equal_var=False)
         st.write(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
 
-
         fig = go.Figure()
         fig.add_trace(go.Violin(x=data[target], y=data[feature], box_visible=True, meanline_visible=True))
         fig.update_layout(title=f'Violin Plot of {feature} ({trade_type}, {model_name})')
         st.plotly_chart(fig)
 
     fig = px.scatter_matrix(data[top_features + [target]], dimensions=top_features, color=target)
-    fig.update_layout(title=f'Pairplot of Top Features ({trade_type}, {model_name})')
+    fig.update_layout(title=f'Scatter Matrix ({trade_type}, {model_name})')
     st.plotly_chart(fig)
 
-    interaction_matrix = data.groupby(target)[top_features].mean().T
-    fig = px.imshow(interaction_matrix, text_auto=True, title=f'Feature Interactions Heatmap ({trade_type}, {model_name})')
-    st.plotly_chart(fig)
-
-    if top_n and top_n != "ALL":
-        fig = px.bar(feature_importances[model_name].head(top_n), x='importance', y='feature', title=f'Top {top_n} Feature Importances from {model_name}', orientation='h')
-        st.plotly_chart(fig)
 
 def run_advanced_eda_indicators():
     st.subheader("Advanced EDA on Indicators")
