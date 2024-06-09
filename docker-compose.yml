@@ -1,9 +1,24 @@
-version: '3.8'
+version: '3'
+
 
 services:
+
   streamlit:
+
     build: .
+
     ports:
+
       - "8501:8501"
-    volumes:
-      - .:/app
+
+    networks:
+
+      - default
+
+
+networks:
+
+  default:
+
+    driver: bridge
+
