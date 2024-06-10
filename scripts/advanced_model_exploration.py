@@ -10,10 +10,11 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Conv1D, MaxPooling1D, Flatten
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, LSTM, Conv1D, MaxPooling1D, Flatten
+from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
+
 
 # Load data
 def load_data(data_dir):
