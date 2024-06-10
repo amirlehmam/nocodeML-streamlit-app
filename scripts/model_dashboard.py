@@ -9,6 +9,7 @@ import xgboost as xgb
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 # Load data
 def load_data(data_dir):
@@ -50,14 +51,14 @@ def preprocess_data(data):
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
 def run_model_dashboard():
-    # Define classifiers
+    # Define classifiers with parameter tuning
     classifiers = {
-        'RandomForest': RandomForestClassifier(),
-        'GradientBoosting': GradientBoostingClassifier(),
-        'AdaBoost': AdaBoostClassifier(),
-        'SVC': SVC(probability=True),
+        'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
+        'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
+        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
+        'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
-        'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+        'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
     }
 
     # Load data with base_dir and data_dir
@@ -94,34 +95,60 @@ def run_model_dashboard():
         results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
         results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
 
+        # Save results and feature importances to session state
+        st.session_state.results_df = results_df
+        st.session_state.feature_importances = feature_importances
+        st.session_state.indicator_columns = indicator_columns
+
+    # Check if data is loaded and preprocessed
+    if "results_df" in st.session_state and "feature_importances" in st.session_state:
         # Display model results
         st.header("Model Accuracy")
-        st.dataframe(results_df)
+        st.dataframe(st.session_state.results_df)
 
         # Feature Importance
         st.header("Feature Importance")
-        classifier = st.selectbox("Select Classifier for Feature Importance", list(feature_importances.keys()))
+        classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()))
 
         if classifier:
-            importance = feature_importances[classifier]
+            importance = st.session_state.feature_importances[classifier]
             importance_df = pd.DataFrame({
-                'Feature': indicator_columns,
+                'Feature': st.session_state.indicator_columns,
                 'Importance': importance
             }).sort_values(by='Importance', ascending=False)
 
+            top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
+            selected_features = importance_df.head(top_n)
+
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(x='Importance', y='Feature', data=importance_df, ax=ax)
+            sns.barplot(x='Importance', y='Feature', data=selected_features, ax=ax)
             st.pyplot(fig)
+
+        # Dropdown for individual indicator analysis
+        st.header("Individual Indicator Analysis")
+        individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns)
+        
+        if st.button("Plot Indicator Distribution"):
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.histplot(data[individual_indicator], kde=True, ax=ax)
+            ax.set_title(f'Distribution of {individual_indicator}')
+            st.pyplot(fig)
+
+        # Dropdown for analyzing multiple indicators together
+        st.header("Multiple Indicators Analysis")
+        selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns)
+        
+        if st.button("Plot Multiple Indicators"):
+            if len(selected_indicators) > 1:
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.pairplot(data[selected_indicators])
+                st.pyplot(fig)
+            else:
+                st.warning("Please select at least two indicators.")
 
         # Display data summary
         st.header("Data Summary")
         st.write(data.describe())
-
-        # Plotting
-        st.header("Feature Distribution")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.histplot(data['price'], kde=True, ax=ax)
-        st.pyplot(fig)
 
         # Winning Range Values
         st.header("Winning Range Values")
@@ -136,8 +163,6 @@ def run_model_dashboard():
         ax.set_title('Winning vs Losing Trade Price Distribution')
         ax.legend()
         st.pyplot(fig)
-
-        # Additional visualizations as needed
 
 # If running this script directly
 if __name__ == "__main__":
