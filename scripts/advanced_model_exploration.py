@@ -199,7 +199,8 @@ def run_advanced_model_exploration():
             st.subheader("Neural Network Parameters")
             epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
-            model = KerasClassifier(model=create_nn_model, input_dim=st.session_state.X_train.shape[1], epochs=epochs, batch_size=batch_size, verbose=0)
+            input_dim = st.session_state.X_train.shape[1]
+            model = KerasClassifier(model=create_nn_model, input_dim=input_dim, epochs=epochs, batch_size=batch_size, verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
