@@ -1,4 +1,4 @@
-# data_ingestion_preparation.py
+# model_dashboard.py
 import os
 import pandas as pd
 from sklearn.impute import SimpleImputer
@@ -7,10 +7,13 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 import lightgbm as lgb
 import xgboost as xgb
+import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
     return data
 
 def preprocess_data(data):
@@ -47,114 +50,100 @@ def preprocess_data(data):
     
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
-# model_training.py
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
-import lightgbm as lgb
-import xgboost as xgb
+def run_model_dashboard():
+    # Define classifiers
+    classifiers = {
+        'RandomForest': RandomForestClassifier(),
+        'GradientBoosting': GradientBoostingClassifier(),
+        'AdaBoost': AdaBoostClassifier(),
+        'SVC': SVC(probability=True),
+        'LogisticRegression': LogisticRegression(max_iter=1000),
+        'LightGBM': lgb.LGBMClassifier(),
+        'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+    }
 
-# Define classifiers
-classifiers = {
-    'RandomForest': RandomForestClassifier(),
-    'GradientBoosting': GradientBoostingClassifier(),
-    'AdaBoost': AdaBoostClassifier(),
-    'SVC': SVC(probability=True),
-    'LogisticRegression': LogisticRegression(max_iter=1000),
-    'LightGBM': lgb.LGBMClassifier(),
-    'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
-}
+    # Load data with base_dir and data_dir
+    def load_and_preprocess_data(base_dir):
+        data_dir = os.path.join(base_dir, "data/processed")
+        data = load_data(data_dir)
+        return preprocess_data(data)
 
-# Train models and get feature importances
-results = []
-feature_importances = {}
+    # Streamlit configuration
+    st.set_page_config(page_title='Trading Dashboard', layout='wide')
 
-for clf_name, clf in classifiers.items():
-    clf.fit(X_train, y_train)
-    accuracy = clf.score(X_test, y_test)
-    results.append((clf_name, accuracy))
-    if hasattr(clf, 'feature_importances_'):
-        feature_importances[clf_name] = clf.feature_importances_
+    # Title
+    st.title("Advanced Trading Dashboard")
 
-results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
-results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
+    # Sidebar for Base Directory input
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
 
-# app.py
-import streamlit as st
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from data_ingestion_preparation import load_data, preprocess_data
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
+    # Load and preprocess data
+    if st.button("Load Data"):
+        data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
+        st.success("Data loaded and preprocessed successfully.")
 
-# Load data with base_dir and data_dir
-def load_and_preprocess_data(base_dir):
-    data_dir = os.path.join(base_dir, "data/processed")
-    data = load_data(data_dir)
-    return preprocess_data(data)
+        # Train models and get feature importances
+        results = []
+        feature_importances = {}
 
-# Streamlit configuration
-st.set_page_config(page_title='Trading Dashboard', layout='wide')
+        for clf_name, clf in classifiers.items():
+            clf.fit(X_train, y_train)
+            accuracy = clf.score(X_test, y_test)
+            results.append((clf_name, accuracy))
+            if hasattr(clf, 'feature_importances_'):
+                feature_importances[clf_name] = clf.feature_importances_
 
-# Title
-st.title("Advanced Trading Dashboard")
+        results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
+        results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
 
-# Sidebar for Base Directory input
-if "base_dir" not in st.session_state:
-    st.session_state.base_dir = "."
+        # Display model results
+        st.header("Model Accuracy")
+        st.dataframe(results_df)
 
-base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+        # Feature Importance
+        st.header("Feature Importance")
+        classifier = st.selectbox("Select Classifier for Feature Importance", list(feature_importances.keys()))
 
-# Load and preprocess data
-if st.button("Load Data"):
-    data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
-    st.success("Data loaded and preprocessed successfully.")
+        if classifier:
+            importance = feature_importances[classifier]
+            importance_df = pd.DataFrame({
+                'Feature': indicator_columns,
+                'Importance': importance
+            }).sort_values(by='Importance', ascending=False)
 
-    # Display model results
-    st.header("Model Accuracy")
-    st.dataframe(results_df)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.barplot(x='Importance', y='Feature', data=importance_df, ax=ax)
+            st.pyplot(fig)
 
-    # Feature Importance
-    st.header("Feature Importance")
-    classifier = st.selectbox("Select Classifier for Feature Importance", list(feature_importances.keys()))
+        # Display data summary
+        st.header("Data Summary")
+        st.write(data.describe())
 
-    if classifier:
-        importance = feature_importances[classifier]
-        importance_df = pd.DataFrame({
-            'Feature': indicator_columns,
-            'Importance': importance
-        }).sort_values(by='Importance', ascending=False)
+        # Plotting
+        st.header("Feature Distribution")
+        plt.figure(figsize=(10, 6))
+        sns.histplot(data, kde=True)
+        st.pyplot(plt)
+
+        # Winning Range Values
+        st.header("Winning Range Values")
+        winning_data = data[data['result'] == 1]
+        losing_data = data[data['result'] == 0]
 
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(x='Importance', y='Feature', data=importance_df, ax=ax)
+        sns.kdeplot(winning_data['price'], label='Winning', ax=ax)
+        sns.kdeplot(losing_data['price'], label='Losing', ax=ax)
+        ax.set_xlabel('Price')
+        ax.set_ylabel('Density')
+        ax.set_title('Winning vs Losing Trade Price Distribution')
+        ax.legend()
         st.pyplot(fig)
 
-    # Display data summary
-    st.header("Data Summary")
-    st.write(data.describe())
+        # Additional visualizations as needed
 
-    # Plotting
-    st.header("Feature Distribution")
-    plt.figure(figsize=(10, 6))
-    sns.histplot(data, kde=True)
-    st.pyplot(plt)
-
-    # Winning Range Values
-    st.header("Winning Range Values")
-    winning_data = data[data['result'] == 1]
-    losing_data = data[data['result'] == 0]
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.kdeplot(winning_data['price'], label='Winning', ax=ax)
-    sns.kdeplot(losing_data['price'], label='Losing', ax=ax)
-    ax.set_xlabel('Price')
-    ax.set_ylabel('Density')
-    ax.set_title('Winning vs Losing Trade Price Distribution')
-    ax.legend()
-    st.pyplot(fig)
-
-    # Additional visualizations as needed
-
+# If running this script directly
 if __name__ == "__main__":
-    st.run()
+    run_model_dashboard()

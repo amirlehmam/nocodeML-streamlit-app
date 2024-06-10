@@ -209,6 +209,7 @@ if st.session_state["authentication_status"]:
     nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
     nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
     nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+    nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
 
     # Initialize session state if not already done
     if 'page' not in st.session_state:
@@ -306,6 +307,10 @@ if st.session_state["authentication_status"]:
     elif page == "Win Ranges for Specific Model":
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
+
+    elif page == "Advanced Trading Dashboard":
+        from scripts.model_dashboard import run_model_dashboard
+        run_model_dashboard()
 
     authenticator.logout()
 
