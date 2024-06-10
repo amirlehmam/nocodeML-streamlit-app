@@ -68,9 +68,6 @@ def run_model_dashboard():
         data = load_data(data_dir)
         return preprocess_data(data)
 
-    # Streamlit configuration
-    st.set_page_config(page_title='Trading Dashboard', layout='wide')
-
     # Title
     st.title("Advanced Trading Dashboard")
 
