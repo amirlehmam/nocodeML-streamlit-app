@@ -9,7 +9,6 @@ import xgboost as xgb
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
 # Load data
 def load_data(data_dir):
@@ -55,7 +54,6 @@ def run_model_dashboard():
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
-        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
         'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
         'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
@@ -78,8 +76,15 @@ def run_model_dashboard():
 
     # Load and preprocess data
     if st.button("Load Data"):
+        st.write("Loading data...")  # Debug statement
         data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
         st.success("Data loaded and preprocessed successfully.")
+        st.session_state.data = data
+        st.session_state.X_train = X_train
+        st.session_state.X_test = X_test
+        st.session_state.y_train = y_train
+        st.session_state.y_test = y_test
+        st.session_state.indicator_columns = indicator_columns
 
         # Train models and get feature importances
         results = []
@@ -94,11 +99,8 @@ def run_model_dashboard():
 
         results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
         results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
-
-        # Save results and feature importances to session state
         st.session_state.results_df = results_df
         st.session_state.feature_importances = feature_importances
-        st.session_state.indicator_columns = indicator_columns
 
     # Check if data is loaded and preprocessed
     if "results_df" in st.session_state and "feature_importances" in st.session_state:
@@ -130,7 +132,7 @@ def run_model_dashboard():
         
         if st.button("Plot Indicator Distribution"):
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.histplot(data[individual_indicator], kde=True, ax=ax)
+            sns.histplot(st.session_state.data[individual_indicator], kde=True, ax=ax)
             ax.set_title(f'Distribution of {individual_indicator}')
             st.pyplot(fig)
 
@@ -141,28 +143,34 @@ def run_model_dashboard():
         if st.button("Plot Multiple Indicators"):
             if len(selected_indicators) > 1:
                 fig, ax = plt.subplots(figsize=(10, 6))
-                sns.pairplot(data[selected_indicators])
+                sns.pairplot(st.session_state.data[selected_indicators])
                 st.pyplot(fig)
             else:
                 st.warning("Please select at least two indicators.")
 
-        # Display data summary
-        st.header("Data Summary")
-        st.write(data.describe())
-
         # Winning Range Values
         st.header("Winning Range Values")
-        winning_data = data[data['result'] == 1]
-        losing_data = data[data['result'] == 0]
+        top_indicators = st.selectbox("Select Top N Indicators for Winning Range Analysis", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
+        selected_top_features = importance_df.head(top_indicators)['Feature'].tolist()
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.kdeplot(winning_data['price'], label='Winning', ax=ax)
-        sns.kdeplot(losing_data['price'], label='Losing', ax=ax)
-        ax.set_xlabel('Price')
-        ax.set_ylabel('Density')
-        ax.set_title('Winning vs Losing Trade Price Distribution')
-        ax.legend()
-        st.pyplot(fig)
+        if st.button("Plot Winning Range Values"):
+            winning_data = st.session_state.data[st.session_state.data['result'] == 1]
+            losing_data = st.session_state.data[st.session_state.data['result'] == 0]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            for feature in selected_top_features:
+                sns.kdeplot(winning_data[feature], label=f'{feature} (Winning)', ax=ax)
+                sns.kdeplot(losing_data[feature], label=f'{feature} (Losing)', ax=ax)
+            ax.set_xlabel('Indicator Value')
+            ax.set_ylabel('Density')
+            ax.set_title('Winning vs Losing Indicator Value Distribution')
+            ax.legend()
+            st.pyplot(fig)
+
+            # Print Winning Range Values
+            winning_ranges = winning_data[selected_top_features].describe()
+            st.write("Winning Range Values for Selected Indicators:")
+            st.write(winning_ranges)
 
 # If running this script directly
 if __name__ == "__main__":
