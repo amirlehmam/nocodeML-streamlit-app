@@ -217,7 +217,6 @@ def main():
         nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
         nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
 
-
         # Initialize session state if not already done
         if 'page' not in st.session_state:
             st.session_state.page = "Overview"
@@ -319,7 +318,7 @@ def main():
             from scripts.model_dashboard import run_model_dashboard
             run_model_dashboard()
 
-        elif page == "Advanced Models Exploration (ML/DL)":
+        elif page == "Advanced Model Exploration":
             from scripts.advanced_model_exploration import run_advanced_model_exploration
             run_advanced_model_exploration()
 
