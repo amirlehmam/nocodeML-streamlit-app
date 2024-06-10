@@ -194,7 +194,7 @@ def run_model_dashboard():
                 st.dataframe(st.session_state.results_df)
 
             with st.expander("Feature Importance"):
-                classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()))
+                classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()), key='feature_importance_classifier')
 
                 if classifier:
                     importance = st.session_state.feature_importances[classifier]
@@ -212,12 +212,12 @@ def run_model_dashboard():
             with st.expander("Optimal Win Ranges"):
                 st.subheader("Calculate Optimal Win Ranges")
 
-                trade_type = st.selectbox("Select Trade Type", ["Long Only", "Short Only", "Long & Short"])
-                model_name = st.selectbox("Select Model", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM"])
-                top_n = st.selectbox("Select Top N Indicators", [None, 10, 5, 3, "ALL"])
-                individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns)
+                trade_type = st.selectbox("Select Trade Type", ["Long Only", "Short Only", "Long & Short"], key='win_ranges_trade_type')
+                model_name = st.selectbox("Select Model", list(classifiers.keys()), key='win_ranges_model')
+                top_n = st.selectbox("Select Top N Indicators", [None, 10, 5, 3, "ALL"], key='win_ranges_top_n')
+                individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns, key='win_ranges_individual')
 
-                if st.button("Calculate and Plot Optimal Win Ranges"):
+                if st.button("Calculate and Plot Optimal Win Ranges", key='plot_win_ranges'):
                     if top_n:
                         selected_features = st.session_state.feature_importances[model_name]['feature'] if top_n == "ALL" else st.session_state.feature_importances[model_name]['feature'].head(top_n)
                     else:
@@ -235,18 +235,20 @@ def run_model_dashboard():
 
         with col2:
             with st.expander("Individual Indicator Analysis"):
-                individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns, key='individual')
+                model_name = st.selectbox("Select Model", list(classifiers.keys()), key='individual_indicator_model')
+                individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns, key='individual_indicator')
                 
                 if st.button("Plot Indicator Distribution", key='plot_individual'):
                     fig = px.histogram(st.session_state.data, x=individual_indicator, color='result', marginal="rug", hover_data=st.session_state.data.columns)
                     st.plotly_chart(fig)
 
             with st.expander("Multiple Indicators Analysis"):
-                selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns, key='multiple')
+                model_name = st.selectbox("Select Model", list(classifiers.keys()), key='multiple_indicators_model')
+                selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns, key='multiple_indicators')
                 
                 if st.button("Plot Multiple Indicators", key='plot_multiple'):
                     if len(selected_indicators) > 1:
-                        fig = px.scatter_matrix(st.session_state.data, dimensions=selected_indicators, color='result')
+                        fig = px.scatter_matrix(st.session_state.data, dimensions=selected_indicators, color='result', title="Scatter Matrix of Selected Indicators")
                         st.plotly_chart(fig)
                     else:
                         st.warning("Please select at least two indicators.")
