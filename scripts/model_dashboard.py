@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 # Load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
@@ -106,60 +106,64 @@ def run_model_dashboard():
     if "results_df" in st.session_state and "feature_importances" in st.session_state:
         st.write("Displaying model results...")
 
-        st.header("Model Accuracy")
-        st.dataframe(st.session_state.results_df)
+        with st.expander("Model Accuracy"):
+            st.dataframe(st.session_state.results_df)
 
-        st.header("Feature Importance")
-        classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()))
+        with st.expander("Feature Importance"):
+            classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()))
 
-        if classifier:
-            importance = st.session_state.feature_importances[classifier]
-            importance_df = pd.DataFrame({
-                'Feature': st.session_state.indicator_columns,
-                'Importance': importance
-            }).sort_values(by='Importance', ascending=False)
+            if classifier:
+                importance = st.session_state.feature_importances[classifier]
+                importance_df = pd.DataFrame({
+                    'Feature': st.session_state.indicator_columns,
+                    'Importance': importance
+                }).sort_values(by='Importance', ascending=False)
 
-            top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
-            selected_features = importance_df.head(top_n)
+                top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
+                selected_features = importance_df.head(top_n)
 
-            fig = px.bar(selected_features, x='Importance', y='Feature', orientation='h')
-            st.plotly_chart(fig)
-
-        st.header("Individual Indicator Analysis")
-        individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns)
-        
-        if st.button("Plot Indicator Distribution"):
-            fig = px.histogram(st.session_state.data, x=individual_indicator, color='result', marginal="rug", hover_data=st.session_state.data.columns)
-            st.plotly_chart(fig)
-
-        st.header("Multiple Indicators Analysis")
-        selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns)
-        
-        if st.button("Plot Multiple Indicators"):
-            if len(selected_indicators) > 1:
-                fig = px.scatter_matrix(st.session_state.data, dimensions=selected_indicators, color='result')
+                fig = px.bar(selected_features, x='Importance', y='Feature', orientation='h')
                 st.plotly_chart(fig)
-            else:
-                st.warning("Please select at least two indicators.")
 
-        st.header("Winning Range Values")
-        top_indicators = st.selectbox("Select Top N Indicators for Winning Range Analysis", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
-        selected_top_features = importance_df.head(top_indicators)['Feature'].tolist()
+        col1, col2 = st.columns(2)
 
-        if st.button("Plot Winning Range Values"):
-            winning_data = st.session_state.data[st.session_state.data['result'] == 1]
-            losing_data = st.session_state.data[st.session_state.data['result'] == 0]
+        with col1:
+            st.subheader("Individual Indicator Analysis")
+            individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns)
+            
+            if st.button("Plot Indicator Distribution"):
+                fig = px.histogram(st.session_state.data, x=individual_indicator, color='result', marginal="rug", hover_data=st.session_state.data.columns)
+                st.plotly_chart(fig)
 
-            fig = go.Figure()
-            for feature in selected_top_features:
-                fig.add_trace(go.Violin(x=winning_data[feature], line=dict(color='green'), name=f'{feature} (Winning)', spanmode='hard'))
-                fig.add_trace(go.Violin(x=losing_data[feature], line=dict(color='red'), name=f'{feature} (Losing)', spanmode='hard'))
-            fig.update_layout(title='Winning vs Losing Indicator Value Distribution', xaxis_title='Indicator Value', yaxis_title='Density')
-            st.plotly_chart(fig)
+        with col2:
+            st.subheader("Multiple Indicators Analysis")
+            selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns)
+            
+            if st.button("Plot Multiple Indicators"):
+                if len(selected_indicators) > 1:
+                    fig = px.scatter_matrix(st.session_state.data, dimensions=selected_indicators, color='result')
+                    st.plotly_chart(fig)
+                else:
+                    st.warning("Please select at least two indicators.")
 
-            winning_ranges = winning_data[selected_top_features].describe()
-            st.write("Winning Range Values for Selected Indicators:")
-            st.write(winning_ranges)
+        with st.expander("Winning Range Values"):
+            top_indicators = st.selectbox("Select Top N Indicators for Winning Range Analysis", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
+            selected_top_features = importance_df.head(top_indicators)['Feature'].tolist()
+
+            if st.button("Plot Winning Range Values"):
+                winning_data = st.session_state.data[st.session_state.data['result'] == 1]
+                losing_data = st.session_state.data[st.session_state.data['result'] == 0]
+
+                fig = go.Figure()
+                for feature in selected_top_features:
+                    fig.add_trace(go.Violin(x=winning_data[feature], line=dict(color='green'), name=f'{feature} (Winning)', spanmode='hard'))
+                    fig.add_trace(go.Violin(x=losing_data[feature], line=dict(color='red'), name=f'{feature} (Losing)', spanmode='hard'))
+                fig.update_layout(title='Winning vs Losing Indicator Value Distribution', xaxis_title='Indicator Value', yaxis_title='Density')
+                st.plotly_chart(fig)
+
+                winning_ranges = winning_data[selected_top_features].describe()
+                st.write("Winning Range Values for Selected Indicators:")
+                st.write(winning_ranges)
 
 if __name__ == "__main__":
     run_model_dashboard()
