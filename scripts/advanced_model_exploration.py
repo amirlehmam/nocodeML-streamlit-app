@@ -38,6 +38,9 @@ def preprocess_data(data):
 
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
+    # Fill NaN values with column mean
+    data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(col.mean()))
+
     X = data[indicator_columns]
     y = data['result']
 
