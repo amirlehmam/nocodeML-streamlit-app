@@ -160,7 +160,7 @@ def run_advanced_model_exploration():
             st.error(f"Error loading data: {e}")
             return
 
-    if "data" in st.session_state:
+    if "data" in st.session_state and "X_train" in st.session_state:
         st.write("Select model and hyperparameters for exploration")
 
         model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "Stacking Ensemble"])
@@ -195,8 +195,8 @@ def run_advanced_model_exploration():
         elif model_type == "Neural Network":
             st.subheader("Neural Network Parameters")
             epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
-                        batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
-            model = KerasClassifier(model=create_nn_model, input_dim=X_train.shape[1], epochs=epochs, batch_size=batch_size, verbose=0)
+            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            model = KerasClassifier(model=create_nn_model, input_dim=st.session_state.X_train.shape[1], epochs=epochs, batch_size=batch_size, verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
@@ -211,84 +211,87 @@ def run_advanced_model_exploration():
         if st.button("Train Model"):
             st.write(f"Training {model_type}...")
             with st.spinner("Training in progress..."):
-                model.fit(X_train, y_train)
-                y_pred = model.predict(X_test)
-                accuracy = accuracy_score(y_test, y_pred)
-                st.write(f"Accuracy: {accuracy}")
-                st.write("Classification Report:")
-                st.text(classification_report(y_test, y_pred))
-                st.write("Confusion Matrix:")
-                cm = confusion_matrix(y_test, y_pred)
-                fig, ax = plt.subplots()
-                sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-                st.pyplot(fig)
-
-            # Save the model
-            model_save_path = os.path.join(base_dir, f"models/{model_type}_model.pkl")
-            pd.to_pickle(model, model_save_path)
-            st.write(f"Model saved to {model_save_path}")
-
-            # Feature importance
-            if hasattr(model, 'feature_importances_'):
-                st.write("Feature Importances:")
-                feature_importances = model.feature_importances_
-                importance_df = pd.DataFrame({
-                    'Feature': indicator_columns,
-                    'Importance': feature_importances
-                }).sort_values(by='Importance', ascending=False)
-                fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
-                st.plotly_chart(fig)
-
-            # Optimal Win Ranges
-            st.subheader("Optimal Win Ranges")
-            top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(indicator_columns)], index=2)
-            selected_features = importance_df.head(top_n)['Feature']
-            optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
-            plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
-
-            optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
-            st.write(optimal_win_ranges_summary)
-            output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
-            optimal_win_ranges_summary.to_csv(output_path, index=False)
-            st.write(f"Saved optimal win ranges summary to {output_path}")
-
-            # Additional Exploratory Data Analysis
-            st.subheader("Additional Exploratory Data Analysis")
-            with st.spinner("Generating additional EDA plots..."):
-                # Correlation matrix
-                selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-                if selected_model in st.session_state.feature_importances:
-                    top_features = st.session_state.feature_importances[selected_model][:10]
-                    top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
-
-                    st.write("Top 10 Features for Correlation Matrix:")
-                    st.write(top_features_list)
-
-                    corr = st.session_state.data[top_features_list].corr()
-                    fig, ax = plt.subplots(figsize=(12, 10))
-                    sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
-                    st.write("Correlation Matrix of Top 10 Features")
+                try:
+                    model.fit(st.session_state.X_train, st.session_state.y_train)
+                    y_pred = model.predict(st.session_state.X_test)
+                    accuracy = accuracy_score(st.session_state.y_test, y_pred)
+                    st.write(f"Accuracy: {accuracy}")
+                    st.write("Classification Report:")
+                    st.text(classification_report(st.session_state.y_test, y_pred))
+                    st.write("Confusion Matrix:")
+                    cm = confusion_matrix(st.session_state.y_test, y_pred)
+                    fig, ax = plt.subplots()
+                    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
                     st.pyplot(fig)
 
-                # Pie chart of wins vs losses
-                win_loss_counts = st.session_state.data['result'].value_counts()
-                fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
-                st.plotly_chart(fig)
+                    # Save the model
+                    model_save_path = os.path.join(base_dir, f"models/{model_type}_model.pkl")
+                    pd.to_pickle(model, model_save_path)
+                    st.write(f"Model saved to {model_save_path}")
 
-                # KDE plots for each indicator showing winning and losing ranges
-                for feature in selected_features:
-                    win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
-                    loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
+                    # Feature importance
+                    if hasattr(model, 'feature_importances_'):
+                        st.write("Feature Importances:")
+                        feature_importances = model.feature_importances_
+                        importance_df = pd.DataFrame({
+                            'Feature': st.session_state.indicator_columns,
+                            'Importance': feature_importances
+                        }).sort_values(by='Importance', ascending=False)
+                        fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
+                        st.plotly_chart(fig)
 
-                    plt.figure(figsize=(12, 6))
-                    sns.kdeplot(win_data, label='Win', color='blue', shade=True)
-                    sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
-                    plt.title(f'Distribution of {feature} for Winning and Losing Trades')
-                    plt.xlabel(feature)
-                    plt.ylabel('Density')
-                    plt.legend()
-                    st.pyplot(plt.gcf())
-                    plt.close()
+                    # Optimal Win Ranges
+                    st.subheader("Optimal Win Ranges")
+                    top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
+                    selected_features = importance_df.head(top_n)['Feature']
+                    optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
+                    plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+
+                    optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
+                    st.write(optimal_win_ranges_summary)
+                    output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
+                    optimal_win_ranges_summary.to_csv(output_path, index=False)
+                    st.write(f"Saved optimal win ranges summary to {output_path}")
+
+                    # Additional Exploratory Data Analysis
+                    st.subheader("Additional Exploratory Data Analysis")
+                    with st.spinner("Generating additional EDA plots..."):
+                        # Correlation matrix
+                        selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
+                        if selected_model in st.session_state.feature_importances:
+                            top_features = st.session_state.feature_importances[selected_model][:10]
+                            top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
+
+                            st.write("Top 10 Features for Correlation Matrix:")
+                            st.write(top_features_list)
+
+                            corr = st.session_state.data[top_features_list].corr()
+                            fig, ax = plt.subplots(figsize=(12, 10))
+                            sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
+                            st.write("Correlation Matrix of Top 10 Features")
+                            st.pyplot(fig)
+
+                        # Pie chart of wins vs losses
+                        win_loss_counts = st.session_state.data['result'].value_counts()
+                        fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
+                        st.plotly_chart(fig)
+
+                        # KDE plots for each indicator showing winning and losing ranges
+                        for feature in selected_features:
+                            win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
+                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
+
+                            plt.figure(figsize=(12, 6))
+                            sns.kdeplot(win_data, label='Win', color='blue', shade=True)
+                            sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
+                            plt.title(f'Distribution of {feature} for Winning and Losing Trades')
+                            plt.xlabel(feature)
+                            plt.ylabel('Density')
+                            plt.legend()
+                            st.pyplot(plt.gcf())
+                            plt.close()
+                except Exception as e:
+                    st.error(f"Error during model training: {e}")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
