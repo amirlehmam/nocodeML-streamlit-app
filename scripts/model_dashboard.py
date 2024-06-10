@@ -68,9 +68,6 @@ def run_model_dashboard():
         data = load_data(data_dir)
         return preprocess_data(data)
 
-    # Title
-    st.title("Advanced Trading Dashboard")
-
     # Sidebar for Base Directory input
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
