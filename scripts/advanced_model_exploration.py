@@ -14,11 +14,10 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense
 from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
-
 
 # Load data
 def load_data(data_dir):
@@ -119,7 +118,7 @@ def run_advanced_model_exploration():
             st.subheader("Neural Network Parameters")
             epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
-            model = KerasClassifier(model=create_nn_model, model__input_dim=st.session_state.X_train.shape[1], epochs=epochs, batch_size=batch_size, verbose=0)
+            model = KerasClassifier(build_fn=create_nn_model, input_dim=X_train.shape[1], epochs=epochs, batch_size=batch_size, verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
@@ -165,53 +164,53 @@ def run_advanced_model_exploration():
             # Optimal Win Ranges
             st.subheader("Optimal Win Ranges")
             top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
-                        selected_features = importance_df.head(top_n)['Feature']
+            selected_features = importance_df.head(top_n)['Feature']
             optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
             plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
             optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
             st.write(optimal_win_ranges_summary)
-            output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
-            optimal_win_ranges_summary.to_csv(output_path, index=False)
-            st.write(f"Saved optimal win ranges summary to {output_path}")
+                       output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
+           optimal_win_ranges_summary.to_csv(output_path, index=False)
+           st.write(f"Saved optimal win ranges summary to {output_path}")
 
-            # Additional Exploratory Data Analysis
-            st.subheader("Additional Exploratory Data Analysis")
-            with st.spinner("Generating additional EDA plots..."):
-                # Correlation matrix
-                selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-                if selected_model in st.session_state.feature_importances:
-                    top_features = st.session_state.feature_importances[selected_model][:10]
-                    top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
+           # Additional Exploratory Data Analysis
+           st.subheader("Additional Exploratory Data Analysis")
+           with st.spinner("Generating additional EDA plots..."):
+               # Correlation matrix
+               selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
+               if selected_model in st.session_state.feature_importances:
+                   top_features = st.session_state.feature_importances[selected_model][:10]
+                   top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
 
-                    st.write("Top 10 Features for Correlation Matrix:")
-                    st.write(top_features_list)
+                   st.write("Top 10 Features for Correlation Matrix:")
+                   st.write(top_features_list)
 
-                    corr = st.session_state.data[top_features_list].corr()
-                    fig, ax = plt.subplots(figsize=(12, 10))
-                    sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
-                    st.write("Correlation Matrix of Top 10 Features")
-                    st.pyplot(fig)
+                   corr = st.session_state.data[top_features_list].corr()
+                   fig, ax = plt.subplots(figsize=(12, 10))
+                   sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
+                   st.write("Correlation Matrix of Top 10 Features")
+                   st.pyplot(fig)
 
-                # Pie chart of wins vs losses
-                win_loss_counts = st.session_state.data['result'].value_counts()
-                fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
-                st.plotly_chart(fig)
+               # Pie chart of wins vs losses
+               win_loss_counts = st.session_state.data['result'].value_counts()
+               fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
+               st.plotly_chart(fig)
 
-                # KDE plots for each indicator showing winning and losing ranges
-                for feature in selected_features:
-                    win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
-                    loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
+               # KDE plots for each indicator showing winning and losing ranges
+               for feature in selected_features:
+                   win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
+                   loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
 
-                    plt.figure(figsize=(12, 6))
-                    sns.kdeplot(win_data, label='Win', color='blue', shade=True)
-                    sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
-                    plt.title(f'Distribution of {feature} for Winning and Losing Trades')
-                    plt.xlabel(feature)
-                    plt.ylabel('Density')
-                    plt.legend()
-                    st.pyplot(plt.gcf())
-                    plt.close()
+                   plt.figure(figsize=(12, 6))
+                   sns.kdeplot(win_data, label='Win', color='blue', shade=True)
+                   sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
+                   plt.title(f'Distribution of {feature} for Winning and Losing Trades')
+                   plt.xlabel(feature)
+                   plt.ylabel('Density')
+                   plt.legend()
+                   st.pyplot(plt.gcf())
+                   plt.close()
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
