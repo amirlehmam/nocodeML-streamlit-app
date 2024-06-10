@@ -13,7 +13,7 @@ import seaborn as sns
 
 @st.cache_data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
     return data
 
 @st.cache_data
