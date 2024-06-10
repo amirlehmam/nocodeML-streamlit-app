@@ -10,11 +10,10 @@ import xgboost as xgb
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-from joblib import Parallel, delayed
 
 @st.cache_data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
     return data
 
 @st.cache_data
@@ -98,13 +97,8 @@ def run_model_dashboard():
         results = []
         feature_importances = {}
 
-        def process_classifier(clf_name, clf):
+        for clf_name, clf in classifiers.items():
             accuracy, importances = train_model(clf, X_train, y_train, X_test, y_test)
-            return clf_name, accuracy, importances
-
-        classifier_results = Parallel(n_jobs=-1)(delayed(process_classifier)(clf_name, clf) for clf_name, clf in classifiers.items())
-
-        for clf_name, accuracy, importances in classifier_results:
             results.append((clf_name, accuracy))
             if importances is not None:
                 feature_importances[clf_name] = importances
