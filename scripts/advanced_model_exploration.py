@@ -247,11 +247,20 @@ def run_advanced_model_exploration():
                         if "feature_importances" not in st.session_state:
                             st.session_state.feature_importances = {}
                         st.session_state.feature_importances[model_type] = feature_importances
+                    else:
+                        importance_df = pd.DataFrame({
+                            'Feature': st.session_state.indicator_columns,
+                            'Importance': [0] * len(st.session_state.indicator_columns)
+                        })
 
                     # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
                     top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
-                    selected_features = importance_df.head(top_n)['Feature']
+                    if not importance_df.empty:
+                        selected_features = importance_df.head(top_n)['Feature']
+                    else:
+                        selected_features = st.session_state.indicator_columns[:top_n]
+
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
