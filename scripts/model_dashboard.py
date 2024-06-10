@@ -1,22 +1,20 @@
+# model_dashboard.py
 import os
 import pandas as pd
-import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-import lightgbm as lgb
 import xgboost as xgb
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-@st.cache_data
+# Load data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
     return data
 
-@st.cache_data
 def preprocess_data(data):
     # Ensure the data contains the expected columns
     if data.shape[1] < 8:
@@ -52,15 +50,14 @@ def preprocess_data(data):
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
 def run_model_dashboard():
-    # Define classifiers with parameter tuning
+    # Define classifiers
     classifiers = {
-        'RandomForest': RandomForestClassifier(n_estimators=50, max_depth=5, n_jobs=-1),
-        'GradientBoosting': GradientBoostingClassifier(n_estimators=50, learning_rate=0.1, max_depth=3),
-        'AdaBoost': AdaBoostClassifier(n_estimators=50, learning_rate=0.1, algorithm='SAMME'),
-        'SVC': SVC(probability=True, C=1.0, kernel='linear'),
-        'LogisticRegression': LogisticRegression(max_iter=1000, n_jobs=-1),
-        'LightGBM': lgb.LGBMClassifier(n_estimators=50, learning_rate=0.1, max_depth=3, n_jobs=-1),
-        'XGBoost': xgb.XGBClassifier(n_estimators=50, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss', n_jobs=-1)
+        'RandomForest': RandomForestClassifier(),
+        'GradientBoosting': GradientBoostingClassifier(),
+        'AdaBoost': AdaBoostClassifier(),
+        'SVC': SVC(probability=True),
+        'LogisticRegression': LogisticRegression(max_iter=1000),
+        'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
     }
 
     # Load data with base_dir and data_dir
@@ -84,23 +81,15 @@ def run_model_dashboard():
         st.success("Data loaded and preprocessed successfully.")
 
         # Train models and get feature importances
-        def train_model(clf, X_train, y_train, X_test, y_test):
-            clf.fit(X_train, y_train)
-            accuracy = clf.score(X_test, y_test)
-            if hasattr(clf, 'feature_importances_'):
-                feature_importances = clf.feature_importances_
-            else:
-                feature_importances = None
-            return accuracy, feature_importances
-
         results = []
         feature_importances = {}
 
         for clf_name, clf in classifiers.items():
-            accuracy, importances = train_model(clf, X_train, y_train, X_test, y_test)
+            clf.fit(X_train, y_train)
+            accuracy = clf.score(X_test, y_test)
             results.append((clf_name, accuracy))
-            if importances is not None:
-                feature_importances[clf_name] = importances
+            if hasattr(clf, 'feature_importances_'):
+                feature_importances[clf_name] = clf.feature_importances_
 
         results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
         results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
@@ -108,12 +97,6 @@ def run_model_dashboard():
         # Display model results
         st.header("Model Accuracy")
         st.dataframe(results_df)
-
-        # Dropdowns for analysis
-        st.header("Feature Analysis")
-        top_n = st.selectbox("Select Top N Indicators", [5, 10, 20], index=0)
-        individual_indicator = st.selectbox("Select Individual Indicator", indicator_columns)
-        combined_indicators = st.multiselect("Select Multiple Indicators", indicator_columns)
 
         # Feature Importance
         st.header("Feature Importance")
@@ -127,22 +110,18 @@ def run_model_dashboard():
             }).sort_values(by='Importance', ascending=False)
 
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(x='Importance', y='Feature', data=importance_df.head(top_n), ax=ax)
+            sns.barplot(x='Importance', y='Feature', data=importance_df, ax=ax)
             st.pyplot(fig)
 
-        # Individual Indicator Analysis
-        st.header("Individual Indicator Analysis")
-        if individual_indicator:
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.histplot(data[individual_indicator], kde=True, ax=ax)
-            ax.set_title(f'Distribution of {individual_indicator}')
-            st.pyplot(fig)
+        # Display data summary
+        st.header("Data Summary")
+        st.write(data.describe())
 
-        # Combined Indicators Analysis
-        st.header("Combined Indicators Analysis")
-        if combined_indicators:
-            sns.pairplot(data[combined_indicators])
-            st.pyplot()
+        # Plotting
+        st.header("Feature Distribution")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.histplot(data['price'], kde=True, ax=ax)
+        st.pyplot(fig)
 
         # Winning Range Values
         st.header("Winning Range Values")
