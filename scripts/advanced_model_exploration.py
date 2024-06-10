@@ -9,14 +9,13 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.graph_objs as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
-from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
 from scipy.stats import gaussian_kde
