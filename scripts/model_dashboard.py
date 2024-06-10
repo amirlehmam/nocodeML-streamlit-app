@@ -3,38 +3,32 @@ import os
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
-from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 import xgboost as xgb
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Load data
 def load_data(data_dir):
-    st.write(f"Loading data from {data_dir}...")  # Debug statement
+    st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
-    st.write(f"Data loaded with shape: {data.shape}")  # Debug statement
+    st.write(f"Data loaded with shape: {data.shape}")
     return data
 
 def preprocess_data(data):
-    st.write("Preprocessing data...")  # Debug statement
-    # Ensure the data contains the expected columns
+    st.write("Preprocessing data...")
     if data.shape[1] < 8:
         raise ValueError("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
 
-    # Select indicator columns from the data (after the first 7 columns)
     indicator_columns = data.columns[7:]
-    st.write(f"Indicator columns: {indicator_columns}")  # Debug statement
+    st.write(f"Indicator columns: {indicator_columns}")
 
-    # Handle missing values by imputing them with the mean of the column
     imputer = SimpleImputer(strategy='mean')
     indicators_imputed = imputer.fit_transform(data[indicator_columns])
 
-    # Encode target variable
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
-    # Create labeled and unlabeled datasets by random selection
     labeled_data = data.sample(frac=0.1, random_state=42)
     unlabeled_data = data.drop(labeled_data.index)
 
@@ -43,48 +37,40 @@ def preprocess_data(data):
 
     X_unlabeled = unlabeled_data[indicator_columns]
 
-    # Impute missing values in both labeled and unlabeled datasets
     X_labeled_imputed = imputer.transform(X_labeled)
     X_unlabeled_imputed = imputer.transform(X_unlabeled)
 
-    # Split labeled data into training and test sets
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X_labeled_imputed, y_labeled, test_size=0.2, random_state=42)
     
-    st.write("Data preprocessing completed.")  # Debug statement
+    st.write("Data preprocessing completed.")
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
 def run_model_dashboard():
-    st.write("Starting model dashboard...")  # Debug statement
-    # Define classifiers with parameter tuning
+    st.write("Starting model dashboard...")
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
         'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
-        'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
         'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
     }
 
-    # Load data with base_dir and data_dir
     def load_and_preprocess_data(base_dir):
-        st.write(f"Base directory: {base_dir}")  # Debug statement
+        st.write(f"Base directory: {base_dir}")
         data_dir = os.path.join(base_dir, "data/processed")
         data = load_data(data_dir)
         return preprocess_data(data)
 
-    # Title
     st.title("Advanced Trading Dashboard")
 
-    # Sidebar for Base Directory input
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
-    # Load and preprocess data
     if st.button("Load Data"):
-        st.write("Loading data...")  # Debug statement
+        st.write("Loading data...")
         try:
             data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
             st.success("Data loaded and preprocessed successfully.")
@@ -95,14 +81,14 @@ def run_model_dashboard():
             st.session_state.y_test = y_test
             st.session_state.indicator_columns = indicator_columns
 
-            # Train models and get feature importances
             results = []
             feature_importances = {}
 
             for clf_name, clf in classifiers.items():
-                st.write(f"Training {clf_name}...")  # Debug statement
+                st.write(f"Training {clf_name}...")
                 clf.fit(X_train, y_train)
                 accuracy = clf.score(X_test, y_test)
+                st.write(f"Trained {clf_name} with accuracy: {accuracy}")
                 results.append((clf_name, accuracy))
                 if hasattr(clf, 'feature_importances_'):
                     feature_importances[clf_name] = clf.feature_importances_
@@ -111,18 +97,18 @@ def run_model_dashboard():
             results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
             st.session_state.results_df = results_df
             st.session_state.feature_importances = feature_importances
+            st.write("Model training and evaluation completed.")
 
         except Exception as e:
             st.error(f"Error loading data: {e}")
             return
 
-    # Check if data is loaded and preprocessed
     if "results_df" in st.session_state and "feature_importances" in st.session_state:
-        # Display model results
+        st.write("Displaying model results...")
+
         st.header("Model Accuracy")
         st.dataframe(st.session_state.results_df)
 
-        # Feature Importance
         st.header("Feature Importance")
         classifier = st.selectbox("Select Classifier for Feature Importance", list(st.session_state.feature_importances.keys()))
 
@@ -136,33 +122,26 @@ def run_model_dashboard():
             top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
             selected_features = importance_df.head(top_n)
 
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(x='Importance', y='Feature', data=selected_features, ax=ax)
-            st.pyplot(fig)
+            fig = px.bar(selected_features, x='Importance', y='Feature', orientation='h')
+            st.plotly_chart(fig)
 
-        # Dropdown for individual indicator analysis
         st.header("Individual Indicator Analysis")
         individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns)
         
         if st.button("Plot Indicator Distribution"):
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.histplot(st.session_state.data[individual_indicator], kde=True, ax=ax)
-            ax.set_title(f'Distribution of {individual_indicator}')
-            st.pyplot(fig)
+            fig = px.histogram(st.session_state.data, x=individual_indicator, color='result', marginal="rug", hover_data=st.session_state.data.columns)
+            st.plotly_chart(fig)
 
-        # Dropdown for analyzing multiple indicators together
         st.header("Multiple Indicators Analysis")
         selected_indicators = st.multiselect("Select Indicators to Analyze Together", st.session_state.indicator_columns)
         
         if st.button("Plot Multiple Indicators"):
             if len(selected_indicators) > 1:
-                fig, ax = plt.subplots(figsize=(10, 6))
-                sns.pairplot(st.session_state.data[selected_indicators])
-                st.pyplot(fig)
+                fig = px.scatter_matrix(st.session_state.data, dimensions=selected_indicators, color='result')
+                st.plotly_chart(fig)
             else:
                 st.warning("Please select at least two indicators.")
 
-        # Winning Range Values
         st.header("Winning Range Values")
         top_indicators = st.selectbox("Select Top N Indicators for Winning Range Analysis", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
         selected_top_features = importance_df.head(top_indicators)['Feature'].tolist()
@@ -171,21 +150,16 @@ def run_model_dashboard():
             winning_data = st.session_state.data[st.session_state.data['result'] == 1]
             losing_data = st.session_state.data[st.session_state.data['result'] == 0]
 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig = go.Figure()
             for feature in selected_top_features:
-                sns.kdeplot(winning_data[feature], label=f'{feature} (Winning)', ax=ax)
-                sns.kdeplot(losing_data[feature], label=f'{feature} (Losing)', ax=ax)
-            ax.set_xlabel('Indicator Value')
-            ax.set_ylabel('Density')
-            ax.set_title('Winning vs Losing Indicator Value Distribution')
-            ax.legend()
-            st.pyplot(fig)
+                fig.add_trace(go.Violin(x=winning_data[feature], line=dict(color='green'), name=f'{feature} (Winning)', spanmode='hard'))
+                fig.add_trace(go.Violin(x=losing_data[feature], line=dict(color='red'), name=f'{feature} (Losing)', spanmode='hard'))
+            fig.update_layout(title='Winning vs Losing Indicator Value Distribution', xaxis_title='Indicator Value', yaxis_title='Density')
+            st.plotly_chart(fig)
 
-            # Print Winning Range Values
             winning_ranges = winning_data[selected_top_features].describe()
             st.write("Winning Range Values for Selected Indicators:")
             st.write(winning_ranges)
 
-# If running this script directly
 if __name__ == "__main__":
     run_model_dashboard()
