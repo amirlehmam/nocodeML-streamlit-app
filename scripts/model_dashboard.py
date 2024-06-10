@@ -51,15 +51,15 @@ def preprocess_data(data):
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
 def run_model_dashboard():
-    # Define classifiers
+    # Define classifiers with parameter tuning
     classifiers = {
-        'RandomForest': RandomForestClassifier(),
-        'GradientBoosting': GradientBoostingClassifier(),
-        'AdaBoost': AdaBoostClassifier(),
-        'SVC': SVC(probability=True),
+        'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
+        'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
+        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
+        'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
-        'LightGBM': lgb.LGBMClassifier(),
-        'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+        'LightGBM': lgb.LGBMClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
+        'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
     }
 
     # Load data with base_dir and data_dir
@@ -67,6 +67,9 @@ def run_model_dashboard():
         data_dir = os.path.join(base_dir, "data/processed")
         data = load_data(data_dir)
         return preprocess_data(data)
+
+    # Title
+    st.title("Advanced Trading Dashboard")
 
     # Sidebar for Base Directory input
     if "base_dir" not in st.session_state:
@@ -118,9 +121,9 @@ def run_model_dashboard():
 
         # Plotting
         st.header("Feature Distribution")
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data, kde=True)
-        st.pyplot(plt)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.histplot(data['price'], kde=True, ax=ax)
+        st.pyplot(fig)
 
         # Winning Range Values
         st.header("Winning Range Values")
