@@ -146,6 +146,10 @@ def run_advanced_model_exploration():
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
+    # Initialize feature_importances in session state
+    if "feature_importances" not in st.session_state:
+        st.session_state.feature_importances = {}
+
     if st.button("Load Data"):
         st.write("Loading data...")
         try:
@@ -244,8 +248,6 @@ def run_advanced_model_exploration():
                         st.plotly_chart(fig)
                         
                         # Initialize feature_importances in session state
-                        if "feature_importances" not in st.session_state:
-                            st.session_state.feature_importances = {}
                         st.session_state.feature_importances[model_type] = feature_importances
                     else:
                         importance_df = pd.DataFrame({
