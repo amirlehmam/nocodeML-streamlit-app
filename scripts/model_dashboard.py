@@ -1,6 +1,6 @@
-# model_dashboard.py
 import os
 import pandas as pd
+import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
@@ -13,7 +13,7 @@ import seaborn as sns
 
 # Load data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
     return data
 
 def preprocess_data(data):
@@ -55,7 +55,7 @@ def run_model_dashboard():
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
-        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
+        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1, algorithm='SAMME'),
         'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
         'LightGBM': lgb.LGBMClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
@@ -100,6 +100,12 @@ def run_model_dashboard():
         st.header("Model Accuracy")
         st.dataframe(results_df)
 
+        # Dropdowns for analysis
+        st.header("Feature Analysis")
+        top_n = st.selectbox("Select Top N Indicators", [5, 10, 20], index=0)
+        individual_indicator = st.selectbox("Select Individual Indicator", indicator_columns)
+        combined_indicators = st.multiselect("Select Multiple Indicators", indicator_columns)
+
         # Feature Importance
         st.header("Feature Importance")
         classifier = st.selectbox("Select Classifier for Feature Importance", list(feature_importances.keys()))
@@ -112,18 +118,23 @@ def run_model_dashboard():
             }).sort_values(by='Importance', ascending=False)
 
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(x='Importance', y='Feature', data=importance_df, ax=ax)
+            sns.barplot(x='Importance', y='Feature', data=importance_df.head(top_n), ax=ax)
             st.pyplot(fig)
 
-        # Display data summary
-        st.header("Data Summary")
-        st.write(data.describe())
+        # Individual Indicator Analysis
+        st.header("Individual Indicator Analysis")
+        if individual_indicator:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.histplot(data[individual_indicator], kde=True, ax=ax)
+            ax.set_title(f'Distribution of {individual_indicator}')
+            st.pyplot(fig)
 
-        # Plotting
-        st.header("Feature Distribution")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.histplot(data['price'], kde=True, ax=ax)
-        st.pyplot(fig)
+        # Combined Indicators Analysis
+        st.header("Combined Indicators Analysis")
+        if combined_indicators:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.pairplot(data[combined_indicators])
+            st.pyplot(fig)
 
         # Winning Range Values
         st.header("Winning Range Values")
