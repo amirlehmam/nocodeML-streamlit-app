@@ -285,8 +285,13 @@ def run_model_dashboard():
                 with st.spinner("Generating additional EDA plots..."):
                     # Correlation matrix
                     selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-                    top_features = st.session_state.feature_importances[selected_model][:10]
-                    top_features_list = top_features.index.tolist()
+                    feature_importances_df = pd.DataFrame({
+                        'Feature': st.session_state.indicator_columns,
+                        'Importance': st.session_state.feature_importances[selected_model]
+                    }).sort_values(by='Importance', ascending=False)
+
+                    top_features = feature_importances_df.head(10)['Feature']
+                    top_features_list = top_features.tolist()
 
                     st.write("Top 10 Features for Correlation Matrix:")
                     st.write(top_features_list)
@@ -301,7 +306,6 @@ def run_model_dashboard():
                     win_loss_counts = st.session_state.data['result'].value_counts()
                     fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
                     st.plotly_chart(fig)
-
 
 if __name__ == "__main__":
     run_model_dashboard()
