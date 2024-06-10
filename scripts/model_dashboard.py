@@ -12,16 +12,20 @@ import seaborn as sns
 
 # Load data
 def load_data(data_dir):
+    st.write(f"Loading data from {data_dir}...")  # Debug statement
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    st.write(f"Data loaded with shape: {data.shape}")  # Debug statement
     return data
 
 def preprocess_data(data):
+    st.write("Preprocessing data...")  # Debug statement
     # Ensure the data contains the expected columns
     if data.shape[1] < 8:
         raise ValueError("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
 
     # Select indicator columns from the data (after the first 7 columns)
     indicator_columns = data.columns[7:]
+    st.write(f"Indicator columns: {indicator_columns}")  # Debug statement
 
     # Handle missing values by imputing them with the mean of the column
     imputer = SimpleImputer(strategy='mean')
@@ -47,13 +51,16 @@ def preprocess_data(data):
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X_labeled_imputed, y_labeled, test_size=0.2, random_state=42)
     
+    st.write("Data preprocessing completed.")  # Debug statement
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
 def run_model_dashboard():
+    st.write("Starting model dashboard...")  # Debug statement
     # Define classifiers with parameter tuning
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
+        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
         'SVC': SVC(probability=True, C=1.0, kernel='linear'),
         'LogisticRegression': LogisticRegression(max_iter=1000),
         'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
@@ -61,6 +68,7 @@ def run_model_dashboard():
 
     # Load data with base_dir and data_dir
     def load_and_preprocess_data(base_dir):
+        st.write(f"Base directory: {base_dir}")  # Debug statement
         data_dir = os.path.join(base_dir, "data/processed")
         data = load_data(data_dir)
         return preprocess_data(data)
@@ -77,30 +85,36 @@ def run_model_dashboard():
     # Load and preprocess data
     if st.button("Load Data"):
         st.write("Loading data...")  # Debug statement
-        data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
-        st.success("Data loaded and preprocessed successfully.")
-        st.session_state.data = data
-        st.session_state.X_train = X_train
-        st.session_state.X_test = X_test
-        st.session_state.y_train = y_train
-        st.session_state.y_test = y_test
-        st.session_state.indicator_columns = indicator_columns
+        try:
+            data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
+            st.success("Data loaded and preprocessed successfully.")
+            st.session_state.data = data
+            st.session_state.X_train = X_train
+            st.session_state.X_test = X_test
+            st.session_state.y_train = y_train
+            st.session_state.y_test = y_test
+            st.session_state.indicator_columns = indicator_columns
 
-        # Train models and get feature importances
-        results = []
-        feature_importances = {}
+            # Train models and get feature importances
+            results = []
+            feature_importances = {}
 
-        for clf_name, clf in classifiers.items():
-            clf.fit(X_train, y_train)
-            accuracy = clf.score(X_test, y_test)
-            results.append((clf_name, accuracy))
-            if hasattr(clf, 'feature_importances_'):
-                feature_importances[clf_name] = clf.feature_importances_
+            for clf_name, clf in classifiers.items():
+                st.write(f"Training {clf_name}...")  # Debug statement
+                clf.fit(X_train, y_train)
+                accuracy = clf.score(X_test, y_test)
+                results.append((clf_name, accuracy))
+                if hasattr(clf, 'feature_importances_'):
+                    feature_importances[clf_name] = clf.feature_importances_
 
-        results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
-        results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
-        st.session_state.results_df = results_df
-        st.session_state.feature_importances = feature_importances
+            results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
+            results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
+            st.session_state.results_df = results_df
+            st.session_state.feature_importances = feature_importances
+
+        except Exception as e:
+            st.error(f"Error loading data: {e}")
+            return
 
     # Check if data is loaded and preprocessed
     if "results_df" in st.session_state and "feature_importances" in st.session_state:
