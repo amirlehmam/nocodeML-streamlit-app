@@ -170,13 +170,13 @@ def run_advanced_model_exploration():
 
             optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
             st.write(optimal_win_ranges_summary)
-                       output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
-           optimal_win_ranges_summary.to_csv(output_path, index=False)
-           st.write(f"Saved optimal win ranges summary to {output_path}")
+            output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
+            optimal_win_ranges_summary.to_csv(output_path, index=False)
+            st.write(f"Saved optimal win ranges summary to {output_path}")
 
            # Additional Exploratory Data Analysis
-           st.subheader("Additional Exploratory Data Analysis")
-           with st.spinner("Generating additional EDA plots..."):
+            st.subheader("Additional Exploratory Data Analysis")
+            with st.spinner("Generating additional EDA plots..."):
                # Correlation matrix
                selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
                if selected_model in st.session_state.feature_importances:
