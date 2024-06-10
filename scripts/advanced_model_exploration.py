@@ -239,6 +239,11 @@ def run_advanced_model_exploration():
                         }).sort_values(by='Importance', ascending=False)
                         fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig)
+                        
+                        # Initialize feature_importances in session state
+                        if "feature_importances" not in st.session_state:
+                            st.session_state.feature_importances = {}
+                        st.session_state.feature_importances[model_type] = feature_importances
 
                     # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
