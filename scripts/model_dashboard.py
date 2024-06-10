@@ -260,13 +260,6 @@ def run_model_dashboard():
                 sns.heatmap(corr, cmap='coolwarm', ax=ax)
                 st.write("Correlation Matrix of Indicators")
                 st.pyplot(fig)
-                
-                # Pair plot for top features
-                if 'feature_importances' in st.session_state:
-                    top_features = st.session_state.feature_importances['RandomForest']
-                    st.write(f"Pair Plot for Top 5 Features: {top_features.values}")
-                    fig = sns.pairplot(st.session_state.data, vars=top_features, hue='result')
-                    st.pyplot(fig)
 
                 # Pie chart of wins vs losses
                 win_loss_counts = st.session_state.data['result'].value_counts()
