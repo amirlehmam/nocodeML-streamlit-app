@@ -10,12 +10,14 @@ import xgboost as xgb
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
+from joblib import Parallel, delayed
 
-# Load data
+@st.cache_data
 def load_data(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
     return data
 
+@st.cache_data
 def preprocess_data(data):
     # Ensure the data contains the expected columns
     if data.shape[1] < 8:
@@ -53,13 +55,13 @@ def preprocess_data(data):
 def run_model_dashboard():
     # Define classifiers with parameter tuning
     classifiers = {
-        'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
-        'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
-        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1, algorithm='SAMME'),
+        'RandomForest': RandomForestClassifier(n_estimators=50, max_depth=5, n_jobs=-1),
+        'GradientBoosting': GradientBoostingClassifier(n_estimators=50, learning_rate=0.1, max_depth=3),
+        'AdaBoost': AdaBoostClassifier(n_estimators=50, learning_rate=0.1, algorithm='SAMME'),
         'SVC': SVC(probability=True, C=1.0, kernel='linear'),
-        'LogisticRegression': LogisticRegression(max_iter=1000),
-        'LightGBM': lgb.LGBMClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
-        'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
+        'LogisticRegression': LogisticRegression(max_iter=1000, n_jobs=-1),
+        'LightGBM': lgb.LGBMClassifier(n_estimators=50, learning_rate=0.1, max_depth=3, n_jobs=-1),
+        'XGBoost': xgb.XGBClassifier(n_estimators=50, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss', n_jobs=-1)
     }
 
     # Load data with base_dir and data_dir
@@ -83,15 +85,29 @@ def run_model_dashboard():
         st.success("Data loaded and preprocessed successfully.")
 
         # Train models and get feature importances
+        @st.cache_data
+        def train_model(clf, X_train, y_train, X_test, y_test):
+            clf.fit(X_train, y_train)
+            accuracy = clf.score(X_test, y_test)
+            if hasattr(clf, 'feature_importances_'):
+                feature_importances = clf.feature_importances_
+            else:
+                feature_importances = None
+            return accuracy, feature_importances
+
         results = []
         feature_importances = {}
 
-        for clf_name, clf in classifiers.items():
-            clf.fit(X_train, y_train)
-            accuracy = clf.score(X_test, y_test)
+        def process_classifier(clf_name, clf):
+            accuracy, importances = train_model(clf, X_train, y_train, X_test, y_test)
+            return clf_name, accuracy, importances
+
+        classifier_results = Parallel(n_jobs=-1)(delayed(process_classifier)(clf_name, clf) for clf_name, clf in classifiers.items())
+
+        for clf_name, accuracy, importances in classifier_results:
             results.append((clf_name, accuracy))
-            if hasattr(clf, 'feature_importances_'):
-                feature_importances[clf_name] = clf.feature_importances_
+            if importances is not None:
+                feature_importances[clf_name] = importances
 
         results_df = pd.DataFrame(results, columns=['Classifier', 'Accuracy'])
         results_df.sort_values(by='Accuracy', ascending=False, inplace=True)
@@ -132,9 +148,8 @@ def run_model_dashboard():
         # Combined Indicators Analysis
         st.header("Combined Indicators Analysis")
         if combined_indicators:
-            fig, ax = plt.subplots(figsize=(10, 6))
             sns.pairplot(data[combined_indicators])
-            st.pyplot(fig)
+            st.pyplot()
 
         # Winning Range Values
         st.header("Winning Range Values")
