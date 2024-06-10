@@ -9,6 +9,7 @@ import xgboost as xgb
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.graph_objs as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -92,6 +93,26 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
         })
 
     return optimal_ranges
+
+def plot_pie_distribution(data, feature, target='result'):
+    win_data = data[data[target] == 1][feature].dropna()
+    loss_data = data[data[target] == 0][feature].dropna()
+
+    win_counts = win_data.value_counts()
+    loss_counts = loss_data.value_counts()
+
+    labels = win_counts.index.union(loss_counts.index)
+
+    win_values = [win_counts.get(label, 0) for label in labels]
+    loss_values = [loss_counts.get(label, 0) for label in labels]
+
+    fig = go.Figure(data=[
+        go.Pie(labels=labels, values=win_values, name='Win', hole=0.3, domain=dict(x=[0, 0.5])),
+        go.Pie(labels=labels, values=loss_values, name='Loss', hole=0.3, domain=dict(x=[0.5, 1.0]))
+    ])
+
+    fig.update_layout(title=f'Win vs Loss Distribution for {feature}')
+    return fig
 
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
     for item in optimal_ranges:
@@ -239,8 +260,14 @@ def run_model_dashboard():
                 individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns, key='individual_indicator')
                 
                 if st.button("Plot Indicator Distribution", key='plot_individual'):
+                    # Histogram plot
                     fig = px.histogram(st.session_state.data, x=individual_indicator, color='result', marginal="rug", hover_data=st.session_state.data.columns)
                     st.plotly_chart(fig)
+
+                    # Pie distribution plot
+                    pie_fig = plot_pie_distribution(st.session_state.data, individual_indicator)
+                    st.plotly_chart(pie_fig)
+
 
             with st.expander("Multiple Indicators Analysis"):
                 model_name = st.selectbox("Select Model", list(classifiers.keys()), key='multiple_indicators_model')
@@ -253,20 +280,28 @@ def run_model_dashboard():
                     else:
                         st.warning("Please select at least two indicators.")
 
-        with st.expander("Additional EDA"):
-            st.subheader("Additional Exploratory Data Analysis")
-            with st.spinner("Generating additional EDA plots..."):
-                # Correlation matrix
-                corr = st.session_state.data[st.session_state.indicator_columns].corr()
-                fig, ax = plt.subplots(figsize=(12, 10))
-                sns.heatmap(corr, cmap='coolwarm', ax=ax)
-                st.write("Correlation Matrix of Indicators")
-                st.pyplot(fig)
+            with st.expander("Additional EDA"):
+                st.subheader("Additional Exploratory Data Analysis")
+                with st.spinner("Generating additional EDA plots..."):
+                    # Correlation matrix
+                    selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
+                    top_features = st.session_state.feature_importances[selected_model][:10]
+                    top_features_list = top_features.index.tolist()
 
-                # Pie chart of wins vs losses
-                win_loss_counts = st.session_state.data['result'].value_counts()
-                fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
-                st.plotly_chart(fig)
+                    st.write("Top 10 Features for Correlation Matrix:")
+                    st.write(top_features_list)
+
+                    corr = st.session_state.data[top_features_list].corr()
+                    fig, ax = plt.subplots(figsize=(12, 10))
+                    sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
+                    st.write("Correlation Matrix of Top 10 Features")
+                    st.pyplot(fig)
+
+                    # Pie chart of wins vs losses
+                    win_loss_counts = st.session_state.data['result'].value_counts()
+                    fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
+                    st.plotly_chart(fig)
+
 
 if __name__ == "__main__":
     run_model_dashboard()
