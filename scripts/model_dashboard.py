@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 # Load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
-    data = pd.read_csv(os.path.join(data_dir, "sample data.csv"))
+    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
