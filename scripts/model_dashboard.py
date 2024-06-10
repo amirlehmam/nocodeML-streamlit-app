@@ -263,7 +263,7 @@ def run_model_dashboard():
                 
                 # Pair plot for top features
                 if 'feature_importances' in st.session_state:
-                    top_features = st.session_state.feature_importances['RandomForest'].head(5)['Feature']
+                    top_features = st.session_state.feature_importances['RandomForest']
                     st.write(f"Pair Plot for Top 5 Features: {top_features.values}")
                     fig = sns.pairplot(st.session_state.data, vars=top_features, hue='result')
                     st.pyplot(fig)
