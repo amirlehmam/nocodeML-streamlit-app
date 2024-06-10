@@ -84,7 +84,6 @@ def run_model_dashboard():
         st.success("Data loaded and preprocessed successfully.")
 
         # Train models and get feature importances
-        @st.cache_data
         def train_model(clf, X_train, y_train, X_test, y_test):
             clf.fit(X_train, y_train)
             accuracy = clf.score(X_test, y_test)
