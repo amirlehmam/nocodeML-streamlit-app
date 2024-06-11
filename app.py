@@ -158,14 +158,6 @@ def main():
                 background: url('https://www.transparenttextures.com/patterns/black-linen.png');
                 color: #FAFAFA;
             }
-			
-			/* Navigation bar styling */
-            .st-navbar {
-                position: fixed;
-                top: 0;
-                width: 100%;
-                z-index: 1000;
-            }
 
             /* Sidebar button style */
             .sidebar-button {
@@ -307,7 +299,7 @@ def main():
             """,
             unsafe_allow_html=True
         )
-        
+
         # Navigation bar
         pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'EDA Indicators',
                  'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific']
