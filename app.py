@@ -3,8 +3,6 @@ from hydralit import HydraApp
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
-import os
-import base64
 
 # Function to load and encode image
 def load_image(image_path):
@@ -128,7 +126,7 @@ def main():
     authenticator.login()
 
     if st.session_state["authentication_status"]:
-        app = HydraApp(title='nocodeML', hide_streamlit_markers=True, use_navbar=True)
+        app = HydraApp(title='nocodeML', hide_streamlit_markers=True, use_navbar=True, navbar_sticky=True)
 
         @app.addapp(is_home=True)
         def overview():
