@@ -186,9 +186,11 @@ def run_advanced_model_exploration():
     if "feature_importances" not in st.session_state:
         st.session_state.feature_importances = {}
 
-    # Initialize session state for current step
+    # Initialize session state for current step and model type
     if "current_step" not in st.session_state:
         st.session_state.current_step = "load_data"
+    if "model_type" not in st.session_state:
+        st.session_state.model_type = "Random Forest"
 
     # Add multiselect for feature types
     selected_feature_types = st.multiselect(
@@ -345,6 +347,7 @@ def run_advanced_model_exploration():
                         })
 
                     st.session_state.current_step = "eda"
+                    st.session_state.model_type = model_type
 
                     # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
@@ -370,6 +373,8 @@ def run_advanced_model_exploration():
         # Additional Exploratory Data Analysis
         st.subheader("Additional Exploratory Data Analysis")
         with st.spinner("Generating additional EDA plots..."):
+            model_type = st.session_state.model_type  # Ensure model_type is retrieved from session state
+
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
                 st.write("Feature Importance Heatmap:")
