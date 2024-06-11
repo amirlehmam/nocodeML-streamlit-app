@@ -4,6 +4,8 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
+from hydralit import HydraApp
+from hydralit import HydraHeadApp
 
 # Set page config
 st.set_page_config(
@@ -31,6 +33,114 @@ authenticator = stauth.Authenticate(
 )
 
 authenticator.login()
+
+class OverviewApp(HydraHeadApp):
+    def run(self):
+        st.write(f'Welcome **{st.session_state["name"]}**')
+        st.write("""
+        ### nocodeML Algorithmic Trading Optimization
+
+        #### Streamlined for Precision and Performance
+        ---
+
+        **Key Features:**
+
+        **Data Ingestion and Preparation:**
+        - Import raw trading data effortlessly.
+        - Utilize cleaning and parsing utilities for ready-to-analyze data.
+        - Save prepared data for exploration and modeling.
+
+        **Advanced EDA on Indicators:**
+        - Perform in-depth analysis of trading indicators.
+        - Generate visualizations to understand trends, correlations, and anomalies.
+        - Use interactive plots to uncover hidden patterns.
+
+        **Optimal Win Ranges Identification:**
+        - Apply statistical techniques to determine profitable trading ranges.
+        - Visualize win ranges to enhance trading decisions.
+        - Summarize findings for quick insights.
+
+        **Model Development on % Away Indicators:**
+        - Build and optimize predictive models based on % away indicators.
+        - Utilize machine learning algorithms to forecast market movements.
+        - Evaluate model performance with comprehensive metrics.
+
+        **Focused Analysis on Specific Models:**
+        - Conduct deep dives into specific model performances.
+        - Analyze model behavior under various market conditions.
+        - Fine-tune parameters for optimal results.
+
+        **Advanced EDA on Specific Models:**
+        - Gain detailed understanding of models through comprehensive EDA.
+        - Visualize feature interactions and outcomes.
+        - Validate model assumptions with advanced statistical tests.
+
+        **Win Ranges Analysis for Specific Models:**
+        - Determine optimal win ranges tailored to specific models.
+        - Enhance performance by focusing on profitable market conditions.
+        - Visualize results for informed trading decisions.
+
+        ---
+
+        **Getting Started:**
+        1. **Navigate through the Sidebar:** Access different sections of the app.
+        2. **Ingest and Prepare Data:** Upload and prepare raw data files.
+        3. **Perform EDA:** Explore data and trading indicators with advanced tools.
+        4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+        5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
+        6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
+
+        ---
+
+        Harness machine learning and data science to unlock new opportunities and enhance trading performance.
+
+        **Two Plums for One**
+        """)
+
+class DataIngestionApp(HydraHeadApp):
+    def run(self):
+        from scripts.data_ingestion_preparation import run_data_ingestion_preparation
+        run_data_ingestion_preparation()
+
+class AdvancedEDAIndicatorsApp(HydraHeadApp):
+    def run(self):
+        from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+        run_advanced_eda_indicators()
+
+class OptimalWinRangesApp(HydraHeadApp):
+    def run(self):
+        from scripts.optimal_win_ranges import run_optimal_win_ranges
+        run_optimal_win_ranges()
+
+class ModelPercentageAwayApp(HydraHeadApp):
+    def run(self):
+        from scripts.model_percentage_away import run_model_percentage_away
+        run_model_percentage_away()
+
+class SpecificModelFocusApp(HydraHeadApp):
+    def run(self):
+        from scripts.specific_model_focus import run_specific_model_focus
+        run_specific_model_focus()
+
+class AdvancedEDASpecificModelApp(HydraHeadApp):
+    def run(self):
+        from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+        run_advanced_eda_specific_model()
+
+class WinRangesSpecificModelApp(HydraHeadApp):
+    def run(self):
+        from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+        run_win_ranges_specific_model()
+
+class AdvancedTradingDashboardApp(HydraHeadApp):
+    def run(self):
+        from scripts.model_dashboard import run_model_dashboard
+        run_model_dashboard()
+
+class AdvancedModelExplorationApp(HydraHeadApp):
+    def run(self):
+        from scripts.advanced_model_exploration import run_advanced_model_exploration
+        run_advanced_model_exploration()
 
 def main():
     if st.session_state["authentication_status"]:
@@ -205,134 +315,20 @@ def main():
         else:
             st.warning("Logo file not found!")
 
-        # Sidebar for navigation with icons
-        st.sidebar.title("Navigation")
+        app = HydraApp(title="nocodeML", favicon="📈", hide_streamlit_markers=True)
 
-        def nav_button(label, page_name, icon, key):
-            if st.sidebar.button(f"{icon} {label}", key=key):
-                st.session_state.page = page_name
+        app.add_app("Overview", icon="🏠", app=OverviewApp())
+        app.add_app("Data Ingestion and Preparation", icon="📂", app=DataIngestionApp())
+        app.add_app("Advanced Trading Dashboard", icon="📈", app=AdvancedTradingDashboardApp())
+        app.add_app("Advanced Model Exploration", icon="⚙️", app=AdvancedModelExplorationApp())
+        app.add_app("Advanced EDA on Indicators", icon="📊", app=AdvancedEDAIndicatorsApp())
+        app.add_app("Optimal Win Ranges", icon="🎯", app=OptimalWinRangesApp())
+        app.add_app("Model on % Away Indicators", icon="📈", app=ModelPercentageAwayApp())
+        app.add_app("Specific Model Focus", icon="🔍", app=SpecificModelFocusApp())
+        app.add_app("Advanced EDA on Specific Model", icon="📉", app=AdvancedEDASpecificModelApp())
+        app.add_app("Win Ranges for Specific Model", icon="🏆", app=WinRangesSpecificModelApp())
 
-        if "page" not in st.session_state:
-            st.session_state.page = "Overview"
-
-        # Navigation
-        nav_button("Overview", "Overview", "🏠", "nav_overview")
-        nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂", "nav_data_ingestion")
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈", "nav_dashboard")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️", "nav_model_exploration")
-        nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊", "nav_eda_indicators")
-        nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯", "nav_win_ranges")
-        nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈", "nav_percentage_away")
-        nav_button("Specific Model Focus", "Specific Model Focus", "🔍", "nav_model_focus")
-        nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉", "nav_eda_specific_model")
-        nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆", "nav_win_ranges_specific_model")
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈", "nav_dashboard_2")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️", "nav_model_exploration_2")
-
-        # Initialize session state if not already done
-        if 'page' not in st.session_state:
-            st.session_state.page = "Overview"
-
-        page = st.session_state.page
-
-        if page == "Overview":
-            st.write(f'Welcome **{st.session_state["name"]}**')
-            st.write("""
-            ###  nocodeML Algorithmic Trading Optimization
-
-            #### Streamlined for Precision and Performance
-            ---
-
-            **Key Features:**
-
-            **Data Ingestion and Preparation:**
-            - Import raw trading data effortlessly.
-            - Utilize cleaning and parsing utilities for ready-to-analyze data.
-            - Save prepared data for exploration and modeling.
-
-            **Advanced EDA on Indicators:**
-            - Perform in-depth analysis of trading indicators.
-            - Generate visualizations to understand trends, correlations, and anomalies.
-            - Use interactive plots to uncover hidden patterns.
-
-            **Optimal Win Ranges Identification:**
-            - Apply statistical techniques to determine profitable trading ranges.
-            - Visualize win ranges to enhance trading decisions.
-            - Summarize findings for quick insights.
-
-            **Model Development on % Away Indicators:**
-            - Build and optimize predictive models based on % away indicators.
-            - Utilize machine learning algorithms to forecast market movements.
-            - Evaluate model performance with comprehensive metrics.
-
-            **Focused Analysis on Specific Models:**
-            - Conduct deep dives into specific model performances.
-            - Analyze model behavior under various market conditions.
-            - Fine-tune parameters for optimal results.
-
-            **Advanced EDA on Specific Models:**
-            - Gain detailed understanding of models through comprehensive EDA.
-            - Visualize feature interactions and outcomes.
-            - Validate model assumptions with advanced statistical tests.
-
-            **Win Ranges Analysis for Specific Models:**
-            - Determine optimal win ranges tailored to specific models.
-            - Enhance performance by focusing on profitable market conditions.
-            - Visualize results for informed trading decisions.
-
-            ---
-
-            **Getting Started:**
-            1. **Navigate through the Sidebar:** Access different sections of the app.
-            2. **Ingest and Prepare Data:** Upload and prepare raw data files.
-            3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-            4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
-            5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
-            6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
-
-            ---
-
-            Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
-
-            **Two Plums for One**
-                        
-            """)
-
-        elif page == "Data Ingestion and Preparation":
-            from scripts.data_ingestion_preparation import run_data_ingestion_preparation
-            run_data_ingestion_preparation()
-
-        elif page == "Advanced EDA on Indicators":
-            from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-            run_advanced_eda_indicators()
-
-        elif page == "Optimal Win Ranges":
-            from scripts.optimal_win_ranges import run_optimal_win_ranges
-            run_optimal_win_ranges()
-
-        elif page == "Model on % Away Indicators":
-            from scripts.model_percentage_away import run_model_percentage_away
-            run_model_percentage_away()
-
-        elif page == "Specific Model Focus":
-            from scripts.specific_model_focus import run_specific_model_focus
-            run_specific_model_focus()
-
-        elif page == "Advanced EDA on Specific Model":
-            from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-            run_advanced_eda_specific_model()
-
-        elif page == "Win Ranges for Specific Model":
-            from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-            run_win_ranges_specific_model()
-
-        elif page == "Advanced Trading Dashboard":
-            from scripts.model_dashboard import run_model_dashboard
-            run_model_dashboard()
-
-        elif page == "Advanced Model Exploration":
-            from scripts.advanced_model_exploration import run_advanced_model_exploration
-            run_advanced_model_exploration()
+        app.run()
 
         authenticator.logout()
 
