@@ -397,7 +397,7 @@ def run_advanced_model_exploration():
                             fig = go.Figure()
                             fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
                             fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
-                            fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades')
+                            fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
                             fig.update_xaxes(title_text=selected_indicator)
                             fig.update_yaxes(title_text='Count')
                             st.plotly_chart(fig)
@@ -417,7 +417,7 @@ def run_advanced_model_exploration():
                                     for start, end in range_item['optimal_win_ranges']:
                                         fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
 
-                            fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density')
+                            fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
                             st.plotly_chart(fig)
 
                         # Feature Importance vs Prediction
