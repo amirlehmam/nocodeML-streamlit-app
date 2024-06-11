@@ -208,12 +208,15 @@ def main():
         # Navigation
         nav_button("Overview", "Overview", "🏠")
         nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-        nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-        nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-        nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-        nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-        nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-        nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
+        with st.sidebar.expander("Basic Analysis"):
+            nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
+            nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
+            nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
+            nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
+            nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
+            nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+
         nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
         nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
 
