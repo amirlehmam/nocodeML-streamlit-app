@@ -177,22 +177,33 @@ def main():
         )
 
         # Navigation bar
-        selected = st_navbar(['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration',
-             'EDA Indicators', 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific'])
-
-        # Display the logo
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'EDA Indicators',
+                 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific']
         logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-        if (os.path.exists(logo_path)):
-            st.markdown(
-                f"""
-                <div class="center-logo">
-                    <img src="data:image/png;base64,{load_image(logo_path)}" width="280">
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.warning("Logo file not found!")
+        styles = {
+            "nav": {
+                "background-color": "royalblue",
+                "justify-content": "left",
+            },
+            "img": {
+                "padding-right": "14px",
+            },
+            "span": {
+                "color": "white",
+                "padding": "14px",
+            },
+            "active": {
+                "background-color": "white",
+                "color": "var(--text-color)",
+                "font-weight": "normal",
+                "padding": "14px",
+            }
+        }
+        selected = st_navbar(
+            pages,
+            logo_path=logo_path,
+            styles=styles
+        )
 
         # Call the function based on the selected page
         page_dict[selected]()
