@@ -269,7 +269,9 @@ def run_advanced_model_exploration():
                         st.session_state.feature_importances[model_type] = feature_importances
                     elif model_type == "Neural Network":
                         st.write("Calculating feature importances using SHAP...")
-                        explainer = shap.Explainer(model, st.session_state.X_train)
+                        # Extract the underlying Keras model from the KerasClassifier
+                        underlying_model = model.model_
+                        explainer = shap.Explainer(underlying_model, st.session_state.X_train)
                         shap_values = explainer(st.session_state.X_test)
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df = pd.DataFrame({
