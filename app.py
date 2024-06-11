@@ -153,29 +153,6 @@ def main():
                 font-family: 'Arial', sans-serif;
             }
 
-            /* Navigation Bar */
-            .st-navbar {
-                background-color: #1E88E5;
-                font-family: 'Arial', sans-serif;
-            }
-
-            .st-navbar a {
-                color: #FAFAFA;
-                padding: 10px 20px;
-                text-decoration: none;
-                font-weight: bold;
-                font-size: 14px;
-                border-right: 1px solid #FAFAFA;
-            }
-
-            .st-navbar a:hover {
-                background-color: #1565C0;
-            }
-
-            .st-navbar a:last-child {
-                border-right: none;
-            }
-
             /* Center logo */
             .center-logo {
                 display: flex;
@@ -199,6 +176,10 @@ def main():
             """
         )
 
+        # Navigation bar
+        selected = st_navbar(['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration',
+             'EDA Indicators', 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific'])
+
         # Display the logo
         logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
         if (os.path.exists(logo_path)):
@@ -212,10 +193,6 @@ def main():
             )
         else:
             st.warning("Logo file not found!")
-
-        # Navigation bar
-        selected = st_navbar(['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration',
-             'EDA Indicators', 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific'])
 
         # Call the function based on the selected page
         page_dict[selected]()
