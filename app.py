@@ -4,7 +4,7 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
-from streamlit_navigation_bar import st_navbar
+from streamlit_navigation_bar import navigation_bar
 
 # Set page config
 st.set_page_config(
@@ -319,10 +319,11 @@ def main():
             st.warning("Logo file not found!")
 
         # Navigation bar
-        selected = st_navbar(
-            menu_items=['Overview', 'Data Ingestion and Preparation', 'Advanced Trading Dashboard', 'Advanced Model Exploration',
-                        'Advanced EDA on Indicators', 'Optimal Win Ranges', 'Model on % Away Indicators', 'Specific Model Focus',
-                        'Advanced EDA on Specific Model', 'Win Ranges for Specific Model']
+        selected = navigation_bar(
+            "Select a page",
+            ["Overview", "Data Ingestion and Preparation", "Advanced Trading Dashboard", "Advanced Model Exploration",
+             "Advanced EDA on Indicators", "Optimal Win Ranges", "Model on % Away Indicators", "Specific Model Focus",
+             "Advanced EDA on Specific Model", "Win Ranges for Specific Model"]
         )
 
         # Call the function based on the selected page
