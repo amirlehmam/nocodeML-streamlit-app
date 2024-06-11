@@ -418,8 +418,8 @@ def run_advanced_model_exploration():
 
                             st.success("EDA plots generated successfully.")
 
-    except Exception as e:
-        st.error(f"Error during model training: {e}")
+except Exception as e:
+    st.error(f"Error during model training: {e}")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
