@@ -209,6 +209,7 @@ def main():
         nav_button("Overview", "Overview", "🏠")
         nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
 
+        # Grouping under "Basic Analysis"
         with st.sidebar.expander("Basic Analysis"):
             nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
             nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
