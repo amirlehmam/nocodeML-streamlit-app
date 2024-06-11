@@ -15,7 +15,7 @@ import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
 from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
 from scipy.stats import gaussian_kde
@@ -64,12 +64,34 @@ def preprocess_data(data, selected_feature_types):
     st.write("Data preprocessing completed.")
     return X_train_scaled, X_test_scaled, y_train, y_test, indicator_columns
 
-# Define Keras model
+# Define Keras models
 def create_nn_model(input_dim):
     model = Sequential()
     model.add(Dense(64, input_dim=input_dim, activation='relu'))
     model.add(Dense(32, activation='relu'))
     model.add(Dense(16, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+
+def create_rnn_model(input_shape, rnn_type='LSTM'):
+    model = Sequential()
+    if rnn_type == 'LSTM':
+        model.add(LSTM(64, input_shape=input_shape, return_sequences=True))
+    else:
+        model.add(GRU(64, input_shape=input_shape, return_sequences=True))
+    model.add(LSTM(32))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+
+def create_cnn_model(input_shape):
+    model = Sequential()
+    model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
+    model.add(MaxPooling1D(pool_size=2))
+    model.add(Flatten())
+    model.add(Dense(32, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
@@ -188,7 +210,7 @@ def run_advanced_model_exploration():
     if "data" in st.session_state and "X_train" in st.session_state:
         st.write("Select model and hyperparameters for exploration")
 
-        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "Stacking Ensemble"])
+        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"])
 
         if model_type == "Random Forest":
             st.subheader("Random Forest Parameters")
@@ -223,6 +245,27 @@ def run_advanced_model_exploration():
             batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
             model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=epochs, batch_size=batch_size, verbose=0)
+
+        elif model_type == "RNN (LSTM)":
+            st.subheader("RNN (LSTM) Parameters")
+            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            input_shape = (st.session_state.X_train.shape[1], 1)
+            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=epochs, batch_size=batch_size, verbose=0)
+
+        elif model_type == "RNN (GRU)":
+            st.subheader("RNN (GRU) Parameters")
+            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            input_shape = (st.session_state.X_train.shape[1], 1)
+            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=epochs, batch_size=batch_size, verbose=0)
+
+        elif model_type == "CNN":
+            st.subheader("CNN Parameters")
+            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            input_shape = (st.session_state.X_train.shape[1], 1)
+            model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=epochs, batch_size=batch_size, verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
@@ -256,7 +299,7 @@ def run_advanced_model_exploration():
                     st.write(f"Model saved to {model_save_path}")
 
                     # Feature importance
-                    if model_type != "Neural Network" and hasattr(model, 'feature_importances_'):
+                    if model_type != "Neural Network" and model_type not in ["RNN (LSTM)", "RNN (GRU)", "CNN"] and hasattr(model, 'feature_importances_'):
                         st.write("Feature Importances:")
                         feature_importances = model.feature_importances_
                         importance_df = pd.DataFrame({
@@ -268,7 +311,7 @@ def run_advanced_model_exploration():
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
-                    elif model_type == "Neural Network":
+                    elif model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         st.write("Calculating feature importances using SHAP...")
                         # Extract the underlying Keras model from the KerasClassifier
                         underlying_model = model.model_
@@ -330,6 +373,20 @@ def run_advanced_model_exploration():
                         fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
                         st.plotly_chart(fig)
 
+                        # KDE plots for each indicator showing winning and losing ranges
+                        for feature in selected_features:
+                            win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
+                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
+
+                            plt.figure(figsize=(12, 6))
+                            sns.kdeplot(win_data, label='Win', color='blue', shade=True)
+                            sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
+                            plt.title(f'Distribution of {feature} for Winning and Losing Trades')
+                            plt.xlabel(feature)
+                            plt.ylabel('Density')
+                            plt.legend()
+                            st.pyplot(plt.gcf())
+                            plt.close()
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
