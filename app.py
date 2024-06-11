@@ -153,6 +153,63 @@ def main():
                 font-family: 'Arial', sans-serif;
             }
 
+            /* Sidebar */
+            .css-1d391kg {
+                background: url('https://www.transparenttextures.com/patterns/black-linen.png');
+                color: #FAFAFA;
+            }
+
+            /* Sidebar button style */
+            .sidebar-button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                margin: 5px 0;
+                font-size: 18px;
+                font-weight: bold;
+                color: #FAFAFA;
+                background-color: #1E88E5;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                width: 100%;
+                text-align: left;
+            }
+            
+            .sidebar-button:hover {
+                background-color: #1565C0;
+            }
+
+            /* Title */
+            .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+                color: #FAFAFA;
+            }
+
+            /* Headers */
+            .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+                color: #FAFAFA;
+            }
+
+            /* Buttons */
+            .stButton button {
+                background-color: #1E88E5;
+                color: #FAFAFA;
+                border-radius: 5px;
+            }
+            
+            /* Dropdown */
+            .stSelectbox div[data-baseweb="select"] {
+                background-color: #262730;
+                color: #FAFAFA;
+            }
+
+            /* Text Inputs */
+            .stTextInput div[data-baseweb="input"] > div {
+                background-color: #262730;
+                color: #FAFAFA;
+            }
+
             /* Center logo */
             .center-logo {
                 display: flex;
@@ -172,14 +229,80 @@ def main():
                 text-align: center;
                 padding: 10px 0;
             }
+
+            /* Tooltip */
+            .tooltip {
+                position: relative;
+                display: inline-block;
+            }
+
+            .tooltip .tooltiptext {
+                visibility: hidden;
+                width: 120px;
+                background-color: #1E88E5;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px 0;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%; 
+                left: 50%;
+                margin-left: -60px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .tooltip:hover .tooltiptext {
+                visibility: visible;
+                opacity: 1;
+            }
+
+            /* Collapsible */
+            .collapsible {
+                background-color: #1E88E5;
+                color: white;
+                cursor: pointer;
+                padding: 10px;
+                width: 100%;
+                border: none;
+                text-align: left;
+                outline: none;
+                font-size: 15px;
+                border-radius: 5px;
+                margin-bottom: 5px;
+            }
+
+            .active, .collapsible:hover {
+                background-color: #1565C0;
+            }
+
+            .content {
+                padding: 0 18px;
+                display: none;
+                overflow: hidden;
+                background-color: #262730;
+                border-radius: 5px;
+            }
+
             </style>
-            """
+            <script>
+                function toggleContent(id) {
+                    var content = document.getElementById(id);
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                    } else {
+                        content.style.display = "block";
+                    }
+                }
+            </script>
+            """,
+            unsafe_allow_html=True
         )
 
         # Navigation bar
         pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'EDA Indicators',
                  'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific']
-        logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
         styles = {
             "nav": {
                 "background-color": "royalblue",
@@ -201,9 +324,22 @@ def main():
         }
         selected = st_navbar(
             pages,
-            logo_path=logo_path,
             styles=styles
         )
+
+        # Display the logo
+        logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+        if (os.path.exists(logo_path)):
+            st.markdown(
+                f"""
+                <div class="center-logo">
+                    <img src="data:image/png;base64,{load_image(logo_path)}" width="280">
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.warning("Logo file not found!")
 
         # Call the function based on the selected page
         page_dict[selected]()
