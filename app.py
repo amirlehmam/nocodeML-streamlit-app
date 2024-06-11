@@ -319,11 +319,9 @@ def main():
             st.warning("Logo file not found!")
 
         # Navigation bar
-        selected = st_navbar(
-            items=['Overview', 'Data Ingestion and Preparation', 'Advanced Trading Dashboard', 'Advanced Model Exploration',
+        selected = st_navbar(['Overview', 'Data Ingestion and Preparation', 'Advanced Trading Dashboard', 'Advanced Model Exploration',
              'Advanced EDA on Indicators', 'Optimal Win Ranges', 'Model on % Away Indicators', 'Specific Model Focus',
-             'Advanced EDA on Specific Model', 'Win Ranges for Specific Model']
-        )
+             'Advanced EDA on Specific Model', 'Win Ranges for Specific Model'])
 
         # Call the function based on the selected page
         page_dict[selected]()
