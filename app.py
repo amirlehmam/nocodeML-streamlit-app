@@ -198,14 +198,15 @@ def main():
         # Sidebar for navigation with icons
         st.sidebar.title("Navigation")
 
+        # Initialize session state if not already done
+        if "page" not in st.session_state:
+            st.session_state.page = "Overview"
+
         def nav_button(label, page_name, icon):
             if st.sidebar.button(f"{icon} {label}"):
                 st.session_state.page = page_name
 
-        if "page" not in st.session_state:
-            st.session_state.page = "Overview"
-
-        # Navigation
+        # Navigation buttons
         nav_button("Overview", "Overview", "🏠")
         nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
 
@@ -236,10 +237,6 @@ def main():
 
         nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
         nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
-
-        # Initialize session state if not already done
-        if 'page' not in st.session_state:
-            st.session_state.page = "Overview"
 
         page = st.session_state.page
 
