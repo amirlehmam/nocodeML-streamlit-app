@@ -202,18 +202,18 @@ def main():
         if "page" not in st.session_state:
             st.session_state.page = "Overview"
 
-        def nav_button(label, page_name, icon):
-            if st.sidebar.button(f"{icon} {label}"):
-                st.session_state.page = page_name
-
         # Navigation buttons
-        overview_button = st.sidebar.button("🏠 Overview")
-        if overview_button:
+        if st.sidebar.button("🏠 Overview"):
             st.session_state.page = "Overview"
 
-        data_ingestion_button = st.sidebar.button("📂 Data Ingestion and Preparation")
-        if data_ingestion_button:
+        if st.sidebar.button("📂 Data Ingestion and Preparation"):
             st.session_state.page = "Data Ingestion and Preparation"
+
+        if st.sidebar.button("📈 Advanced Trading Dashboard"):
+            st.session_state.page = "Advanced Trading Dashboard"
+
+        if st.sidebar.button("⚙️ Advanced Model Exploration"):
+            st.session_state.page = "Advanced Model Exploration"
 
         # Basic Analysis Dropdown
         basic_analysis_options = [
@@ -227,27 +227,10 @@ def main():
 
         basic_analysis_choice = st.sidebar.selectbox("Basic Analysis", basic_analysis_options)
 
-        if basic_analysis_choice == "Advanced EDA on Indicators":
-            st.session_state.page = "Advanced EDA on Indicators"
-        elif basic_analysis_choice == "Optimal Win Ranges":
-            st.session_state.page = "Optimal Win Ranges"
-        elif basic_analysis_choice == "Model on % Away Indicators":
-            st.session_state.page = "Model on % Away Indicators"
-        elif basic_analysis_choice == "Specific Model Focus":
-            st.session_state.page = "Specific Model Focus"
-        elif basic_analysis_choice == "Advanced EDA on Specific Model":
-            st.session_state.page = "Advanced EDA on Specific Model"
-        elif basic_analysis_choice == "Win Ranges for Specific Model":
-            st.session_state.page = "Win Ranges for Specific Model"
+        if basic_analysis_choice:
+            st.session_state.page = basic_analysis_choice
 
-        advanced_trading_dashboard_button = st.sidebar.button("📈 Advanced Trading Dashboard")
-        if advanced_trading_dashboard_button:
-            st.session_state.page = "Advanced Trading Dashboard"
-
-        advanced_model_exploration_button = st.sidebar.button("⚙️ Advanced Model Exploration")
-        if advanced_model_exploration_button:
-            st.session_state.page = "Advanced Model Exploration"
-
+        # Display the page content based on session state
         page = st.session_state.page
 
         if page == "Overview":
