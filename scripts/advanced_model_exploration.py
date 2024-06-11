@@ -213,60 +213,61 @@ def run_advanced_model_exploration():
 
         model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"])
 
+        model_params = {}
         if model_type == "Random Forest":
             st.subheader("Random Forest Parameters")
-            n_estimators = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
-            max_depth = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=10)
-            model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
+            model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
+            model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=10)
+            model = RandomForestClassifier(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
         
         elif model_type == "Gradient Boosting":
             st.subheader("Gradient Boosting Parameters")
-            n_estimators = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
-            learning_rate = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
-            max_depth = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = GradientBoostingClassifier(n_estimators=n_estimators, learning_rate=learning_rate, max_depth=max_depth, random_state=42)
+            model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
+            model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
+            model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
+            model = GradientBoostingClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "XGBoost":
             st.subheader("XGBoost Parameters")
-            n_estimators = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
-            learning_rate = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
-            max_depth = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = xgb.XGBClassifier(n_estimators=n_estimators, learning_rate=learning_rate, max_depth=max_depth, use_label_encoder=False, eval_metric='logloss', random_state=42)
+            model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
+            model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
+            model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
+            model = xgb.XGBClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], use_label_encoder=False, eval_metric='logloss', random_state=42)
 
         elif model_type == "LightGBM":
             st.subheader("LightGBM Parameters")
-            n_estimators = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
-            learning_rate = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
-            max_depth = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = lgb.LGBMClassifier(n_estimators=n_estimators, learning_rate=learning_rate, max_depth=max_depth, random_state=42)
+            model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
+            model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
+            model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
+            model = lgb.LGBMClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "Neural Network":
             st.subheader("Neural Network Parameters")
-            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
-            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
-            model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=epochs, batch_size=batch_size, verbose=0)
+            model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "RNN (LSTM)":
             st.subheader("RNN (LSTM) Parameters")
-            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
-            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=epochs, batch_size=batch_size, verbose=0)
+            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "RNN (GRU)":
             st.subheader("RNN (GRU) Parameters")
-            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
-            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=epochs, batch_size=batch_size, verbose=0)
+            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "CNN":
             st.subheader("CNN Parameters")
-            epochs = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
-            batch_size = st.slider("Batch Size", min_value=10, max_value=128, value=32)
+            model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
+            model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=epochs, batch_size=batch_size, verbose=0)
+            model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
