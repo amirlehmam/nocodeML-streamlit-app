@@ -314,13 +314,15 @@ def run_advanced_model_exploration():
                     st.write(f"Model saved to {model_save_path}")
 
                     # Feature importance
+                    importance_df = pd.DataFrame({
+                        'Feature': st.session_state.indicator_columns,
+                        'Importance': [0] * len(st.session_state.indicator_columns)
+                    })
                     if model_type not in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"] and hasattr(model, 'feature_importances_'):
                         st.write("Feature Importances:")
                         feature_importances = model.feature_importances_
-                        importance_df = pd.DataFrame({
-                            'Feature': st.session_state.indicator_columns,
-                            'Importance': feature_importances
-                        }).sort_values(by='Importance', ascending=False)
+                        importance_df['Importance'] = feature_importances
+                        importance_df.sort_values(by='Importance', ascending=False, inplace=True)
                         fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig)
                         
@@ -333,20 +335,13 @@ def run_advanced_model_exploration():
                         explainer = shap.Explainer(underlying_model, st.session_state.X_train)
                         shap_values = explainer(st.session_state.X_test)
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
-                        importance_df = pd.DataFrame({
-                            'Feature': st.session_state.indicator_columns,
-                            'Importance': feature_importances
-                        }).sort_values(by='Importance', ascending=False)
+                        importance_df['Importance'] = feature_importances
+                        importance_df.sort_values(by='Importance', ascending=False, inplace=True)
                         fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig)
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
-                    else:
-                        importance_df = pd.DataFrame({
-                            'Feature': st.session_state.indicator_columns,
-                            'Importance': [0] * len(st.session_state.indicator_columns)
-                        })
 
                     st.session_state.current_step = "eda"
                     st.session_state.model_type_selected = model_type
@@ -396,17 +391,6 @@ def run_advanced_model_exploration():
                 fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig)
 
-            # ROC Curve
-            st.write("ROC Curve:")
-            fpr, tpr, _ = roc_curve(st.session_state.y_test, model.predict_proba(st.session_state.X_test)[:, 1])
-            roc_auc = auc(fpr, tpr)
-            fig = go.Figure(data=[
-                go.Scatter(x=fpr, y=tpr, mode='lines', name=f'AUC = {roc_auc:.2f}', line=dict(color='blue')),
-                go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(color='red', dash='dash'))
-            ])
-            fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate', title='Receiver Operating Characteristic (ROC) Curve')
-            st.plotly_chart(fig)
-
             # Detailed Indicator Analysis
             st.write("Detailed Indicator Analysis")
             selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
@@ -442,7 +426,7 @@ def run_advanced_model_exploration():
 
             # Feature Importance vs Prediction
             st.write("Feature Importance vs Prediction Analysis")
-            if not importance_df.empty:
+            if 'importance_df' in locals() and not importance_df.empty:
                 feature_importance_threshold = st.slider("Select Feature Importance Threshold", min_value=0.0, max_value=float(importance_df['Importance'].max()), value=0.1)
                 important_features = importance_df[importance_df['Importance'] >= feature_importance_threshold]['Feature']
                 if not important_features.empty:
