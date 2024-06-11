@@ -25,6 +25,7 @@ import shap
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from PIL import Image
+from io import BytesIO  # Add this import statement
 
 def save_plots_to_pdf(pdf_filename, plots):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
