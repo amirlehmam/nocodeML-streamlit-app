@@ -220,8 +220,10 @@ def run_advanced_model_exploration():
         st.write("Select model and hyperparameters for exploration")
 
         model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select")
+        st.session_state.model_type_selected = model_type
 
         model_params = {}
+        model = None  # Initialize model as None
         if model_type == "Random Forest":
             st.subheader("Random Forest Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
@@ -358,10 +360,10 @@ def run_advanced_model_exploration():
                         selected_features = st.session_state.indicator_columns[:top_n]
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
+                    st.session_state.optimal_ranges = optimal_ranges
                     plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
-                    st.session_state.optimal_ranges = optimal_ranges
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
