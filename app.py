@@ -177,6 +177,16 @@ def main():
             }
 
             </style>
+            <script>
+                function toggleContent(id) {
+                    var content = document.getElementById(id);
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                    } else {
+                        content.style.display = "block";
+                    }
+                }
+            </script>
             """,
             unsafe_allow_html=True
         )
@@ -209,14 +219,20 @@ def main():
         nav_button("Overview", "Overview", "🏠")
         nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
 
-        # Grouping under "Basic Analysis"
-        with st.sidebar.expander("Basic Analysis"):
-            nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-            nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-            nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-            nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-            nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-            nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
+        st.sidebar.markdown(
+            """
+            <button class="collapsible" onclick="toggleContent('basicAnalysis')">Basic Analysis</button>
+            <div class="content" id="basicAnalysis">
+                <button onclick="window.location.href='Advanced EDA on Indicators'">📊 Advanced EDA on Indicators</button><br>
+                <button onclick="window.location.href='Optimal Win Ranges'">🎯 Optimal Win Ranges</button><br>
+                <button onclick="window.location.href='Model on % Away Indicators'">📈 Model on % Away Indicators</button><br>
+                <button onclick="window.location.href='Specific Model Focus'">🔍 Specific Model Focus</button><br>
+                <button onclick="window.location.href='Advanced EDA on Specific Model'">📉 Advanced EDA on Specific Model</button><br>
+                <button onclick="window.location.href='Win Ranges for Specific Model'">🏆 Win Ranges for Specific Model</button>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
         nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
