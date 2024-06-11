@@ -219,7 +219,7 @@ def run_advanced_model_exploration():
     if "data" in st.session_state and "X_train" in st.session_state and st.session_state.current_step == "model_selection":
         st.write("Select model and hyperparameters for exploration")
 
-        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type")
+        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select")
 
         model_params = {}
         if model_type == "Random Forest":
@@ -347,7 +347,7 @@ def run_advanced_model_exploration():
                         })
 
                     st.session_state.current_step = "eda"
-                    st.session_state.model_type = model_type
+                    st.session_state.model_type_selected = model_type
 
                     # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
@@ -361,6 +361,7 @@ def run_advanced_model_exploration():
                     plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
+                    st.session_state.optimal_ranges = optimal_ranges
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
@@ -373,7 +374,8 @@ def run_advanced_model_exploration():
         # Additional Exploratory Data Analysis
         st.subheader("Additional Exploratory Data Analysis")
         with st.spinner("Generating additional EDA plots..."):
-            model_type = st.session_state.model_type  # Ensure model_type is retrieved from session state
+            model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
+            optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
 
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
@@ -389,7 +391,7 @@ def run_advanced_model_exploration():
                 top_features = st.session_state.feature_importances[selected_model][:10]
                 top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
                 corr = st.session_state.data[top_features_list].corr()
-                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
+                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='coolwarm')
                 st.plotly_chart(fig)
 
             # ROC Curve
