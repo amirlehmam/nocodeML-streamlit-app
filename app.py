@@ -5,7 +5,7 @@ from yaml.loader import SafeLoader
 import os
 import base64
 from hydralit import HydraApp
-from hydralit import HydraHeadApp
+from hydralit_components import HydraHeadApp
 
 # Set page config
 st.set_page_config(
@@ -328,6 +328,7 @@ def main():
         app.add_app("Advanced EDA on Specific Model", icon="📉", app=AdvancedEDASpecificModelApp())
         app.add_app("Win Ranges for Specific Model", icon="🏆", app=WinRangesSpecificModelApp())
 
+        # Run HydraApp
         app.run()
 
         authenticator.logout()
