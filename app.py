@@ -3,8 +3,16 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 import os
+import sys
+import subprocess
 import base64
 from streamlit_navigation_bar import st_navbar
+
+if sys.platform.startswith('win'):
+    try:
+        import pywin32
+    except ImportError:
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pywin32'])
 
 # Set page config
 st.set_page_config(
