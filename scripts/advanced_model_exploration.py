@@ -360,47 +360,66 @@ def run_advanced_model_exploration():
                     st.subheader("Additional Exploratory Data Analysis")
                     with st.spinner("Generating additional EDA plots..."):
                         # Correlation matrix
+                        st.write("Correlation Matrix of Top Features")
                         selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
                         if selected_model in st.session_state.feature_importances:
                             top_features = st.session_state.feature_importances[selected_model][:10]
                             top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
 
-                            st.write("Top 10 Features for Correlation Matrix:")
-                            st.write(top_features_list)
-
                             corr = st.session_state.data[top_features_list].corr()
-                            fig, ax = plt.subplots(figsize=(12, 10))
-                            sns.heatmap(corr, cmap='coolwarm', annot=True, fmt='.2f', ax=ax)
-                            st.write("Correlation Matrix of Top 10 Features")
-                            st.pyplot(fig)
+                            fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale="RdBu_r")
+                            st.plotly_chart(fig)
 
-                        # Dynamic pie charts for indicator winning and losing ranges
-                        for feature in selected_features:
-                            for range_start, range_end in optimal_ranges[0]['optimal_win_ranges']:
-                                win_counts = st.session_state.data[(st.session_state.data[feature] >= range_start) & 
-                                                                   (st.session_state.data[feature] <= range_end) & 
-                                                                   (st.session_state.data['result'] == 0)].shape[0]
-                                loss_counts = st.session_state.data[(st.session_state.data[feature] >= range_start) & 
-                                                                    (st.session_state.data[feature] <= range_end) & 
-                                                                    (st.session_state.data['result'] == 1)].shape[0]
+                        # Detailed Indicator Analysis
+                        st.write("Detailed Indicator Analysis")
+                        selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
+                        if selected_indicator:
+                            win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
+                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
 
-                                fig_win = px.pie(values=[win_counts, st.session_state.data[st.session_state.data['result'] == 0].shape[0] - win_counts], 
-                                                 names=['In Range Wins', 'Out of Range Wins'], 
-                                                 title=f"Win Distribution for {feature} in Optimal Ranges")
-                                st.plotly_chart(fig_win)
+                            fig = go.Figure()
+                            fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
+                            fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
+                            fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades')
+                            fig.update_xaxes(title_text=selected_indicator)
+                            fig.update_yaxes(title_text='Count')
+                            st.plotly_chart(fig)
 
-                                fig_loss = px.pie(values=[loss_counts, st.session_state.data[st.session_state.data['result'] == 1].shape[0] - loss_counts], 
-                                                  names=['In Range Losses', 'Out of Range Losses'], 
-                                                  title=f"Loss Distribution for {feature} in Optimal Ranges")
-                                st.plotly_chart(fig_loss)
-                                
-                        # Pie chart of wins vs losses
-                        win_loss_counts = st.session_state.data['result'].value_counts()
-                        fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
-                        st.plotly_chart(fig)
+                            # KDE plot with winning ranges
+                            kde_win = gaussian_kde(win_data)
+                            kde_loss = gaussian_kde(loss_data)
+                            x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
+                            kde_win_density = kde_win(x_grid)
+                            kde_loss_density = kde_loss(x_grid)
 
-                except Exception as e:
-                    st.error(f"Error during model training: {e}")
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+                            fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+                            for range_item in optimal_ranges:
+                                if range_item['feature'] == selected_indicator:
+                                    for start, end in range_item['optimal_win_ranges']:
+                                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+
+                            fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density')
+                            st.plotly_chart(fig)
+
+                        # Feature Importance vs Prediction
+                        st.write("Feature Importance vs Prediction Analysis")
+                        if not importance_df.empty:
+                            feature_importance_threshold = st.slider("Select Feature Importance Threshold", min_value=0.0, max_value=float(importance_df['Importance'].max()), value=0.1)
+                            important_features = importance_df[importance_df['Importance'] >= feature_importance_threshold]['Feature']
+                            if not important_features.empty:
+                                for feature in important_features:
+                                    fig = go.Figure()
+                                    fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=st.session_state.data['result'], mode='markers', name='Actual', marker=dict(color='blue')))
+                                    fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=y_pred, mode='markers', name='Predicted', marker=dict(color='red')))
+                                    fig.update_layout(title_text=f'Actual vs Predicted Results for {feature}', xaxis_title=feature, yaxis_title='Result')
+                                    st.plotly_chart(fig)
+
+                            st.success("EDA plots generated successfully.")
+
+    except Exception as e:
+        st.error(f"Error during model training: {e}")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
