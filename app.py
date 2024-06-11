@@ -207,8 +207,13 @@ def main():
                 st.session_state.page = page_name
 
         # Navigation buttons
-        nav_button("Overview", "Overview", "🏠")
-        nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
+        overview_button = st.sidebar.button("🏠 Overview")
+        if overview_button:
+            st.session_state.page = "Overview"
+
+        data_ingestion_button = st.sidebar.button("📂 Data Ingestion and Preparation")
+        if data_ingestion_button:
+            st.session_state.page = "Data Ingestion and Preparation"
 
         # Basic Analysis Dropdown
         basic_analysis_options = [
@@ -235,8 +240,13 @@ def main():
         elif basic_analysis_choice == "Win Ranges for Specific Model":
             st.session_state.page = "Win Ranges for Specific Model"
 
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
+        advanced_trading_dashboard_button = st.sidebar.button("📈 Advanced Trading Dashboard")
+        if advanced_trading_dashboard_button:
+            st.session_state.page = "Advanced Trading Dashboard"
+
+        advanced_model_exploration_button = st.sidebar.button("⚙️ Advanced Model Exploration")
+        if advanced_model_exploration_button:
+            st.session_state.page = "Advanced Model Exploration"
 
         page = st.session_state.page
 
