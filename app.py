@@ -4,6 +4,7 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
+from st_navbar import st_navbar
 
 # Set page config
 st.set_page_config(
@@ -32,63 +33,7 @@ authenticator = stauth.Authenticate(
 
 authenticator.login()
 
-def top_navbar():
-    st.markdown(
-        """
-        <style>
-        .navbar {
-            overflow: hidden;
-            background-color: #333;
-            position: -webkit-sticky; /* Safari */
-            position: sticky;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-        }
-
-        .navbar a {
-            float: left;
-            display: block;
-            color: #f2f2f2;
-            text-align: center;
-            padding: 14px 20px;
-            text-decoration: none;
-            font-size: 17px;
-        }
-
-        .navbar a:hover {
-            background-color: #ddd;
-            color: black;
-        }
-
-        .navbar a.active {
-            background-color: #1E88E5;
-            color: white;
-        }
-        </style>
-
-        <div class="navbar">
-            <a href="/?page=overview" class="{active_overview}">Overview</a>
-            <a href="/?page=data_ingestion" class="{active_data_ingestion}">Data Ingestion and Preparation</a>
-            <a href="/?page=dashboard" class="{active_dashboard}">Advanced Trading Dashboard</a>
-            <a href="/?page=model_exploration" class="{active_model_exploration}">Advanced Model Exploration</a>
-            <a href="/?page=eda_indicators" class="{active_eda_indicators}">Advanced EDA on Indicators</a>
-            <a href="/?page=win_ranges" class="{active_win_ranges}">Optimal Win Ranges</a>
-            <a href="/?page=percentage_away" class="{active_percentage_away}">Model on % Away Indicators</a>
-            <a href="/?page=model_focus" class="{active_model_focus}">Specific Model Focus</a>
-            <a href="/?page=eda_specific_model" class="{active_eda_specific_model}">Advanced EDA on Specific Model</a>
-            <a href="/?page=win_ranges_specific_model" class="{active_win_ranges_specific_model}">Win Ranges for Specific Model</a>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
 def main():
-    query_params = st.experimental_get_query_params()
-    page = query_params.get("page", ["overview"])[0]
-
-    top_navbar()
-
     if st.session_state["authentication_status"]:
         st.markdown(
             """
@@ -98,6 +43,34 @@ def main():
                 background: url('https://www.transparenttextures.com/patterns/black-linen.png');
                 color: #FAFAFA;
                 font-family: 'Arial', sans-serif;
+            }
+
+            /* Sidebar */
+            .css-1d391kg {
+                background: url('https://www.transparenttextures.com/patterns/black-linen.png');
+                color: #FAFAFA;
+            }
+
+            /* Sidebar button style */
+            .sidebar-button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                margin: 5px 0;
+                font-size: 18px;
+                font-weight: bold;
+                color: #FAFAFA;
+                background-color: #1E88E5;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                width: 100%;
+                text-align: left;
+            }
+            
+            .sidebar-button:hover {
+                background-color: #1565C0;
             }
 
             /* Title */
@@ -233,11 +206,25 @@ def main():
         else:
             st.warning("Logo file not found!")
 
-        # Initialize session state if not already done
-        if 'page' not in st.session_state:
-            st.session_state.page = "overview"
+        # Navigation bar
+        page = st_navbar(
+            nav_items=[
+                ('Overview', '🏠'),
+                ('Data Ingestion and Preparation', '📂'),
+                ('Advanced Trading Dashboard', '📈'),
+                ('Advanced Model Exploration', '⚙️'),
+                ('Advanced EDA on Indicators', '📊'),
+                ('Optimal Win Ranges', '🎯'),
+                ('Model on % Away Indicators', '📈'),
+                ('Specific Model Focus', '🔍'),
+                ('Advanced EDA on Specific Model', '📉'),
+                ('Win Ranges for Specific Model', '🏆')
+            ],
+            sticky_nav=True,
+            sticky_mode='pinned',
+        )
 
-        if page == "overview":
+        if page == 'Overview':
             st.write(f'Welcome **{st.session_state["name"]}**')
             st.write("""
             ### nocodeML Algorithmic Trading Optimization
@@ -299,39 +286,39 @@ def main():
             **Two Plums for One**
             """)
 
-        elif page == "data_ingestion":
+        elif page == 'Data Ingestion and Preparation':
             from scripts.data_ingestion_preparation import run_data_ingestion_preparation
             run_data_ingestion_preparation()
 
-        elif page == "dashboard":
+        elif page == 'Advanced Trading Dashboard':
             from scripts.model_dashboard import run_model_dashboard
             run_model_dashboard()
 
-        elif page == "model_exploration":
+        elif page == 'Advanced Model Exploration':
             from scripts.advanced_model_exploration import run_advanced_model_exploration
             run_advanced_model_exploration()
 
-        elif page == "eda_indicators":
+        elif page == 'Advanced EDA on Indicators':
             from scripts.advanced_eda_indicators import run_advanced_eda_indicators
             run_advanced_eda_indicators()
 
-        elif page == "win_ranges":
+        elif page == 'Optimal Win Ranges':
             from scripts.optimal_win_ranges import run_optimal_win_ranges
             run_optimal_win_ranges()
 
-        elif page == "percentage_away":
+        elif page == 'Model on % Away Indicators':
             from scripts.model_percentage_away import run_model_percentage_away
             run_model_percentage_away()
 
-        elif page == "model_focus":
+        elif page == 'Specific Model Focus':
             from scripts.specific_model_focus import run_specific_model_focus
             run_specific_model_focus()
 
-        elif page == "eda_specific_model":
+        elif page == 'Advanced EDA on Specific Model':
             from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
             run_advanced_eda_specific_model()
 
-        elif page == "win_ranges_specific_model":
+        elif page == 'Win Ranges for Specific Model':
             from scripts.win_ranges_specific_model import run_win_ranges_specific_model
             run_win_ranges_specific_model()
 
