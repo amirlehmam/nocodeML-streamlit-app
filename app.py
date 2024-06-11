@@ -6,6 +6,14 @@ from yaml.loader import SafeLoader
 import os
 import base64
 
+# Set page config
+st.set_page_config(
+    page_title="nocodeML",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 # Function to load and encode image
 def load_image(image_path):
     with open(image_path, "rb") as image_file:
@@ -287,7 +295,7 @@ def main():
             unsafe_allow_html=True
         )
 
-        app = HydraApp(title='nocodeML', hide_streamlit_markers=True)
+        app = HydraApp(title='nocodeML', hide_streamlit_markers=True, use_navbar=True, navbar_name="Main Menu")
         
         app.add_app("Overview", icon="🏠", app=OverviewApp())
         app.add_app("Data Ingestion and Preparation", icon="📂", app=DataIngestionApp())
@@ -300,8 +308,9 @@ def main():
         app.add_app("Advanced Trading Dashboard", icon="📊", app=AdvancedTradingDashboardApp())
         app.add_app("Advanced Model Exploration", icon="⚙️", app=AdvancedModelExplorationApp())
 
+        # Run the application with the navigation bar
         app.run()
-        
+
         authenticator.logout()
 
         # Footer
