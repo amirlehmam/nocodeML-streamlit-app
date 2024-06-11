@@ -208,14 +208,10 @@ def main():
 
         # Navigation bar
         page = st_navbar(
-            pages=["Overview", "Data Ingestion and Preparation", "Advanced EDA on Indicators",
-                   "Optimal Win Ranges", "Model on % Away Indicators", "Specific Model Focus",
-                   "Advanced EDA on Specific Model", "Win Ranges for Specific Model",
-                   "Advanced Trading Dashboard", "Advanced Model Exploration"],
-            titles=["🏠 Overview", "📂 Data Ingestion and Preparation", "📊 Advanced EDA on Indicators",
-                    "🎯 Optimal Win Ranges", "📈 Model on % Away Indicators", "🔍 Specific Model Focus",
-                    "📉 Advanced EDA on Specific Model", "🏆 Win Ranges for Specific Model",
-                    "📈 Advanced Trading Dashboard", "⚙️ Advanced Model Exploration"]
+            options=["Overview", "Data Ingestion and Preparation", "Advanced EDA on Indicators",
+                     "Optimal Win Ranges", "Model on % Away Indicators", "Specific Model Focus",
+                     "Advanced EDA on Specific Model", "Win Ranges for Specific Model",
+                     "Advanced Trading Dashboard", "Advanced Model Exploration"]
         )
 
         if page == "Overview":
