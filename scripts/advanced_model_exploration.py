@@ -32,7 +32,10 @@ def save_plots_to_pdf(pdf_filename, plots):
     width, height = letter
     for plot in plots:
         plot_data = BytesIO()
-        plot.savefig(plot_data, format='png')
+        if isinstance(plot, plt.Figure):
+            plot.savefig(plot_data, format='png')
+        elif isinstance(plot, go.Figure):
+            plot_data.write(plot.to_image(format='png'))
         plot_data.seek(0)
         c.drawImage(plot_data, 10, height - 500, width=500, height=500)
         c.showPage()
