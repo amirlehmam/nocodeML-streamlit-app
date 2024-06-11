@@ -374,6 +374,26 @@ def run_advanced_model_exploration():
                             st.write("Correlation Matrix of Top 10 Features")
                             st.pyplot(fig)
 
+                        # Dynamic pie charts for indicator winning and losing ranges
+                        for feature in selected_features:
+                            for range_start, range_end in optimal_ranges[0]['optimal_win_ranges']:
+                                win_counts = st.session_state.data[(st.session_state.data[feature] >= range_start) & 
+                                                                   (st.session_state.data[feature] <= range_end) & 
+                                                                   (st.session_state.data['result'] == 0)].shape[0]
+                                loss_counts = st.session_state.data[(st.session_state.data[feature] >= range_start) & 
+                                                                    (st.session_state.data[feature] <= range_end) & 
+                                                                    (st.session_state.data['result'] == 1)].shape[0]
+
+                                fig_win = px.pie(values=[win_counts, st.session_state.data[st.session_state.data['result'] == 0].shape[0] - win_counts], 
+                                                 names=['In Range Wins', 'Out of Range Wins'], 
+                                                 title=f"Win Distribution for {feature} in Optimal Ranges")
+                                st.plotly_chart(fig_win)
+
+                                fig_loss = px.pie(values=[loss_counts, st.session_state.data[st.session_state.data['result'] == 1].shape[0] - loss_counts], 
+                                                  names=['In Range Losses', 'Out of Range Losses'], 
+                                                  title=f"Loss Distribution for {feature} in Optimal Ranges")
+                                st.plotly_chart(fig_loss)
+                                
                         # Pie chart of wins vs losses
                         win_loss_counts = st.session_state.data['result'].value_counts()
                         fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
