@@ -22,29 +22,33 @@ from tqdm import tqdm
 from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
 import shap
-from io import BytesIO
-from reportlab.pdfgen import canvas
+import io
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
+# Save plots to PDF
 def save_plots_to_pdf(pdf_filename, plots, dataframes):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
+    img_width = width - 20
+    img_height = height // 3
 
     for plot in plots:
-        plot_data = BytesIO()
+        plot_data = io.BytesIO()
         plot.write_image(plot_data, format='png')
         plot_data.seek(0)
-        img_width, img_height = plot_data.getbuffer().nbytes, plot_data.getbuffer().nbytes
-        c.drawImage(plot_data, 0, height - img_height, width=img_width, height=img_height)
+        img = ImageReader(plot_data)
+        c.drawImage(img, 10, height - img_height - 10, width=img_width, height=img_height)
         c.showPage()
 
-    for dataframe in dataframes:
-        c.drawString(10, height - 10, dataframe)
+    for df in dataframes:
+        c.drawString(10, height - 10, str(df))
         c.showPage()
 
     c.save()
 
+# Load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
@@ -170,18 +174,30 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
         
-        fig = go.Figure()
-        fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75))
-        fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75))
-        fig.update_layout(barmode='overlay', title_text=f'Distribution of {feature} for Winning and Losing Trades', width=800, height=400)
-        fig.update_xaxes(title_text=feature)
-        fig.update_yaxes(title_text='Count')
-
+        plt.figure(figsize=(12, 6))
+        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True)
+        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True)
+        
         for range_start, range_end in ranges:
-            fig.add_vrect(x0=range_start, x1=range_end, fillcolor="blue", opacity=0.3, line_width=0)
+            plt.axvspan(range_start, range_end, color='blue', alpha=0.3)
 
-        plots.append(fig)
-        st.plotly_chart(fig)
+        plt.title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
+        plt.xlabel(feature)
+        plt.ylabel('Density')
+        plt.legend()
+        st.pyplot(plt.gcf())
+        plt.close()
+
+        # Convert matplotlib figure to plotly figure
+        fig = plt.gcf()
+        plot = go.Figure()
+        plot.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75))
+        plot.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75))
+        for range_start, range_end in ranges:
+            plot.add_vrect(x0=range_start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+        plot.update_layout(title_text=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})', xaxis_title=feature, yaxis_title='Density')
+        plots.append(plot)
+
     return plots
 
 def summarize_optimal_win_ranges(optimal_ranges):
@@ -378,7 +394,7 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    optimal_plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    plots_optimal_win_ranges = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
@@ -395,16 +411,16 @@ def run_advanced_model_exploration():
         with st.spinner("Generating additional EDA plots..."):
             model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
             optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
-            plots = []  # List to store plotly figures
-            dataframes = []  # List to store dataframes
+
+            plots = []
 
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
                 st.write("Feature Importance Heatmap:")
                 feature_importance_values = st.session_state.feature_importances[model_type]
                 fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                plots.append(fig)
                 st.plotly_chart(fig)
+                plots.append(fig)
 
             # Correlation matrix
             st.write("Correlation Matrix of Top Indicators:")
@@ -414,8 +430,8 @@ def run_advanced_model_exploration():
                 top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
                 corr = st.session_state.data[top_features_list].corr()
                 fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                plots.append(fig)
                 st.plotly_chart(fig)
+                plots.append(fig)
 
             # Detailed Indicator Analysis
             st.write("Detailed Indicator Analysis")
@@ -430,8 +446,8 @@ def run_advanced_model_exploration():
                 fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
                 fig.update_xaxes(title_text=selected_indicator)
                 fig.update_yaxes(title_text='Count')
-                plots.append(fig)
                 st.plotly_chart(fig)
+                plots.append(fig)
 
                 # KDE plot with winning ranges
                 kde_win = gaussian_kde(win_data)
@@ -449,15 +465,15 @@ def run_advanced_model_exploration():
                             fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
 
                 fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
-                plots.append(fig)
                 st.plotly_chart(fig)
+                plots.append(fig)
 
             st.success("EDA plots generated successfully.")
-            
-            # Save plots to PDF
-            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_eda_plots.pdf')
-            save_plots_to_pdf(pdf_filename_eda, plots, dataframes)
-            st.write(f"EDA plots saved to {pdf_filename_eda}")
+
+            # Save the detailed analysis to PDF
+            pdf_filename_eda = os.path.join(base_dir, f"docs/ml_analysis/{model_type}_analysis.pdf")
+            dataframes = [optimal_win_ranges_summary, st.session_state.data]
+            save_plots_to_pdf(pdf_filename_eda, plots + plots_optimal_win_ranges, dataframes)
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
