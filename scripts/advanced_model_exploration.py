@@ -25,7 +25,7 @@ import shap
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from PIL import Image
-from io import BytesIO  # Add this import statement
+from io import BytesIO
 
 def save_plots_to_pdf(pdf_filename, plots):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
@@ -39,13 +39,19 @@ def save_plots_to_pdf(pdf_filename, plots):
             plot_data.write(img_bytes)
         plot_data.seek(0)
         img = Image.open(plot_data)
+        
+        temp_file = 'temp_image.png'
+        img.save(temp_file)
+
         img_width, img_height = img.size
         aspect = img_height / float(img_width)
         img_width = width - 20
         img_height = aspect * img_width
-        c.drawImage(plot_data, 10, height - img_height - 10, width=img_width, height=img_height)
+
+        c.drawImage(temp_file, 10, height - img_height - 10, width=img_width, height=img_height)
         c.showPage()
     c.save()
+    os.remove(temp_file)
 
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
