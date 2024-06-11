@@ -5,7 +5,7 @@ import numpy as np
 import streamlit as st
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
 import plotly.express as px
@@ -296,9 +296,8 @@ def run_advanced_model_exploration():
                     st.text(classification_report(st.session_state.y_test, y_pred))
                     st.write("Confusion Matrix:")
                     cm = confusion_matrix(st.session_state.y_test, y_pred)
-                    fig, ax = plt.subplots()
-                    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-                    st.pyplot(fig)
+                    fig = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
+                    st.plotly_chart(fig)
 
                     # Save the model
                     model_save_path = os.path.join(base_dir, f"models/{model_type}_model.pkl")
@@ -360,16 +359,33 @@ def run_advanced_model_exploration():
                     # Additional Exploratory Data Analysis
                     st.subheader("Additional Exploratory Data Analysis")
                     with st.spinner("Generating additional EDA plots..."):
+                        # Feature importance heatmap
+                        if model_type in st.session_state.feature_importances:
+                            st.write("Feature Importance Heatmap:")
+                            feature_importance_values = st.session_state.feature_importances[model_type]
+                            fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
+                            st.plotly_chart(fig)
+                        
                         # Correlation matrix
-                        st.write("Correlation Matrix of Top Features")
+                        st.write("Correlation Matrix of Top Indicators:")
                         selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
                         if selected_model in st.session_state.feature_importances:
                             top_features = st.session_state.feature_importances[selected_model][:10]
                             top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
-
                             corr = st.session_state.data[top_features_list].corr()
-                            fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale="RdBu_r")
+                            fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='coolwarm')
                             st.plotly_chart(fig)
+
+                        # ROC Curve
+                        st.write("ROC Curve:")
+                        fpr, tpr, _ = roc_curve(st.session_state.y_test, model.predict_proba(st.session_state.X_test)[:, 1])
+                        roc_auc = auc(fpr, tpr)
+                        fig = go.Figure(data=[
+                            go.Scatter(x=fpr, y=tpr, mode='lines', name=f'AUC = {roc_auc:.2f}', line=dict(color='blue')),
+                            go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(color='red', dash='dash'))
+                        ])
+                        fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate', title='Receiver Operating Characteristic (ROC) Curve')
+                        st.plotly_chart(fig)
 
                         # Detailed Indicator Analysis
                         st.write("Detailed Indicator Analysis")
@@ -418,10 +434,8 @@ def run_advanced_model_exploration():
                                     st.plotly_chart(fig)
 
                             st.success("EDA plots generated successfully.")
-
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
-
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
