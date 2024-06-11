@@ -18,6 +18,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
 from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
+from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
 import shap
 
@@ -281,7 +282,11 @@ def run_advanced_model_exploration():
             st.write(f"Training {model_type}...")
             with st.spinner("Training in progress..."):
                 try:
-                    model.fit(st.session_state.X_train, st.session_state.y_train)
+                    if model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
+                        model.fit(st.session_state.X_train, st.session_state.y_train, callbacks=[TqdmCallback(verbose=1)])
+                    else:
+                        for _ in tqdm(range(1), desc=f"Training {model_type}"):
+                            model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
                     accuracy = accuracy_score(st.session_state.y_test, y_pred)
                     st.write(f"Accuracy: {accuracy}")
@@ -299,7 +304,7 @@ def run_advanced_model_exploration():
                     st.write(f"Model saved to {model_save_path}")
 
                     # Feature importance
-                    if model_type != "Neural Network" and model_type not in ["RNN (LSTM)", "RNN (GRU)", "CNN"] and hasattr(model, 'feature_importances_'):
+                    if model_type not in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"] and hasattr(model, 'feature_importances_'):
                         st.write("Feature Importances:")
                         feature_importances = model.feature_importances_
                         importance_df = pd.DataFrame({
@@ -373,20 +378,6 @@ def run_advanced_model_exploration():
                         fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
                         st.plotly_chart(fig)
 
-                        # KDE plots for each indicator showing winning and losing ranges
-                        for feature in selected_features:
-                            win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
-                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
-
-                            plt.figure(figsize=(12, 6))
-                            sns.kdeplot(win_data, label='Win', color='blue', shade=True)
-                            sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
-                            plt.title(f'Distribution of {feature} for Winning and Losing Trades')
-                            plt.xlabel(feature)
-                            plt.ylabel('Density')
-                            plt.legend()
-                            st.pyplot(plt.gcf())
-                            plt.close()
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
