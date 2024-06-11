@@ -22,36 +22,28 @@ from tqdm import tqdm
 from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
 import shap
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from PIL import Image
 from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 
-def save_plots_to_pdf(pdf_filename, plots):
+def save_plots_to_pdf(pdf_filename, plots, dataframes):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
+
     for plot in plots:
         plot_data = BytesIO()
-        if isinstance(plot, plt.Figure):
-            plot.savefig(plot_data, format='png')
-        elif isinstance(plot, go.Figure):
-            img_bytes = plot.to_image(format='png')
-            plot_data.write(img_bytes)
+        plot.write_image(plot_data, format='png')
         plot_data.seek(0)
-        img = Image.open(plot_data)
-        
-        temp_file = 'temp_image.png'
-        img.save(temp_file)
-
-        img_width, img_height = img.size
-        aspect = img_height / float(img_width)
-        img_width = width - 20
-        img_height = aspect * img_width
-
-        c.drawImage(temp_file, 10, height - img_height - 10, width=img_width, height=img_height)
+        img_width, img_height = plot_data.getbuffer().nbytes, plot_data.getbuffer().nbytes
+        c.drawImage(plot_data, 0, height - img_height, width=img_width, height=img_height)
         c.showPage()
+
+    for dataframe in dataframes:
+        c.drawString(10, height - 10, dataframe)
+        c.showPage()
+
     c.save()
-    os.remove(temp_file)
 
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
@@ -175,22 +167,21 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         feature = item['feature']
         ranges = item['optimal_win_ranges']
         
-        fig, ax = plt.subplots(figsize=(12, 6))
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
-
-        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True, ax=ax)
-        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True, ax=ax)
         
-        for range_start, range_end in ranges:
-            ax.axvspan(range_start, range_end, color='blue', alpha=0.3)
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75))
+        fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75))
+        fig.update_layout(barmode='overlay', title_text=f'Distribution of {feature} for Winning and Losing Trades', width=800, height=400)
+        fig.update_xaxes(title_text=feature)
+        fig.update_yaxes(title_text='Count')
 
-        ax.set_title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
-        ax.set_xlabel(feature)
-        ax.set_ylabel('Density')
-        ax.legend()
-        st.pyplot(fig)
+        for range_start, range_end in ranges:
+            fig.add_vrect(x0=range_start, x1=range_end, fillcolor="blue", opacity=0.3, line_width=0)
+
         plots.append(fig)
+        st.plotly_chart(fig)
     return plots
 
 def summarize_optimal_win_ranges(optimal_ranges):
@@ -387,18 +378,13 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    optimal_plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
-
-                    # Save plots to PDF
-                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
-                    save_plots_to_pdf(pdf_filename, plots)
-                    st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
@@ -409,16 +395,16 @@ def run_advanced_model_exploration():
         with st.spinner("Generating additional EDA plots..."):
             model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
             optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
-
-            plots = []
+            plots = []  # List to store plotly figures
+            dataframes = []  # List to store dataframes
 
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
                 st.write("Feature Importance Heatmap:")
                 feature_importance_values = st.session_state.feature_importances[model_type]
                 fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                st.plotly_chart(fig)
                 plots.append(fig)
+                st.plotly_chart(fig)
 
             # Correlation matrix
             st.write("Correlation Matrix of Top Indicators:")
@@ -428,8 +414,8 @@ def run_advanced_model_exploration():
                 top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
                 corr = st.session_state.data[top_features_list].corr()
                 fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                st.plotly_chart(fig)
                 plots.append(fig)
+                st.plotly_chart(fig)
 
             # Detailed Indicator Analysis
             st.write("Detailed Indicator Analysis")
@@ -444,8 +430,8 @@ def run_advanced_model_exploration():
                 fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
                 fig.update_xaxes(title_text=selected_indicator)
                 fig.update_yaxes(title_text='Count')
-                st.plotly_chart(fig)
                 plots.append(fig)
+                st.plotly_chart(fig)
 
                 # KDE plot with winning ranges
                 kde_win = gaussian_kde(win_data)
@@ -463,15 +449,15 @@ def run_advanced_model_exploration():
                             fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
 
                 fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
-                st.plotly_chart(fig)
                 plots.append(fig)
-
-            # Save additional EDA plots to PDF
-            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
-            save_plots_to_pdf(pdf_filename_eda, plots)
-            st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
+                st.plotly_chart(fig)
 
             st.success("EDA plots generated successfully.")
+            
+            # Save plots to PDF
+            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_eda_plots.pdf')
+            save_plots_to_pdf(pdf_filename_eda, plots, dataframes)
+            st.write(f"EDA plots saved to {pdf_filename_eda}")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
