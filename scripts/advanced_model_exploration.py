@@ -22,33 +22,37 @@ from tqdm import tqdm
 from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
 import shap
-import io
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
+from PIL import Image
+from io import BytesIO
 
-# Save plots to PDF
-def save_plots_to_pdf(pdf_filename, plots, dataframes):
+def save_plots_to_pdf(pdf_filename, plots):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
-    img_width = width - 20
-    img_height = height // 3
-
     for plot in plots:
-        plot_data = io.BytesIO()
-        plot.write_image(plot_data, format='png')
+        plot_data = BytesIO()
+        if isinstance(plot, plt.Figure):
+            plot.savefig(plot_data, format='png')
+        elif isinstance(plot, go.Figure):
+            img_bytes = plot.to_image(format='png')
+            plot_data.write(img_bytes)
         plot_data.seek(0)
-        img = ImageReader(plot_data)
-        c.drawImage(img, 10, height - img_height - 10, width=img_width, height=img_height)
-        c.showPage()
+        img = Image.open(plot_data)
+        
+        temp_file = 'temp_image.png'
+        img.save(temp_file)
 
-    for df in dataframes:
-        c.drawString(10, height - 10, str(df))
-        c.showPage()
+        img_width, img_height = img.size
+        aspect = img_height / float(img_width)
+        img_width = width - 20
+        img_height = aspect * img_width
 
+        c.drawImage(temp_file, 10, height - img_height - 10, width=img_width, height=img_height)
+        c.showPage()
     c.save()
+    os.remove(temp_file)
 
-# Load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
@@ -171,33 +175,22 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         feature = item['feature']
         ranges = item['optimal_win_ranges']
         
+        fig, ax = plt.subplots(figsize=(12, 6))
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
-        
-        plt.figure(figsize=(12, 6))
-        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True)
-        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True)
+
+        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True, ax=ax)
+        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True, ax=ax)
         
         for range_start, range_end in ranges:
-            plt.axvspan(range_start, range_end, color='blue', alpha=0.3)
+            ax.axvspan(range_start, range_end, color='blue', alpha=0.3)
 
-        plt.title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
-        plt.xlabel(feature)
-        plt.ylabel('Density')
-        plt.legend()
-        st.pyplot(plt.gcf())
-        plt.close()
-
-        # Convert matplotlib figure to plotly figure
-        fig = plt.gcf()
-        plot = go.Figure()
-        plot.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75))
-        plot.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75))
-        for range_start, range_end in ranges:
-            plot.add_vrect(x0=range_start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-        plot.update_layout(title_text=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})', xaxis_title=feature, yaxis_title='Density')
-        plots.append(plot)
-
+        ax.set_title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
+        ax.set_xlabel(feature)
+        ax.set_ylabel('Density')
+        ax.legend()
+        st.pyplot(fig)
+        plots.append(fig)
     return plots
 
 def summarize_optimal_win_ranges(optimal_ranges):
@@ -394,13 +387,18 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    plots_optimal_win_ranges = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
+
+                    # Save plots to PDF
+                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
+                    save_plots_to_pdf(pdf_filename, plots)
+                    st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
@@ -468,12 +466,12 @@ def run_advanced_model_exploration():
                 st.plotly_chart(fig)
                 plots.append(fig)
 
-            st.success("EDA plots generated successfully.")
+            # Save additional EDA plots to PDF
+            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
+            save_plots_to_pdf(pdf_filename_eda, plots)
+            st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
-            # Save the detailed analysis to PDF
-            pdf_filename_eda = os.path.join(base_dir, f"docs/ml_analysis/{model_type}_analysis.pdf")
-            dataframes = [optimal_win_ranges_summary, st.session_state.data]
-            save_plots_to_pdf(pdf_filename_eda, plots + plots_optimal_win_ranges, dataframes)
+            st.success("EDA plots generated successfully.")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
