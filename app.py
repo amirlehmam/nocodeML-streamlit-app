@@ -208,26 +208,26 @@ def main():
         # Sidebar for navigation with icons
         st.sidebar.title("Navigation")
 
-        def nav_button(label, page_name, icon):
-            if st.sidebar.button(f"{icon} {label}"):
+        def nav_button(label, page_name, icon, key):
+            if st.sidebar.button(f"{icon} {label}", key=key):
                 st.session_state.page = page_name
 
         if "page" not in st.session_state:
             st.session_state.page = "Overview"
 
         # Navigation
-        nav_button("Overview", "Overview", "🏠")
-        nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
-        nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊")
-        nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯")
-        nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈")
-        nav_button("Specific Model Focus", "Specific Model Focus", "🔍")
-        nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉")
-        nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆")
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
+        nav_button("Overview", "Overview", "🏠", "nav_overview")
+        nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂", "nav_data_ingestion")
+        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈", "nav_dashboard")
+        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️", "nav_model_exploration")
+        nav_button("Advanced EDA on Indicators", "Advanced EDA on Indicators", "📊", "nav_eda_indicators")
+        nav_button("Optimal Win Ranges", "Optimal Win Ranges", "🎯", "nav_win_ranges")
+        nav_button("Model on % Away Indicators", "Model on % Away Indicators", "📈", "nav_percentage_away")
+        nav_button("Specific Model Focus", "Specific Model Focus", "🔍", "nav_model_focus")
+        nav_button("Advanced EDA on Specific Model", "Advanced EDA on Specific Model", "📉", "nav_eda_specific_model")
+        nav_button("Win Ranges for Specific Model", "Win Ranges for Specific Model", "🏆", "nav_win_ranges_specific_model")
+        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈", "nav_dashboard_2")
+        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️", "nav_model_exploration_2")
 
         # Initialize session state if not already done
         if 'page' not in st.session_state:
