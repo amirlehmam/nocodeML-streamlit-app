@@ -12,8 +12,14 @@ def load_image(image_path):
         encoded_image = base64.b64encode(image_file.read()).decode()
     return encoded_image
 
-# Define each app as a separate class
-class OverviewApp:
+# Base class for all apps
+class HydralitApp:
+    def assign_session(self, session_state, app):
+        self.session_state = session_state
+        self.app = app
+
+# Define each app as a subclass of HydralitApp
+class OverviewApp(HydralitApp):
     def run(self):
         st.write(f'Welcome **{st.session_state["name"]}**')
         st.write("""
@@ -74,47 +80,47 @@ class OverviewApp:
         **Two Plums for One**
         """)
 
-class DataIngestionApp:
+class DataIngestionApp(HydralitApp):
     def run(self):
         from scripts.data_ingestion_preparation import run_data_ingestion_preparation
         run_data_ingestion_preparation()
 
-class AdvancedEDAApp:
+class AdvancedEDAApp(HydralitApp):
     def run(self):
         from scripts.advanced_eda_indicators import run_advanced_eda_indicators
         run_advanced_eda_indicators()
 
-class OptimalWinRangesApp:
+class OptimalWinRangesApp(HydralitApp):
     def run(self):
         from scripts.optimal_win_ranges import run_optimal_win_ranges
         run_optimal_win_ranges()
 
-class ModelPercentageAwayApp:
+class ModelPercentageAwayApp(HydralitApp):
     def run(self):
         from scripts.model_percentage_away import run_model_percentage_away
         run_model_percentage_away()
 
-class SpecificModelFocusApp:
+class SpecificModelFocusApp(HydralitApp):
     def run(self):
         from scripts.specific_model_focus import run_specific_model_focus
         run_specific_model_focus()
 
-class AdvancedEDASpecificModelApp:
+class AdvancedEDASpecificModelApp(HydralitApp):
     def run(self):
         from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
         run_advanced_eda_specific_model()
 
-class WinRangesSpecificModelApp:
+class WinRangesSpecificModelApp(HydralitApp):
     def run(self):
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-class AdvancedTradingDashboardApp:
+class AdvancedTradingDashboardApp(HydralitApp):
     def run(self):
         from scripts.model_dashboard import run_model_dashboard
         run_model_dashboard()
 
-class AdvancedModelExplorationApp:
+class AdvancedModelExplorationApp(HydralitApp):
     def run(self):
         from scripts.advanced_model_exploration import run_advanced_model_exploration
         run_advanced_model_exploration()
