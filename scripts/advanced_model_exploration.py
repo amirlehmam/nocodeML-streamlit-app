@@ -161,10 +161,10 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         feature = item['feature']
         ranges = item['optimal_win_ranges']
         
+        fig, ax = plt.subplots(figsize=(12, 6))
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
-        
-        fig, ax = plt.subplots(figsize=(12, 6))
+
         sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True, ax=ax)
         sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True, ax=ax)
         
@@ -396,12 +396,15 @@ def run_advanced_model_exploration():
             model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
             optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
 
+            plots = []
+
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
                 st.write("Feature Importance Heatmap:")
                 feature_importance_values = st.session_state.feature_importances[model_type]
                 fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
                 st.plotly_chart(fig)
+                plots.append(fig)
 
             # Correlation matrix
             st.write("Correlation Matrix of Top Indicators:")
@@ -412,6 +415,7 @@ def run_advanced_model_exploration():
                 corr = st.session_state.data[top_features_list].corr()
                 fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig)
+                plots.append(fig)
 
             # Detailed Indicator Analysis
             st.write("Detailed Indicator Analysis")
@@ -427,6 +431,7 @@ def run_advanced_model_exploration():
                 fig.update_xaxes(title_text=selected_indicator)
                 fig.update_yaxes(title_text='Count')
                 st.plotly_chart(fig)
+                plots.append(fig)
 
                 # KDE plot with winning ranges
                 kde_win = gaussian_kde(win_data)
@@ -445,6 +450,12 @@ def run_advanced_model_exploration():
 
                 fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
                 st.plotly_chart(fig)
+                plots.append(fig)
+
+            # Save additional EDA plots to PDF
+            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
+            save_plots_to_pdf(pdf_filename_eda, plots)
+            st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
 
