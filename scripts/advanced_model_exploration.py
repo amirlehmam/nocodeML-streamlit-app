@@ -424,19 +424,6 @@ def run_advanced_model_exploration():
                 fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
                 st.plotly_chart(fig)
 
-            # Feature Importance vs Prediction
-            st.write("Feature Importance vs Prediction Analysis")
-            if 'importance_df' in locals() and not importance_df.empty:
-                feature_importance_threshold = st.slider("Select Feature Importance Threshold", min_value=0.0, max_value=float(importance_df['Importance'].max()), value=0.1)
-                important_features = importance_df[importance_df['Importance'] >= feature_importance_threshold]['Feature']
-                if not important_features.empty:
-                    for feature in important_features:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=st.session_state.data['result'], mode='markers', name='Actual', marker=dict(color='blue')))
-                        fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=y_pred, mode='markers', name='Predicted', marker=dict(color='red')))
-                        fig.update_layout(title_text=f'Actual vs Predicted Results for {feature}', xaxis_title=feature, yaxis_title='Result')
-                        st.plotly_chart(fig)
-
             st.success("EDA plots generated successfully.")
 
 if __name__ == "__main__":
