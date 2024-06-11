@@ -4,7 +4,7 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
-from hydralit import HydraApp
+from hydralit import HydraApp, HydraHeadApp
 
 # Set page config
 st.set_page_config(
@@ -34,7 +34,7 @@ authenticator = stauth.Authenticate(
 authenticator.login()
 
 # Define individual page classes
-class OverviewApp:
+class OverviewApp(HydraHeadApp):
     def run(self):
         st.write(f'Welcome **{st.session_state["name"]}**')
         st.write("""
@@ -97,47 +97,47 @@ class OverviewApp:
         **Two Plums for One**
         """)
 
-class DataIngestionApp:
+class DataIngestionApp(HydraHeadApp):
     def run(self):
         from scripts.data_ingestion_preparation import run_data_ingestion_preparation
         run_data_ingestion_preparation()
 
-class AdvancedEDAIndicatorsApp:
+class AdvancedEDAIndicatorsApp(HydraHeadApp):
     def run(self):
         from scripts.advanced_eda_indicators import run_advanced_eda_indicators
         run_advanced_eda_indicators()
 
-class OptimalWinRangesApp:
+class OptimalWinRangesApp(HydraHeadApp):
     def run(self):
         from scripts.optimal_win_ranges import run_optimal_win_ranges
         run_optimal_win_ranges()
 
-class ModelPercentageAwayApp:
+class ModelPercentageAwayApp(HydraHeadApp):
     def run(self):
         from scripts.model_percentage_away import run_model_percentage_away
         run_model_percentage_away()
 
-class SpecificModelFocusApp:
+class SpecificModelFocusApp(HydraHeadApp):
     def run(self):
         from scripts.specific_model_focus import run_specific_model_focus
         run_specific_model_focus()
 
-class AdvancedEDASpecificModelApp:
+class AdvancedEDASpecificModelApp(HydraHeadApp):
     def run(self):
         from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
         run_advanced_eda_specific_model()
 
-class WinRangesSpecificModelApp:
+class WinRangesSpecificModelApp(HydraHeadApp):
     def run(self):
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-class AdvancedTradingDashboardApp:
+class AdvancedTradingDashboardApp(HydraHeadApp):
     def run(self):
         from scripts.model_dashboard import run_model_dashboard
         run_model_dashboard()
 
-class AdvancedModelExplorationApp:
+class AdvancedModelExplorationApp(HydraHeadApp):
     def run(self):
         from scripts.advanced_model_exploration import run_advanced_model_exploration
         run_advanced_model_exploration()
