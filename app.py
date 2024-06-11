@@ -225,7 +225,7 @@ def main():
             "Win Ranges for Specific Model"
         ]
 
-        basic_analysis_choice = st.sidebar.selectbox("Basic Analysis", basic_analysis_options)
+        basic_analysis_choice = st.sidebar.selectbox("Basic Analysis", basic_analysis_options, key="basic_analysis_select")
 
         if basic_analysis_choice:
             st.session_state.page = basic_analysis_choice
