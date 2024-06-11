@@ -385,7 +385,7 @@ def run_advanced_model_exploration():
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
                     # Save plots to PDF
-                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
+                    pdf_filename = os.path.join(base_dir, f'/docs/ml_analysis/{model_type}_analysis.pdf')
                     save_plots_to_pdf(pdf_filename, plots)
                     st.write(f"Saved analysis plots to {pdf_filename}")
 
