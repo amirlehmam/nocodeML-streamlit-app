@@ -223,12 +223,12 @@ def main():
             """
             <button class="collapsible" onclick="toggleContent('basicAnalysis')">Basic Analysis</button>
             <div class="content" id="basicAnalysis">
-                <button onclick="window.location.href='Advanced EDA on Indicators'">📊 Advanced EDA on Indicators</button><br>
-                <button onclick="window.location.href='Optimal Win Ranges'">🎯 Optimal Win Ranges</button><br>
-                <button onclick="window.location.href='Model on % Away Indicators'">📈 Model on % Away Indicators</button><br>
-                <button onclick="window.location.href='Specific Model Focus'">🔍 Specific Model Focus</button><br>
-                <button onclick="window.location.href='Advanced EDA on Specific Model'">📉 Advanced EDA on Specific Model</button><br>
-                <button onclick="window.location.href='Win Ranges for Specific Model'">🏆 Win Ranges for Specific Model</button>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Advanced EDA on Indicators'}, '*')">📊 Advanced EDA on Indicators</button><br>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Optimal Win Ranges'}, '*')">🎯 Optimal Win Ranges</button><br>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Model on % Away Indicators'}, '*')">📈 Model on % Away Indicators</button><br>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Specific Model Focus'}, '*')">🔍 Specific Model Focus</button><br>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Advanced EDA on Specific Model'}, '*')">📉 Advanced EDA on Specific Model</button><br>
+                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Win Ranges for Specific Model'}, '*')">🏆 Win Ranges for Specific Model</button>
             </div>
             """,
             unsafe_allow_html=True
