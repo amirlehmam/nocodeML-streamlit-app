@@ -393,7 +393,7 @@ def run_advanced_model_exploration():
                 top_features = st.session_state.feature_importances[selected_model][:10]
                 top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
                 corr = st.session_state.data[top_features_list].corr()
-                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='coolwarm')
+                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig)
 
             # ROC Curve
