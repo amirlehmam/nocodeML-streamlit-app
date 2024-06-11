@@ -5,7 +5,6 @@ from yaml.loader import SafeLoader
 import os
 import base64
 from hydralit import HydraApp
-from hydralit_components import HydraHeadApp
 
 # Set page config
 st.set_page_config(
@@ -34,8 +33,27 @@ authenticator = stauth.Authenticate(
 
 authenticator.login()
 
-class OverviewApp(HydraHeadApp):
+# Main application class
+class MyApp:
+    def __init__(self):
+        self.app = HydraApp(title="nocodeML", favicon="📈", hide_streamlit_markers=True)
+
+    def add_pages(self):
+        self.app.add_app("Overview", icon="🏠", app=self.OverviewApp)
+        self.app.add_app("Data Ingestion and Preparation", icon="📂", app=self.DataIngestionApp)
+        self.app.add_app("Advanced Trading Dashboard", icon="📈", app=self.AdvancedTradingDashboardApp)
+        self.app.add_app("Advanced Model Exploration", icon="⚙️", app=self.AdvancedModelExplorationApp)
+        self.app.add_app("Advanced EDA on Indicators", icon="📊", app=self.AdvancedEDAIndicatorsApp)
+        self.app.add_app("Optimal Win Ranges", icon="🎯", app=self.OptimalWinRangesApp)
+        self.app.add_app("Model on % Away Indicators", icon="📈", app=self.ModelPercentageAwayApp)
+        self.app.add_app("Specific Model Focus", icon="🔍", app=self.SpecificModelFocusApp)
+        self.app.add_app("Advanced EDA on Specific Model", icon="📉", app=self.AdvancedEDASpecificModelApp)
+        self.app.add_app("Win Ranges for Specific Model", icon="🏆", app=self.WinRangesSpecificModelApp)
+
     def run(self):
+        self.app.run()
+
+    def OverviewApp(self):
         st.write(f'Welcome **{st.session_state["name"]}**')
         st.write("""
         ### nocodeML Algorithmic Trading Optimization
@@ -97,48 +115,39 @@ class OverviewApp(HydraHeadApp):
         **Two Plums for One**
         """)
 
-class DataIngestionApp(HydraHeadApp):
-    def run(self):
+    def DataIngestionApp(self):
         from scripts.data_ingestion_preparation import run_data_ingestion_preparation
         run_data_ingestion_preparation()
 
-class AdvancedEDAIndicatorsApp(HydraHeadApp):
-    def run(self):
+    def AdvancedEDAIndicatorsApp(self):
         from scripts.advanced_eda_indicators import run_advanced_eda_indicators
         run_advanced_eda_indicators()
 
-class OptimalWinRangesApp(HydraHeadApp):
-    def run(self):
+    def OptimalWinRangesApp(self):
         from scripts.optimal_win_ranges import run_optimal_win_ranges
         run_optimal_win_ranges()
 
-class ModelPercentageAwayApp(HydraHeadApp):
-    def run(self):
+    def ModelPercentageAwayApp(self):
         from scripts.model_percentage_away import run_model_percentage_away
         run_model_percentage_away()
 
-class SpecificModelFocusApp(HydraHeadApp):
-    def run(self):
+    def SpecificModelFocusApp(self):
         from scripts.specific_model_focus import run_specific_model_focus
         run_specific_model_focus()
 
-class AdvancedEDASpecificModelApp(HydraHeadApp):
-    def run(self):
+    def AdvancedEDASpecificModelApp(self):
         from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
         run_advanced_eda_specific_model()
 
-class WinRangesSpecificModelApp(HydraHeadApp):
-    def run(self):
+    def WinRangesSpecificModelApp(self):
         from scripts.win_ranges_specific_model import run_win_ranges_specific_model
         run_win_ranges_specific_model()
 
-class AdvancedTradingDashboardApp(HydraHeadApp):
-    def run(self):
+    def AdvancedTradingDashboardApp(self):
         from scripts.model_dashboard import run_model_dashboard
         run_model_dashboard()
 
-class AdvancedModelExplorationApp(HydraHeadApp):
-    def run(self):
+    def AdvancedModelExplorationApp(self):
         from scripts.advanced_model_exploration import run_advanced_model_exploration
         run_advanced_model_exploration()
 
@@ -315,21 +324,9 @@ def main():
         else:
             st.warning("Logo file not found!")
 
-        app = HydraApp(title="nocodeML", favicon="📈", hide_streamlit_markers=True)
-
-        app.add_app("Overview", icon="🏠", app=OverviewApp())
-        app.add_app("Data Ingestion and Preparation", icon="📂", app=DataIngestionApp())
-        app.add_app("Advanced Trading Dashboard", icon="📈", app=AdvancedTradingDashboardApp())
-        app.add_app("Advanced Model Exploration", icon="⚙️", app=AdvancedModelExplorationApp())
-        app.add_app("Advanced EDA on Indicators", icon="📊", app=AdvancedEDAIndicatorsApp())
-        app.add_app("Optimal Win Ranges", icon="🎯", app=OptimalWinRangesApp())
-        app.add_app("Model on % Away Indicators", icon="📈", app=ModelPercentageAwayApp())
-        app.add_app("Specific Model Focus", icon="🔍", app=SpecificModelFocusApp())
-        app.add_app("Advanced EDA on Specific Model", icon="📉", app=AdvancedEDASpecificModelApp())
-        app.add_app("Win Ranges for Specific Model", icon="🏆", app=WinRangesSpecificModelApp())
-
-        # Run HydraApp
-        app.run()
+        my_app = MyApp()
+        my_app.add_pages()
+        my_app.run()
 
         authenticator.logout()
 
