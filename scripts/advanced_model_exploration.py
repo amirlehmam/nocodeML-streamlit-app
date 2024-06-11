@@ -186,6 +186,10 @@ def run_advanced_model_exploration():
     if "feature_importances" not in st.session_state:
         st.session_state.feature_importances = {}
 
+    # Initialize session state for current step
+    if "current_step" not in st.session_state:
+        st.session_state.current_step = "load_data"
+
     # Add multiselect for feature types
     selected_feature_types = st.multiselect(
         "Select Feature Types",
@@ -193,7 +197,7 @@ def run_advanced_model_exploration():
         ["Non-Market Value Data", "Percent Away Indicators", "Binary Indicators"]
     )
 
-    if st.button("Load Data"):
+    if st.session_state.current_step == "load_data" and st.button("Load Data"):
         st.write("Loading data...")
         try:
             data = load_data(base_dir)
@@ -204,15 +208,16 @@ def run_advanced_model_exploration():
             st.session_state.y_train = y_train
             st.session_state.y_test = y_test
             st.session_state.indicator_columns = indicator_columns
+            st.session_state.current_step = "model_selection"
             st.success("Data loaded and preprocessed successfully.")
         except Exception as e:
             st.error(f"Error loading data: {e}")
             return
 
-    if "data" in st.session_state and "X_train" in st.session_state:
+    if "data" in st.session_state and "X_train" in st.session_state and st.session_state.current_step == "model_selection":
         st.write("Select model and hyperparameters for exploration")
 
-        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"])
+        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type")
 
         model_params = {}
         if model_type == "Random Forest":
@@ -339,6 +344,8 @@ def run_advanced_model_exploration():
                             'Importance': [0] * len(st.session_state.indicator_columns)
                         })
 
+                    st.session_state.current_step = "eda"
+
                     # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
                     top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
@@ -356,86 +363,88 @@ def run_advanced_model_exploration():
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
-                    # Additional Exploratory Data Analysis
-                    st.subheader("Additional Exploratory Data Analysis")
-                    with st.spinner("Generating additional EDA plots..."):
-                        # Feature importance heatmap
-                        if model_type in st.session_state.feature_importances:
-                            st.write("Feature Importance Heatmap:")
-                            feature_importance_values = st.session_state.feature_importances[model_type]
-                            fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                            st.plotly_chart(fig)
-                        
-                        # Correlation matrix
-                        st.write("Correlation Matrix of Top Indicators:")
-                        selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-                        if selected_model in st.session_state.feature_importances:
-                            top_features = st.session_state.feature_importances[selected_model][:10]
-                            top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
-                            corr = st.session_state.data[top_features_list].corr()
-                            fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                            st.plotly_chart(fig)
-
-                        # ROC Curve
-                        st.write("ROC Curve:")
-                        fpr, tpr, _ = roc_curve(st.session_state.y_test, model.predict_proba(st.session_state.X_test)[:, 1])
-                        roc_auc = auc(fpr, tpr)
-                        fig = go.Figure(data=[
-                            go.Scatter(x=fpr, y=tpr, mode='lines', name=f'AUC = {roc_auc:.2f}', line=dict(color='blue')),
-                            go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(color='red', dash='dash'))
-                        ])
-                        fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate', title='Receiver Operating Characteristic (ROC) Curve')
-                        st.plotly_chart(fig)
-
-                        # Detailed Indicator Analysis
-                        st.write("Detailed Indicator Analysis")
-                        selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
-                        if selected_indicator:
-                            win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
-                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
-
-                            fig = go.Figure()
-                            fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
-                            fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
-                            fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
-                            fig.update_xaxes(title_text=selected_indicator)
-                            fig.update_yaxes(title_text='Count')
-                            st.plotly_chart(fig)
-
-                            # KDE plot with winning ranges
-                            kde_win = gaussian_kde(win_data)
-                            kde_loss = gaussian_kde(loss_data)
-                            x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
-                            kde_win_density = kde_win(x_grid)
-                            kde_loss_density = kde_loss(x_grid)
-
-                            fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-                            fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-                            for range_item in optimal_ranges:
-                                if range_item['feature'] == selected_indicator:
-                                    for start, end in range_item['optimal_win_ranges']:
-                                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-
-                            fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
-                            st.plotly_chart(fig)
-
-                        # Feature Importance vs Prediction
-                        st.write("Feature Importance vs Prediction Analysis")
-                        if not importance_df.empty:
-                            feature_importance_threshold = st.slider("Select Feature Importance Threshold", min_value=0.0, max_value=float(importance_df['Importance'].max()), value=0.1)
-                            important_features = importance_df[importance_df['Importance'] >= feature_importance_threshold]['Feature']
-                            if not important_features.empty:
-                                for feature in important_features:
-                                    fig = go.Figure()
-                                    fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=st.session_state.data['result'], mode='markers', name='Actual', marker=dict(color='blue')))
-                                    fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=y_pred, mode='markers', name='Predicted', marker=dict(color='red')))
-                                    fig.update_layout(title_text=f'Actual vs Predicted Results for {feature}', xaxis_title=feature, yaxis_title='Result')
-                                    st.plotly_chart(fig)
-
-                            st.success("EDA plots generated successfully.")
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
+
+    if st.session_state.current_step == "eda":
+        # Additional Exploratory Data Analysis
+        st.subheader("Additional Exploratory Data Analysis")
+        with st.spinner("Generating additional EDA plots..."):
+            # Feature importance heatmap
+            if model_type in st.session_state.feature_importances:
+                st.write("Feature Importance Heatmap:")
+                feature_importance_values = st.session_state.feature_importances[model_type]
+                fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
+                st.plotly_chart(fig)
+
+            # Correlation matrix
+            st.write("Correlation Matrix of Top Indicators:")
+            selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
+            if selected_model in st.session_state.feature_importances:
+                top_features = st.session_state.feature_importances[selected_model][:10]
+                top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
+                corr = st.session_state.data[top_features_list].corr()
+                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
+                st.plotly_chart(fig)
+
+            # ROC Curve
+            st.write("ROC Curve:")
+            fpr, tpr, _ = roc_curve(st.session_state.y_test, model.predict_proba(st.session_state.X_test)[:, 1])
+            roc_auc = auc(fpr, tpr)
+            fig = go.Figure(data=[
+                go.Scatter(x=fpr, y=tpr, mode='lines', name=f'AUC = {roc_auc:.2f}', line=dict(color='blue')),
+                go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(color='red', dash='dash'))
+            ])
+            fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate', title='Receiver Operating Characteristic (ROC) Curve')
+            st.plotly_chart(fig)
+
+            # Detailed Indicator Analysis
+            st.write("Detailed Indicator Analysis")
+            selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
+            if selected_indicator:
+                win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
+                loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+
+                fig = go.Figure()
+                fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
+                fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
+                fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
+                fig.update_xaxes(title_text=selected_indicator)
+                fig.update_yaxes(title_text='Count')
+                st.plotly_chart(fig)
+
+                # KDE plot with winning ranges
+                kde_win = gaussian_kde(win_data)
+                kde_loss = gaussian_kde(loss_data)
+                x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
+                kde_win_density = kde_win(x_grid)
+                kde_loss_density = kde_loss(x_grid)
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+                fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+                for range_item in optimal_ranges:
+                    if range_item['feature'] == selected_indicator:
+                        for start, end in range_item['optimal_win_ranges']:
+                            fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+
+                fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
+                st.plotly_chart(fig)
+
+            # Feature Importance vs Prediction
+            st.write("Feature Importance vs Prediction Analysis")
+            if not importance_df.empty:
+                feature_importance_threshold = st.slider("Select Feature Importance Threshold", min_value=0.0, max_value=float(importance_df['Importance'].max()), value=0.1)
+                important_features = importance_df[importance_df['Importance'] >= feature_importance_threshold]['Feature']
+                if not important_features.empty:
+                    for feature in important_features:
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=st.session_state.data['result'], mode='markers', name='Actual', marker=dict(color='blue')))
+                        fig.add_trace(go.Scatter(x=st.session_state.data[feature], y=y_pred, mode='markers', name='Predicted', marker=dict(color='red')))
+                        fig.update_layout(title_text=f'Actual vs Predicted Results for {feature}', xaxis_title=feature, yaxis_title='Result')
+                        st.plotly_chart(fig)
+
+            st.success("EDA plots generated successfully.")
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
