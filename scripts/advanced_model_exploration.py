@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
 import plotly.express as px
+import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 import xgboost as xgb
