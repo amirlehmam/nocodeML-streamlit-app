@@ -8,7 +8,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
 import plotly.express as px
-import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 import xgboost as xgb
@@ -27,13 +26,24 @@ def load_data(data_dir):
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
-def preprocess_data(data):
+def preprocess_data(data, selected_feature_types):
     st.write("Preprocessing data...")
     if data.shape[1] < 8:
         raise ValueError("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
 
-    indicator_columns = data.columns[7:]
-    st.write(f"Indicator columns: {indicator_columns}")
+    all_indicators = data.columns[7:]
+    st.write(f"All indicators: {all_indicators}")
+
+    # Filter features based on user selection
+    indicator_columns = []
+    if "Non-Market Value Data" in selected_feature_types:
+        indicator_columns.extend([col for col in all_indicators if "_percent_away" not in col and "_binary" not in col])
+    if "Percent Away Indicators" in selected_feature_types:
+        indicator_columns.extend([col for col in all_indicators if "_percent_away" in col])
+    if "Binary Indicators" in selected_feature_types:
+        indicator_columns.extend([col for col in all_indicators if "_binary" in col])
+
+    st.write(f"Selected indicators: {indicator_columns}")
 
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
@@ -150,11 +160,18 @@ def run_advanced_model_exploration():
     if "feature_importances" not in st.session_state:
         st.session_state.feature_importances = {}
 
+    # Add multiselect for feature types
+    selected_feature_types = st.multiselect(
+        "Select Feature Types",
+        ["Non-Market Value Data", "Percent Away Indicators", "Binary Indicators"],
+        ["Non-Market Value Data", "Percent Away Indicators", "Binary Indicators"]
+    )
+
     if st.button("Load Data"):
         st.write("Loading data...")
         try:
             data = load_data(base_dir)
-            X_train, X_test, y_train, y_test, indicator_columns = preprocess_data(data)
+            X_train, X_test, y_train, y_test, indicator_columns = preprocess_data(data, selected_feature_types)
             st.session_state.data = data
             st.session_state.X_train = X_train
             st.session_state.X_test = X_test
