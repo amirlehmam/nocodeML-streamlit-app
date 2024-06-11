@@ -22,6 +22,21 @@ from tqdm import tqdm
 from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
 import shap
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
+# Function to save plots to a PDF
+def save_plots_to_pdf(pdf_filename, plots):
+    c = canvas.Canvas(pdf_filename, pagesize=letter)
+    width, height = letter
+    for plot in plots:
+        plot_data = BytesIO()
+        plot.savefig(plot_data, format='png')
+        plot_data.seek(0)
+        c.drawImage(plot_data, 10, height - 500, width=500, height=500)
+        c.showPage()
+    c.save()
 
 # Load data
 def load_data(data_dir):
@@ -141,6 +156,7 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
     return optimal_ranges
 
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
+    plots = []
     for item in optimal_ranges:
         feature = item['feature']
         ranges = item['optimal_win_ranges']
@@ -148,19 +164,20 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
         
-        plt.figure(figsize=(12, 6))
-        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True)
-        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True)
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True, ax=ax)
+        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True, ax=ax)
         
         for range_start, range_end in ranges:
-            plt.axvspan(range_start, range_end, color='blue', alpha=0.3)
+            ax.axvspan(range_start, range_end, color='blue', alpha=0.3)
 
-        plt.title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
-        plt.xlabel(feature)
-        plt.ylabel('Density')
-        plt.legend()
-        st.pyplot(plt.gcf())
-        plt.close()
+        ax.set_title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
+        ax.set_xlabel(feature)
+        ax.set_ylabel('Density')
+        ax.legend()
+        st.pyplot(fig)
+        plots.append(fig)
+    return plots
 
 def summarize_optimal_win_ranges(optimal_ranges):
     summary = []
@@ -356,13 +373,18 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
+
+                    # Save plots to PDF
+                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
+                    save_plots_to_pdf(pdf_filename, plots)
+                    st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
