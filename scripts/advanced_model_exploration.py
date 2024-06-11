@@ -24,9 +24,8 @@ from scipy.stats import gaussian_kde
 import shap
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from io import BytesIO
+from PIL import Image
 
-# Function to save plots to a PDF
 def save_plots_to_pdf(pdf_filename, plots):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
@@ -35,13 +34,18 @@ def save_plots_to_pdf(pdf_filename, plots):
         if isinstance(plot, plt.Figure):
             plot.savefig(plot_data, format='png')
         elif isinstance(plot, go.Figure):
-            plot_data.write(plot.to_image(format='png'))
+            img_bytes = plot.to_image(format='png')
+            plot_data.write(img_bytes)
         plot_data.seek(0)
-        c.drawImage(plot_data, 10, height - 500, width=500, height=500)
+        img = Image.open(plot_data)
+        img_width, img_height = img.size
+        aspect = img_height / float(img_width)
+        img_width = width - 20
+        img_height = aspect * img_width
+        c.drawImage(plot_data, 10, height - img_height - 10, width=img_width, height=img_height)
         c.showPage()
     c.save()
 
-# Load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
