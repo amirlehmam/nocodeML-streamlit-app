@@ -6,134 +6,14 @@ from yaml.loader import SafeLoader
 import os
 import base64
 
-# Set page config
-st.set_page_config(
-    page_title="nocodeML",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 # Function to load and encode image
 def load_image(image_path):
     with open(image_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
     return encoded_image
 
-# Base class for all apps
-class HydralitApp:
-    def assign_session(self, session_state, app):
-        self.session_state = session_state
-        self.app = app
-
-# Define each app as a subclass of HydralitApp
-class OverviewApp(HydralitApp):
-    def run(self):
-        st.write(f'Welcome **{st.session_state["name"]}**')
-        st.write("""
-        ###  nocodeML Algorithmic Trading Optimization
-
-        #### Streamlined for Precision and Performance
-        ---
-
-        **Key Features:**
-
-        **Data Ingestion and Preparation:**
-        - Import raw trading data effortlessly.
-        - Utilize cleaning and parsing utilities for ready-to-analyze data.
-        - Save prepared data for exploration and modeling.
-
-        **Advanced EDA on Indicators:**
-        - Perform in-depth analysis of trading indicators.
-        - Generate visualizations to understand trends, correlations, and anomalies.
-        - Use interactive plots to uncover hidden patterns.
-
-        **Optimal Win Ranges Identification:**
-        - Apply statistical techniques to determine profitable trading ranges.
-        - Visualize win ranges to enhance trading decisions.
-        - Summarize findings for quick insights.
-
-        **Model Development on % Away Indicators:**
-        - Build and optimize predictive models based on % away indicators.
-        - Utilize machine learning algorithms to forecast market movements.
-        - Evaluate model performance with comprehensive metrics.
-
-        **Focused Analysis on Specific Models:**
-        - Conduct deep dives into specific model performances.
-        - Analyze model behavior under various market conditions.
-        - Fine-tune parameters for optimal results.
-
-        **Advanced EDA on Specific Models:**
-        - Gain detailed understanding of models through comprehensive EDA.
-        - Visualize feature interactions and outcomes.
-        - Validate model assumptions with advanced statistical tests.
-
-        **Win Ranges Analysis for Specific Models:**
-        - Determine optimal win ranges tailored to specific models.
-        - Enhance performance by focusing on profitable market conditions.
-        - Visualize results for informed trading decisions.
-
-        ---
-        **Getting Started:**
-        1. **Navigate through the Sidebar:** Access different sections of the app.
-        2. **Ingest and Prepare Data:** Upload and prepare raw data files.
-        3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-        4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
-        5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
-        6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
-
-        ---
-        Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
-
-        **Two Plums for One**
-        """)
-
-class DataIngestionApp(HydralitApp):
-    def run(self):
-        from scripts.data_ingestion_preparation import run_data_ingestion_preparation
-        run_data_ingestion_preparation()
-
-class AdvancedEDAApp(HydralitApp):
-    def run(self):
-        from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-        run_advanced_eda_indicators()
-
-class OptimalWinRangesApp(HydralitApp):
-    def run(self):
-        from scripts.optimal_win_ranges import run_optimal_win_ranges
-        run_optimal_win_ranges()
-
-class ModelPercentageAwayApp(HydralitApp):
-    def run(self):
-        from scripts.model_percentage_away import run_model_percentage_away
-        run_model_percentage_away()
-
-class SpecificModelFocusApp(HydralitApp):
-    def run(self):
-        from scripts.specific_model_focus import run_specific_model_focus
-        run_specific_model_focus()
-
-class AdvancedEDASpecificModelApp(HydralitApp):
-    def run(self):
-        from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-        run_advanced_eda_specific_model()
-
-class WinRangesSpecificModelApp(HydralitApp):
-    def run(self):
-        from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-        run_win_ranges_specific_model()
-
-class AdvancedTradingDashboardApp(HydralitApp):
-    def run(self):
-        from scripts.model_dashboard import run_model_dashboard
-        run_model_dashboard()
-
-class AdvancedModelExplorationApp(HydralitApp):
-    def run(self):
-        from scripts.advanced_model_exploration import run_advanced_model_exploration
-        run_advanced_model_exploration()
-
-def main():
+# Function to configure authentication
+def configure_authentication():
     with open('./config.yaml') as file:
         config = yaml.load(file, Loader=SafeLoader)
 
@@ -144,171 +24,152 @@ def main():
         config['cookie']['expiry_days'],
         config['pre-authorized']
     )
+    return authenticator
 
+# Functions for each app
+def overview_app():
+    st.write(f'Welcome **{st.session_state["name"]}**')
+    st.write("""
+    ###  nocodeML Algorithmic Trading Optimization
+
+    #### Streamlined for Precision and Performance
+    ---
+
+    **Key Features:**
+
+    **Data Ingestion and Preparation:**
+    - Import raw trading data effortlessly.
+    - Utilize cleaning and parsing utilities for ready-to-analyze data.
+    - Save prepared data for exploration and modeling.
+
+    **Advanced EDA on Indicators:**
+    - Perform in-depth analysis of trading indicators.
+    - Generate visualizations to understand trends, correlations, and anomalies.
+    - Use interactive plots to uncover hidden patterns.
+
+    **Optimal Win Ranges Identification:**
+    - Apply statistical techniques to determine profitable trading ranges.
+    - Visualize win ranges to enhance trading decisions.
+    - Summarize findings for quick insights.
+
+    **Model Development on % Away Indicators:**
+    - Build and optimize predictive models based on % away indicators.
+    - Utilize machine learning algorithms to forecast market movements.
+    - Evaluate model performance with comprehensive metrics.
+
+    **Focused Analysis on Specific Models:**
+    - Conduct deep dives into specific model performances.
+    - Analyze model behavior under various market conditions.
+    - Fine-tune parameters for optimal results.
+
+    **Advanced EDA on Specific Models:**
+    - Gain detailed understanding of models through comprehensive EDA.
+    - Visualize feature interactions and outcomes.
+    - Validate model assumptions with advanced statistical tests.
+
+    **Win Ranges Analysis for Specific Models:**
+    - Determine optimal win ranges tailored to specific models.
+    - Enhance performance by focusing on profitable market conditions.
+    - Visualize results for informed trading decisions.
+
+    ---
+    **Getting Started:**
+    1. **Navigate through the Sidebar:** Access different sections of the app.
+    2. **Ingest and Prepare Data:** Upload and prepare raw data files.
+    3. **Perform EDA:** Explore data and trading indicators with advanced tools.
+    4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+    5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
+    6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
+
+    ---
+    Harness machine learning and data science to unlock new opportunities and enhance trading performance. 
+
+    **Two Plums for One**
+    """)
+
+def data_ingestion_app():
+    from scripts.data_ingestion_preparation import run_data_ingestion_preparation
+    run_data_ingestion_preparation()
+
+def advanced_eda_app():
+    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+    run_advanced_eda_indicators()
+
+def optimal_win_ranges_app():
+    from scripts.optimal_win_ranges import run_optimal_win_ranges
+    run_optimal_win_ranges()
+
+def model_percentage_away_app():
+    from scripts.model_percentage_away import run_model_percentage_away
+    run_model_percentage_away()
+
+def specific_model_focus_app():
+    from scripts.specific_model_focus import run_specific_model_focus
+    run_specific_model_focus()
+
+def advanced_eda_specific_model_app():
+    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+    run_advanced_eda_specific_model()
+
+def win_ranges_specific_model_app():
+    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+    run_win_ranges_specific_model()
+
+def advanced_trading_dashboard_app():
+    from scripts.model_dashboard import run_model_dashboard
+    run_model_dashboard()
+
+def advanced_model_exploration_app():
+    from scripts.advanced_model_exploration import run_advanced_model_exploration
+    run_advanced_model_exploration()
+
+def main():
+    authenticator = configure_authentication()
     authenticator.login()
 
     if st.session_state["authentication_status"]:
-        st.markdown(
-            """
-            <style>
-            /* Main Layout */
-            .main {
-                background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-                color: #FAFAFA;
-                font-family: 'Arial', sans-serif;
-            }
+        app = HydraApp(title='nocodeML', hide_streamlit_markers=True, use_navbar=True)
 
-            /* Sidebar */
-            .css-1d391kg {
-                background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-                color: #FAFAFA;
-            }
+        @app.addapp(is_home=True)
+        def overview():
+            overview_app()
 
-            /* Sidebar button style */
-            .sidebar-button {
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                padding: 10px 20px;
-                margin: 5px 0;
-                font-size: 18px;
-                font-weight: bold;
-                color: #FAFAFA;
-                background-color: #1E88E5;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                width: 100%;
-                text-align: left;
-            }
-            
-            .sidebar-button:hover {
-                background-color: #1565C0;
-            }
+        @app.addapp(icon="📂")
+        def data_ingestion():
+            data_ingestion_app()
 
-            /* Title */
-            .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
-                color: #FAFAFA;
-            }
+        @app.addapp(icon="📈")
+        def advanced_eda():
+            advanced_eda_app()
 
-            /* Headers */
-            .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-                color: #FAFAFA;
-            }
+        @app.addapp(icon="🎯")
+        def optimal_win_ranges():
+            optimal_win_ranges_app()
 
-            /* Buttons */
-            .stButton button {
-                background-color: #1E88E5;
-                color: #FAFAFA;
-                border-radius: 5px;
-            }
-            
-            /* Dropdown */
-            .stSelectbox div[data-baseweb="select"] {
-                background-color: #262730;
-                color: #FAFAFA;
-            }
+        @app.addapp(icon="📊")
+        def model_percentage_away():
+            model_percentage_away_app()
 
-            /* Text Inputs */
-            .stTextInput div[data-baseweb="input"] > div {
-                background-color: #262730;
-                color: #FAFAFA;
-            }
+        @app.addapp(icon="🔍")
+        def specific_model_focus():
+            specific_model_focus_app()
 
-            /* Center logo */
-            .center-logo {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-top: 5px;
-            }
+        @app.addapp(icon="📉")
+        def advanced_eda_specific_model():
+            advanced_eda_specific_model_app()
 
-            /* Footer */
-            .footer {
-                position: fixed;
-                left: 0;
-                bottom: 0;
-                width: 100%;
-                background-color: #0E1117;
-                color: #FAFAFA;
-                text-align: center;
-                padding: 10px 0;
-            }
+        @app.addapp(icon="🏆")
+        def win_ranges_specific_model():
+            win_ranges_specific_model_app()
 
-            /* Tooltip */
-            .tooltip {
-                position: relative;
-                display: inline-block;
-            }
+        @app.addapp(icon="📊")
+        def advanced_trading_dashboard():
+            advanced_trading_dashboard_app()
 
-            .tooltip .tooltiptext {
-                visibility: hidden;
-                width: 120px;
-                background-color: #1E88E5;
-                color: #fff;
-                text-align: center;
-                border-radius: 6px;
-                padding: 5px 0;
-                position: absolute;
-                z-index: 1;
-                bottom: 125%; 
-                left: 50%;
-                margin-left: -60px;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
+        @app.addapp(icon="⚙️")
+        def advanced_model_exploration():
+            advanced_model_exploration_app()
 
-            .tooltip:hover .tooltiptext {
-                visibility: visible;
-                opacity: 1;
-            }
-
-            /* Collapsible */
-            .collapsible {
-                background-color: #1E88E5;
-                color: white;
-                cursor: pointer;
-                padding: 10px;
-                width: 100%;
-                border: none;
-                text-align: left;
-                outline: none;
-                font-size: 15px;
-                border-radius: 5px;
-                margin-bottom: 5px;
-            }
-
-            .active, .collapsible:hover {
-                background-color: #1565C0;
-            }
-
-            .content {
-                padding: 0 18px;
-                display: none;
-                overflow: hidden;
-                background-color: #262730;
-                border-radius: 5px;
-            }
-
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        app = HydraApp(title='nocodeML', hide_streamlit_markers=True, use_navbar=True, navbar_name="Main Menu")
-        
-        app.add_app("Overview", icon="🏠", app=OverviewApp())
-        app.add_app("Data Ingestion and Preparation", icon="📂", app=DataIngestionApp())
-        app.add_app("Advanced EDA on Indicators", icon="📈", app=AdvancedEDAApp())
-        app.add_app("Optimal Win Ranges", icon="🎯", app=OptimalWinRangesApp())
-        app.add_app("Model on % Away Indicators", icon="📊", app=ModelPercentageAwayApp())
-        app.add_app("Specific Model Focus", icon="🔍", app=SpecificModelFocusApp())
-        app.add_app("Advanced EDA on Specific Model", icon="📉", app=AdvancedEDASpecificModelApp())
-        app.add_app("Win Ranges for Specific Model", icon="🏆", app=WinRangesSpecificModelApp())
-        app.add_app("Advanced Trading Dashboard", icon="📊", app=AdvancedTradingDashboardApp())
-        app.add_app("Advanced Model Exploration", icon="⚙️", app=AdvancedModelExplorationApp())
-
-        # Run the application with the navigation bar
         app.run()
 
         authenticator.logout()
