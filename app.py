@@ -40,7 +40,6 @@ def overview():
 
     #### Streamlined for Precision and Performance
     ---
-
     **Key Features:**
 
     **Data Ingestion and Preparation:**
@@ -79,7 +78,6 @@ def overview():
     - Visualize results for informed trading decisions.
 
     ---
-
     **Getting Started:**
     1. **Navigate through the Sidebar:** Access different sections of the app.
     2. **Ingest and Prepare Data:** Upload and prepare raw data files.
@@ -89,9 +87,7 @@ def overview():
     6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
 
     ---
-
     Harness machine learning and data science to unlock new opportunities and enhance trading performance.
-
     **Two Plums for One**
     """)
 
@@ -134,15 +130,15 @@ def advanced_model_exploration():
 # Mapping page names to functions
 page_dict = {
     'Overview': overview,
-    'Data Ingestion and Preparation': data_ingestion,
-    'Advanced Trading Dashboard': advanced_trading_dashboard,
-    'Advanced Model Exploration': advanced_model_exploration,
-    'Advanced EDA on Indicators': advanced_eda_indicators,
-    'Optimal Win Ranges': optimal_win_ranges,
-    'Model on % Away Indicators': model_percentage_away,
-    'Specific Model Focus': specific_model_focus,
-    'Advanced EDA on Specific Model': advanced_eda_specific_model,
-    'Win Ranges for Specific Model': win_ranges_specific_model
+    'Data Ingestion': data_ingestion,
+    'Trading Dashboard': advanced_trading_dashboard,
+    'Model Exploration': advanced_model_exploration,
+    'EDA Indicators': advanced_eda_indicators,
+    'Win Ranges': optimal_win_ranges,
+    '% Away Indicators': model_percentage_away,
+    'Model Focus': specific_model_focus,
+    'EDA Specific': advanced_eda_specific_model,
+    'Ranges Specific': win_ranges_specific_model
 }
 
 def main():
@@ -157,61 +153,27 @@ def main():
                 font-family: 'Arial', sans-serif;
             }
 
-            /* Sidebar */
-            .css-1d391kg {
-                background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-                color: #FAFAFA;
+            /* Navigation Bar */
+            .st-navbar {
+                background-color: #1E88E5;
+                font-family: 'Arial', sans-serif;
             }
 
-            /* Sidebar button style */
-            .sidebar-button {
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                padding: 10px 20px;
-                margin: 5px 0;
-                font-size: 18px;
-                font-weight: bold;
+            .st-navbar a {
                 color: #FAFAFA;
-                background-color: #1E88E5;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                width: 100%;
-                text-align: left;
+                padding: 10px 20px;
+                text-decoration: none;
+                font-weight: bold;
+                font-size: 14px;
+                border-right: 1px solid #FAFAFA;
             }
-            
-            .sidebar-button:hover {
+
+            .st-navbar a:hover {
                 background-color: #1565C0;
             }
 
-            /* Title */
-            .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
-                color: #FAFAFA;
-            }
-
-            /* Headers */
-            .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-                color: #FAFAFA;
-            }
-
-            /* Buttons */
-            .stButton button {
-                background-color: #1E88E5;
-                color: #FAFAFA;
-                border-radius: 5px;
-            }
-            
-            /* Dropdown */
-            .stSelectbox div[data-baseweb="select"] {
-                background-color: #262730;
-                color: #FAFAFA;
-            }
-
-            /* Text Inputs */
-            .stTextInput div[data-baseweb="input"] > div {
-                background-color: #262730;
-                color: #FAFAFA;
+            .st-navbar a:last-child {
+                border-right: none;
             }
 
             /* Center logo */
@@ -233,75 +195,8 @@ def main():
                 text-align: center;
                 padding: 10px 0;
             }
-
-            /* Tooltip */
-            .tooltip {
-                position: relative;
-                display: inline-block;
-            }
-
-            .tooltip .tooltiptext {
-                visibility: hidden;
-                width: 120px;
-                background-color: #1E88E5;
-                color: #fff;
-                text-align: center;
-                border-radius: 6px;
-                padding: 5px 0;
-                position: absolute;
-                z-index: 1;
-                bottom: 125%; 
-                left: 50%;
-                margin-left: -60px;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
-
-            .tooltip:hover .tooltiptext {
-                visibility: visible;
-                opacity: 1;
-            }
-
-            /* Collapsible */
-            .collapsible {
-                background-color: #1E88E5;
-                color: white;
-                cursor: pointer;
-                padding: 10px;
-                width: 100%;
-                border: none;
-                text-align: left;
-                outline: none;
-                font-size: 15px;
-                border-radius: 5px;
-                margin-bottom: 5px;
-            }
-
-            .active, .collapsible:hover {
-                background-color: #1565C0;
-            }
-
-            .content {
-                padding: 0 18px;
-                display: none;
-                overflow: hidden;
-                background-color: #262730;
-                border-radius: 5px;
-            }
-
             </style>
-            <script>
-                function toggleContent(id) {
-                    var content = document.getElementById(id);
-                    if (content.style.display === "block") {
-                        content.style.display = "none";
-                    } else {
-                        content.style.display = "block";
-                    }
-                }
-            </script>
-            """,
-            unsafe_allow_html=True
+            """
         )
 
         # Display the logo
@@ -319,9 +214,8 @@ def main():
             st.warning("Logo file not found!")
 
         # Navigation bar
-        selected = st_navbar(['Overview', 'Data Ingestion and Preparation', 'Advanced Trading Dashboard', 'Advanced Model Exploration',
-             'Advanced EDA on Indicators', 'Optimal Win Ranges', 'Model on % Away Indicators', 'Specific Model Focus',
-             'Advanced EDA on Specific Model', 'Win Ranges for Specific Model'])
+        selected = st_navbar(['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration',
+             'EDA Indicators', 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific'])
 
         # Call the function based on the selected page
         page_dict[selected]()
