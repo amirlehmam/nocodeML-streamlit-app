@@ -329,20 +329,6 @@ def run_advanced_model_exploration():
                         fig = px.pie(values=win_loss_counts, names=win_loss_counts.index, title="Win vs Loss Distribution")
                         st.plotly_chart(fig)
 
-                        # KDE plots for each indicator showing winning and losing ranges
-                        for feature in selected_features:
-                            win_data = st.session_state.data[st.session_state.data['result'] == 0][feature].dropna()
-                            loss_data = st.session_state.data[st.session_state.data['result'] == 1][feature].dropna()
-
-                            plt.figure(figsize=(12, 6))
-                            sns.kdeplot(win_data, label='Win', color='blue', shade=True)
-                            sns.kdeplot(loss_data, label='Loss', color='red', shade=True)
-                            plt.title(f'Distribution of {feature} for Winning and Losing Trades')
-                            plt.xlabel(feature)
-                            plt.ylabel('Density')
-                            plt.legend()
-                            st.pyplot(plt.gcf())
-                            plt.close()
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
