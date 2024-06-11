@@ -4,7 +4,7 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
-from st_navbar import st_navbar
+from streamlit_navigation_bar import st_navbar
 
 # Set page config
 st.set_page_config(
@@ -32,6 +32,118 @@ authenticator = stauth.Authenticate(
 )
 
 authenticator.login()
+
+def overview():
+    st.write(f'Welcome **{st.session_state["name"]}**')
+    st.write("""
+    ### nocodeML Algorithmic Trading Optimization
+
+    #### Streamlined for Precision and Performance
+    ---
+
+    **Key Features:**
+
+    **Data Ingestion and Preparation:**
+    - Import raw trading data effortlessly.
+    - Utilize cleaning and parsing utilities for ready-to-analyze data.
+    - Save prepared data for exploration and modeling.
+
+    **Advanced EDA on Indicators:**
+    - Perform in-depth analysis of trading indicators.
+    - Generate visualizations to understand trends, correlations, and anomalies.
+    - Use interactive plots to uncover hidden patterns.
+
+    **Optimal Win Ranges Identification:**
+    - Apply statistical techniques to determine profitable trading ranges.
+    - Visualize win ranges to enhance trading decisions.
+    - Summarize findings for quick insights.
+
+    **Model Development on % Away Indicators:**
+    - Build and optimize predictive models based on % away indicators.
+    - Utilize machine learning algorithms to forecast market movements.
+    - Evaluate model performance with comprehensive metrics.
+
+    **Focused Analysis on Specific Models:**
+    - Conduct deep dives into specific model performances.
+    - Analyze model behavior under various market conditions.
+    - Fine-tune parameters for optimal results.
+
+    **Advanced EDA on Specific Models:**
+    - Gain detailed understanding of models through comprehensive EDA.
+    - Visualize feature interactions and outcomes.
+    - Validate model assumptions with advanced statistical tests.
+
+    **Win Ranges Analysis for Specific Models:**
+    - Determine optimal win ranges tailored to specific models.
+    - Enhance performance by focusing on profitable market conditions.
+    - Visualize results for informed trading decisions.
+
+    ---
+
+    **Getting Started:**
+    1. **Navigate through the Sidebar:** Access different sections of the app.
+    2. **Ingest and Prepare Data:** Upload and prepare raw data files.
+    3. **Perform EDA:** Explore data and trading indicators with advanced tools.
+    4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
+    5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
+    6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
+
+    ---
+
+    Harness machine learning and data science to unlock new opportunities and enhance trading performance.
+
+    **Two Plums for One**
+    """)
+
+def data_ingestion():
+    from scripts.data_ingestion_preparation import run_data_ingestion_preparation
+    run_data_ingestion_preparation()
+
+def advanced_eda_indicators():
+    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+    run_advanced_eda_indicators()
+
+def optimal_win_ranges():
+    from scripts.optimal_win_ranges import run_optimal_win_ranges
+    run_optimal_win_ranges()
+
+def model_percentage_away():
+    from scripts.model_percentage_away import run_model_percentage_away
+    run_model_percentage_away()
+
+def specific_model_focus():
+    from scripts.specific_model_focus import run_specific_model_focus
+    run_specific_model_focus()
+
+def advanced_eda_specific_model():
+    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+    run_advanced_eda_specific_model()
+
+def win_ranges_specific_model():
+    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+    run_win_ranges_specific_model()
+
+def advanced_trading_dashboard():
+    from scripts.model_dashboard import run_model_dashboard
+    run_model_dashboard()
+
+def advanced_model_exploration():
+    from scripts.advanced_model_exploration import run_advanced_model_exploration
+    run_advanced_model_exploration()
+
+# Mapping page names to functions
+page_dict = {
+    'Overview': overview,
+    'Data Ingestion and Preparation': data_ingestion,
+    'Advanced Trading Dashboard': advanced_trading_dashboard,
+    'Advanced Model Exploration': advanced_model_exploration,
+    'Advanced EDA on Indicators': advanced_eda_indicators,
+    'Optimal Win Ranges': optimal_win_ranges,
+    'Model on % Away Indicators': model_percentage_away,
+    'Specific Model Focus': specific_model_focus,
+    'Advanced EDA on Specific Model': advanced_eda_specific_model,
+    'Win Ranges for Specific Model': win_ranges_specific_model
+}
 
 def main():
     if st.session_state["authentication_status"]:
@@ -194,7 +306,7 @@ def main():
 
         # Display the logo
         logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-        if os.path.exists(logo_path):
+        if (os.path.exists(logo_path)):
             st.markdown(
                 f"""
                 <div class="center-logo">
@@ -207,120 +319,14 @@ def main():
             st.warning("Logo file not found!")
 
         # Navigation bar
-        page = st_navbar(
-            nav_items=[
-                ('Overview', '🏠'),
-                ('Data Ingestion and Preparation', '📂'),
-                ('Advanced Trading Dashboard', '📈'),
-                ('Advanced Model Exploration', '⚙️'),
-                ('Advanced EDA on Indicators', '📊'),
-                ('Optimal Win Ranges', '🎯'),
-                ('Model on % Away Indicators', '📈'),
-                ('Specific Model Focus', '🔍'),
-                ('Advanced EDA on Specific Model', '📉'),
-                ('Win Ranges for Specific Model', '🏆')
-            ],
-            sticky_nav=True,
-            sticky_mode='pinned',
+        selected = st_navbar(
+            menu_items=['Overview', 'Data Ingestion and Preparation', 'Advanced Trading Dashboard', 'Advanced Model Exploration',
+                        'Advanced EDA on Indicators', 'Optimal Win Ranges', 'Model on % Away Indicators', 'Specific Model Focus',
+                        'Advanced EDA on Specific Model', 'Win Ranges for Specific Model']
         )
 
-        if page == 'Overview':
-            st.write(f'Welcome **{st.session_state["name"]}**')
-            st.write("""
-            ### nocodeML Algorithmic Trading Optimization
-
-            #### Streamlined for Precision and Performance
-            ---
-
-            **Key Features:**
-
-            **Data Ingestion and Preparation:**
-            - Import raw trading data effortlessly.
-            - Utilize cleaning and parsing utilities for ready-to-analyze data.
-            - Save prepared data for exploration and modeling.
-
-            **Advanced EDA on Indicators:**
-            - Perform in-depth analysis of trading indicators.
-            - Generate visualizations to understand trends, correlations, and anomalies.
-            - Use interactive plots to uncover hidden patterns.
-
-            **Optimal Win Ranges Identification:**
-            - Apply statistical techniques to determine profitable trading ranges.
-            - Visualize win ranges to enhance trading decisions.
-            - Summarize findings for quick insights.
-
-            **Model Development on % Away Indicators:**
-            - Build and optimize predictive models based on % away indicators.
-            - Utilize machine learning algorithms to forecast market movements.
-            - Evaluate model performance with comprehensive metrics.
-
-            **Focused Analysis on Specific Models:**
-            - Conduct deep dives into specific model performances.
-            - Analyze model behavior under various market conditions.
-            - Fine-tune parameters for optimal results.
-
-            **Advanced EDA on Specific Models:**
-            - Gain detailed understanding of models through comprehensive EDA.
-            - Visualize feature interactions and outcomes.
-            - Validate model assumptions with advanced statistical tests.
-
-            **Win Ranges Analysis for Specific Models:**
-            - Determine optimal win ranges tailored to specific models.
-            - Enhance performance by focusing on profitable market conditions.
-            - Visualize results for informed trading decisions.
-
-            ---
-
-            **Getting Started:**
-            1. **Navigate through the Sidebar:** Access different sections of the app.
-            2. **Ingest and Prepare Data:** Upload and prepare raw data files.
-            3. **Perform EDA:** Explore data and trading indicators with advanced tools.
-            4. **Identify Optimal Win Ranges:** Use statistical methods to find the best trading ranges.
-            5. **Develop and Optimize Models:** Build, train, and evaluate machine learning models.
-            6. **Deep Dive into Specific Models:** Analyze model performance and characteristics.
-
-            ---
-
-            Harness machine learning and data science to unlock new opportunities and enhance trading performance.
-
-            **Two Plums for One**
-            """)
-
-        elif page == 'Data Ingestion and Preparation':
-            from scripts.data_ingestion_preparation import run_data_ingestion_preparation
-            run_data_ingestion_preparation()
-
-        elif page == 'Advanced Trading Dashboard':
-            from scripts.model_dashboard import run_model_dashboard
-            run_model_dashboard()
-
-        elif page == 'Advanced Model Exploration':
-            from scripts.advanced_model_exploration import run_advanced_model_exploration
-            run_advanced_model_exploration()
-
-        elif page == 'Advanced EDA on Indicators':
-            from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-            run_advanced_eda_indicators()
-
-        elif page == 'Optimal Win Ranges':
-            from scripts.optimal_win_ranges import run_optimal_win_ranges
-            run_optimal_win_ranges()
-
-        elif page == 'Model on % Away Indicators':
-            from scripts.model_percentage_away import run_model_percentage_away
-            run_model_percentage_away()
-
-        elif page == 'Specific Model Focus':
-            from scripts.specific_model_focus import run_specific_model_focus
-            run_specific_model_focus()
-
-        elif page == 'Advanced EDA on Specific Model':
-            from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-            run_advanced_eda_specific_model()
-
-        elif page == 'Win Ranges for Specific Model':
-            from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-            run_win_ranges_specific_model()
+        # Call the function based on the selected page
+        page_dict[selected]()
 
         authenticator.logout()
 
