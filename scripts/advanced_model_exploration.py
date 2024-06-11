@@ -18,8 +18,7 @@ from tensorflow.keras.layers import Dense
 from scikeras.wrappers import KerasClassifier
 from tqdm import tqdm
 from scipy.stats import gaussian_kde
-import eli5
-from eli5.sklearn import PermutationImportance
+import shap
 
 # Load data
 def load_data(data_dir):
@@ -269,9 +268,10 @@ def run_advanced_model_exploration():
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
                     elif model_type == "Neural Network":
-                        st.write("Calculating feature importances using eli5...")
-                        perm = PermutationImportance(model, random_state=42).fit(st.session_state.X_test, st.session_state.y_test)
-                        feature_importances = perm.feature_importances_
+                        st.write("Calculating feature importances using SHAP...")
+                        explainer = shap.Explainer(model, st.session_state.X_train)
+                        shap_values = explainer(st.session_state.X_test)
+                        feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df = pd.DataFrame({
                             'Feature': st.session_state.indicator_columns,
                             'Importance': feature_importances
