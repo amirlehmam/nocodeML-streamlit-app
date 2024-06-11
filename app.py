@@ -4,6 +4,7 @@ import yaml
 from yaml.loader import SafeLoader
 import os
 import base64
+from streamlit_navigation_bar import st_navbar
 
 # Set page config
 st.set_page_config(
@@ -205,43 +206,17 @@ def main():
         else:
             st.warning("Logo file not found!")
 
-        # Sidebar for navigation with icons
-        st.sidebar.title("Navigation")
-
-        def nav_button(label, page_name, icon):
-            if st.sidebar.button(f"{icon} {label}"):
-                st.session_state.page = page_name
-
-        if "page" not in st.session_state:
-            st.session_state.page = "Overview"
-
-        # Navigation
-        nav_button("Overview", "Overview", "🏠")
-        nav_button("Data Ingestion and Preparation", "Data Ingestion and Preparation", "📂")
-
-        st.sidebar.markdown(
-            """
-            <button class="collapsible" onclick="toggleContent('basicAnalysis')">Basic Analysis</button>
-            <div class="content" id="basicAnalysis">
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Advanced EDA on Indicators'}, '*')">📊 Advanced EDA on Indicators</button><br>
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Optimal Win Ranges'}, '*')">🎯 Optimal Win Ranges</button><br>
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Model on % Away Indicators'}, '*')">📈 Model on % Away Indicators</button><br>
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Specific Model Focus'}, '*')">🔍 Specific Model Focus</button><br>
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Advanced EDA on Specific Model'}, '*')">📉 Advanced EDA on Specific Model</button><br>
-                <button class="sidebar-button" onclick="window.parent.postMessage({type: 'setPage', page: 'Win Ranges for Specific Model'}, '*')">🏆 Win Ranges for Specific Model</button>
-            </div>
-            """,
-            unsafe_allow_html=True
+        # Navigation bar
+        page = st_navbar(
+            pages=["Overview", "Data Ingestion and Preparation", "Advanced EDA on Indicators",
+                   "Optimal Win Ranges", "Model on % Away Indicators", "Specific Model Focus",
+                   "Advanced EDA on Specific Model", "Win Ranges for Specific Model",
+                   "Advanced Trading Dashboard", "Advanced Model Exploration"],
+            titles=["🏠 Overview", "📂 Data Ingestion and Preparation", "📊 Advanced EDA on Indicators",
+                    "🎯 Optimal Win Ranges", "📈 Model on % Away Indicators", "🔍 Specific Model Focus",
+                    "📉 Advanced EDA on Specific Model", "🏆 Win Ranges for Specific Model",
+                    "📈 Advanced Trading Dashboard", "⚙️ Advanced Model Exploration"]
         )
-
-        nav_button("Advanced Trading Dashboard", "Advanced Trading Dashboard", "📈")
-        nav_button("Advanced Model Exploration", "Advanced Model Exploration", "⚙️")
-
-        # Initialize session state if not already done
-        if 'page' not in st.session_state:
-            st.session_state.page = "Overview"
-
-        page = st.session_state.page
 
         if page == "Overview":
             st.write(f'Welcome **{st.session_state["name"]}**')
