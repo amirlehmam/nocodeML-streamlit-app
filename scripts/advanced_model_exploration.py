@@ -24,6 +24,7 @@ from scipy.stats import gaussian_kde
 import shap
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
 
@@ -40,19 +41,33 @@ def save_plots_to_pdf(pdf_filename, plots, descriptions):
             plot_data.write(img_bytes)
         plot_data.seek(0)
         img = Image.open(plot_data)
-        
-        temp_file = 'temp_image.png'
-        img.save(temp_file)
-
         img_width, img_height = img.size
         aspect = img_height / float(img_width)
         img_width = width - 20
         img_height = aspect * img_width
 
-        c.drawImage(temp_file, 10, height - img_height - 30, width=img_width, height=img_height)
+        if img_height > height - 60:
+            img_height = height - 60
+            img_width = img_height / aspect
+
+        c.drawImage(ImageReader(img), 10, height - img_height - 30, width=img_width, height=img_height)
         c.showPage()
     c.save()
-    os.remove(temp_file)
+
+def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
+    c = canvas.Canvas(pdf_filename, pagesize=letter)
+    width, height = letter
+    for df, description in zip(dataframes, descriptions):
+        c.drawString(10, height - 20, description)
+        text = df.to_string()
+        text_lines = text.split('\n')
+        for i, line in enumerate(text_lines):
+            if i * 12 + 30 > height:
+                c.showPage()
+                i = 0
+            c.drawString(10, height - 30 - i * 12, line)
+        c.showPage()
+    c.save()
 
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
