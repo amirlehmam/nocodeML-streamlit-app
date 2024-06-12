@@ -29,32 +29,24 @@ def clean_data(ma_data):
     return ma_data
 
 def check_convergence(row, ma_columns, threshold):
-    convergence = True
     for i in range(len(ma_columns) - 1):
         for j in range(i + 1, len(ma_columns)):
             ma1 = row[ma_columns[i]]
             ma2 = row[ma_columns[j]]
             percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
             if percentage_diff > threshold:
-                convergence = False
-                break
-        if not convergence:
-            break
-    return convergence
+                return False
+    return True
 
 def check_divergence(row, ma_columns, threshold):
-    divergence = True
     for i in range(len(ma_columns) - 1):
         for j in range(i + 1, len(ma_columns)):
             ma1 = row[ma_columns[i]]
             ma2 = row[ma_columns[j]]
             percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
             if percentage_diff < threshold:
-                divergence = False
-                break
-        if not divergence:
-            break
-    return divergence
+                return False
+    return True
 
 def run_moving_average_convergence():
     if "base_dir" not in st.session_state:
@@ -63,7 +55,7 @@ def run_moving_average_convergence():
     data = load_data(st.session_state.base_dir)
     ma_data = calculate_moving_averages(data)
     ma_data = clean_data(ma_data)
-    threshold = st.slider("Set Convergence/Divergence Threshold (%)", 0.1, 20.0, 5.0)  # Adjust the range for better exploration
+    threshold = st.slider("Set Convergence/Divergence Threshold (%)", 0.1, 50.0, 5.0)  # Adjust the range for better exploration
 
     # List of Moving Average columns
     ma_columns = ma_data.columns.tolist()
