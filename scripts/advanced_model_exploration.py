@@ -54,12 +54,11 @@ def save_plots_to_pdf(pdf_filename, plots, descriptions):
         c.showPage()
     c.save()
 
-def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
+def save_text_to_pdf(pdf_filename, text_sections):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
-    for df, description in zip(dataframes, descriptions):
+    for description, text in text_sections:
         c.drawString(10, height - 20, description)
-        text = df.to_string()
         text_lines = text.split('\n')
         for i, line in enumerate(text_lines):
             if i * 12 + 30 > height:
@@ -69,11 +68,12 @@ def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
         c.showPage()
     c.save()
 
-def save_text_to_pdf(pdf_filename, text_sections):
+def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
-    for description, text in text_sections:
+    for df, description in zip(dataframes, descriptions):
         c.drawString(10, height - 20, description)
+        text = df.to_string()
         text_lines = text.split('\n')
         for i, line in enumerate(text_lines):
             if i * 12 + 30 > height:
@@ -432,6 +432,7 @@ def run_advanced_model_exploration():
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
                     save_plots_to_pdf(pdf_filename, plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
                     save_text_to_pdf(pdf_filename, [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")])
+                    save_dataframe_to_pdf(pdf_filename, [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"])
                     st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
