@@ -242,6 +242,7 @@ def reset_session_state():
     st.session_state.current_step = "load_data"
     st.session_state.model_type = "Random Forest"
     st.session_state.feature_importances = {}
+    st.session_state.optimal_ranges = None
 
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
@@ -444,11 +445,14 @@ def run_advanced_model_exploration():
                                     plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
                     st.write(f"Saved analysis to {pdf_filename}")
 
+                    # Generate additional EDA
+                    st.session_state.current_step = "additional_eda"
+                    generate_additional_eda()
+
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
-    if st.session_state.current_step == "eda":
-        # Additional Exploratory Data Analysis
+    def generate_additional_eda():
         st.subheader("Additional Exploratory Data Analysis")
         with st.spinner("Generating additional EDA plots..."):
             model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
@@ -521,6 +525,9 @@ def run_advanced_model_exploration():
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
+
+    if st.session_state.current_step == "additional_eda":
+        generate_additional_eda()
 
     if st.button("Restart Exploration"):
         reset_session_state()
