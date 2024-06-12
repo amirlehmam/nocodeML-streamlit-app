@@ -1,11 +1,10 @@
-# advanced_model_exploration.py
 import os
 import pandas as pd
 import numpy as np
 import streamlit as st
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, mean_squared_error, roc_curve, auc
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
 import plotly.express as px
@@ -17,7 +16,7 @@ import lightgbm as lgb
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
-from scikeras.wrappers import KerasClassifier
+from scikeras.wrappers import KerasClassifier, KerasRegressor
 from tqdm import tqdm
 from tqdm.keras import TqdmCallback
 from scipy.stats import gaussian_kde
@@ -111,20 +110,25 @@ def preprocess_data(data, selected_feature_types):
 
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
+    # Feature Engineering: Add derived metrics (changes, slopes)
+    for col in indicator_columns:
+        data[f'{col}_change'] = data[col].diff()
+        data[f'{col}_slope'] = data[col].diff().diff()
+
     # Fill NaN values with column mean
     data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(col.mean()))
+
+    # Normalize the data
+    scaler = StandardScaler()
+    data[indicator_columns] = scaler.fit_transform(data[indicator_columns])
 
     X = data[indicator_columns]
     y = data['result']
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
 
     st.write("Data preprocessing completed.")
-    return X_train_scaled, X_test_scaled, y_train, y_test, indicator_columns
+    return X_train, X_test, y_train, y_test, indicator_columns
 
 # Define Keras models
 def create_nn_model(input_dim):
@@ -242,7 +246,6 @@ def reset_session_state():
     st.session_state.current_step = "load_data"
     st.session_state.model_type = "Random Forest"
     st.session_state.feature_importances = {}
-    st.session_state.optimal_ranges = None
 
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
@@ -289,8 +292,11 @@ def run_advanced_model_exploration():
     if "data" in st.session_state and "X_train" in st.session_state and st.session_state.current_step == "model_selection":
         st.write("Select model and hyperparameters for exploration")
 
+        # Model type and task selection
         model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select")
+        task_type = st.radio("Select Task Type", ["Classification", "Regression"], index=0)
         st.session_state.model_type_selected = model_type
+        st.session_state.task_type_selected = task_type
 
         model_params = {}
         model = None  # Initialize model as None
@@ -298,56 +304,80 @@ def run_advanced_model_exploration():
             st.subheader("Random Forest Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=10)
-            model = RandomForestClassifier(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
+            if task_type == "Classification":
+                model = RandomForestClassifier(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
+            else:
+                model = RandomForestRegressor(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
         
         elif model_type == "Gradient Boosting":
             st.subheader("Gradient Boosting Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = GradientBoostingClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
+            if task_type == "Classification":
+                model = GradientBoostingClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
+            else:
+                model = GradientBoostingRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "XGBoost":
             st.subheader("XGBoost Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = xgb.XGBClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], use_label_encoder=False, eval_metric='logloss', random_state=42)
+            if task_type == "Classification":
+                model = xgb.XGBClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], use_label_encoder=False, eval_metric='logloss', random_state=42)
+            else:
+                model = xgb.XGBRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "LightGBM":
             st.subheader("LightGBM Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            model = lgb.LGBMClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
+            if task_type == "Classification":
+                model = lgb.LGBMClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
+            else:
+                model = lgb.LGBMRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "Neural Network":
             st.subheader("Neural Network Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
-            model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            if task_type == "Classification":
+                model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            else:
+                model = KerasRegressor(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "RNN (LSTM)":
             st.subheader("RNN (LSTM) Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            if task_type == "Classification":
+                model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            else:
+                model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "RNN (GRU)":
             st.subheader("RNN (GRU) Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            if task_type == "Classification":
+                model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            else:
+                model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "CNN":
             st.subheader("CNN Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            if task_type == "Classification":
+                model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
+            else:
+                model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
@@ -357,10 +387,13 @@ def run_advanced_model_exploration():
                 ('xgb', xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss', random_state=42))
             ]
             final_estimator = LogisticRegression(max_iter=1000)
-            model = StackingClassifier(estimators=base_learners, final_estimator=final_estimator)
+            if task_type == "Classification":
+                model = StackingClassifier(estimators=base_learners, final_estimator=final_estimator)
+            else:
+                model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
 
         if st.button("Train Model"):
-            st.write(f"Training {model_type}...")
+            st.write(f"Training {model_type} for {task_type} task...")
             with st.spinner("Training in progress..."):
                 try:
                     if model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
@@ -369,18 +402,23 @@ def run_advanced_model_exploration():
                         for _ in tqdm(range(1), desc=f"Training {model_type}"):
                             model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
-                    accuracy = accuracy_score(st.session_state.y_test, y_pred)
-                    st.write(f"Accuracy: {accuracy}")
-                    st.write("Classification Report:")
-                    class_report = classification_report(st.session_state.y_test, y_pred)
-                    st.text(class_report)
-                    st.write("Confusion Matrix:")
-                    cm = confusion_matrix(st.session_state.y_test, y_pred)
-                    fig_cm = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
-                    st.plotly_chart(fig_cm)
+
+                    if task_type == "Classification":
+                        accuracy = accuracy_score(st.session_state.y_test, y_pred)
+                        st.write(f"Accuracy: {accuracy}")
+                        st.write("Classification Report:")
+                        class_report = classification_report(st.session_state.y_test, y_pred)
+                        st.text(class_report)
+                        st.write("Confusion Matrix:")
+                        cm = confusion_matrix(st.session_state.y_test, y_pred)
+                        fig_cm = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
+                        st.plotly_chart(fig_cm)
+                    else:
+                        mse = mean_squared_error(st.session_state.y_test, y_pred)
+                        st.write(f"Mean Squared Error: {mse}")
 
                     # Save the model
-                    model_save_path = os.path.join(base_dir, f"models/{model_type}_model.pkl")
+                    model_save_path = os.path.join(base_dir, f"models/{model_type}_{task_type}_model.pkl")
                     pd.to_pickle(model, model_save_path)
                     st.write(f"Model saved to {model_save_path}")
 
@@ -438,21 +476,24 @@ def run_advanced_model_exploration():
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
                     # Save all elements to a single PDF
-                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
-                    save_all_to_pdf(pdf_filename, 
-                                    [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
-                                    [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
-                                    plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
+                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_analysis.pdf')
+                    if task_type == "Classification":
+                        save_all_to_pdf(pdf_filename, 
+                                        [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
+                                        [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
+                                        plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
+                    else:
+                        save_all_to_pdf(pdf_filename, 
+                                        [("Mean Squared Error", f"Mean Squared Error: {mse}")], 
+                                        [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
+                                        plots + [fig_feat_imp], descriptions + ["Feature Importance"])
                     st.write(f"Saved analysis to {pdf_filename}")
-
-                    # Generate additional EDA
-                    st.session_state.current_step = "additional_eda"
-                    generate_additional_eda()
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
-    def generate_additional_eda():
+    if st.session_state.current_step == "eda":
+        # Additional Exploratory Data Analysis
         st.subheader("Additional Exploratory Data Analysis")
         with st.spinner("Generating additional EDA plots..."):
             model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
@@ -525,9 +566,6 @@ def run_advanced_model_exploration():
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
-
-    if st.session_state.current_step == "additional_eda":
-        generate_additional_eda()
 
     if st.button("Restart Exploration"):
         reset_session_state()
