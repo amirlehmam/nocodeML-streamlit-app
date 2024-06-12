@@ -28,18 +28,23 @@ def clean_data(ma_data):
     st.write(ma_data.head())  # Debug: Show a sample of the cleaned data
     return ma_data
 
-def check_convergence(row, ma_columns, threshold):
-    for i in range(len(ma_columns) - 1):
-        for j in range(i + 1, len(ma_columns)):
-            ma1 = row[ma_columns[i]]
-            ma2 = row[ma_columns[j]]
-            percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
-            # Check and print only for first few rows
-            if i == 0 and j == 1:
-                st.write(f"Comparing {ma_columns[i]} and {ma_columns[j]}: {percentage_diff}")
-            if percentage_diff > threshold:
-                return False
-    return True
+def check_convergence(ma_data, ma_columns, threshold):
+    convergence_points = []
+    for index, row in ma_data.iterrows():
+        convergence = True
+        for i in range(len(ma_columns) - 1):
+            for j in range(i + 1, len(ma_columns)):
+                ma1 = row[ma_columns[i]]
+                ma2 = row[ma_columns[j]]
+                percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
+                if percentage_diff > threshold:
+                    convergence = False
+                    break
+            if not convergence:
+                break
+        if convergence:
+            convergence_points.append(index)
+    return convergence_points
 
 def run_moving_average_convergence():
     if "base_dir" not in st.session_state:
@@ -53,24 +58,20 @@ def run_moving_average_convergence():
     # List of Moving Average columns
     ma_columns = ma_data.columns.tolist()
     
-    # Iterate through the DataFrame and check for convergence
-    convergence_points = []
-
-    for index, row in ma_data.iterrows():
-        if check_convergence(row, ma_columns, threshold):
-            convergence_points.append((index, data.loc[index, 'price']))
-
-    # Convert the convergence points to a DataFrame
-    convergence_df = pd.DataFrame(convergence_points, columns=['Index', 'Price'])
+    # Check for convergence points
+    convergence_points = check_convergence(ma_data, ma_columns, threshold)
 
     st.write(f"Found {len(convergence_points)} convergence points.")
-    st.write(convergence_df.head())  # Display the first few convergence points
+    if convergence_points:
+        convergence_df = data.loc[convergence_points, ['time', 'price']]
+        st.write(convergence_df.head())  # Display the first few convergence points
 
-    # Visualize the convergence points
-    fig = px.scatter(data, x='time', y='price', title='Price vs Time with Convergence Points')
-    if not convergence_df.empty:
-        fig.add_scatter(x=data.loc[convergence_df['Index'], 'time'], y=convergence_df['Price'], mode='markers', name='Convergence Points')
-    st.plotly_chart(fig)
+        # Visualize the convergence points
+        fig = px.scatter(data, x='time', y='price', title='Price vs Time with Convergence Points')
+        fig.add_scatter(x=convergence_df['time'], y=convergence_df['price'], mode='markers', name='Convergence Points')
+        st.plotly_chart(fig)
+    else:
+        st.write("No convergence points found.")
 
 if __name__ == "__main__":
     run_moving_average_convergence()
