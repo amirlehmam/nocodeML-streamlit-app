@@ -388,7 +388,8 @@ def run_advanced_model_exploration():
                         feature_importances = model.feature_importances_
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        fig_feat_imp = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
+                        top_15_importance_df = importance_df.head(15)  # Select top 15 features
+                        fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
                         
                         # Initialize feature_importances in session state
@@ -402,7 +403,8 @@ def run_advanced_model_exploration():
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        fig_feat_imp = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
+                        top_15_importance_df = importance_df.head(15)  # Select top 15 features
+                        fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
                         
                         # Initialize feature_importances in session state
