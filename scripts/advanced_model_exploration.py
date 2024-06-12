@@ -28,8 +28,7 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
 
-def save_plots_to_pdf(pdf_filename, plots, descriptions):
-    c = canvas.Canvas(pdf_filename, pagesize=letter)
+def save_plots_to_pdf(c, plots, descriptions):
     width, height = letter
     for plot, description in zip(plots, descriptions):
         c.drawString(10, height - 20, description)
@@ -52,10 +51,8 @@ def save_plots_to_pdf(pdf_filename, plots, descriptions):
 
         c.drawImage(ImageReader(img), 10, height - img_height - 30, width=img_width, height=img_height)
         c.showPage()
-    c.save()
 
-def save_text_to_pdf(pdf_filename, text_sections):
-    c = canvas.Canvas(pdf_filename, pagesize=letter)
+def save_text_to_pdf(c, text_sections):
     width, height = letter
     for description, text in text_sections:
         c.drawString(10, height - 20, description)
@@ -66,10 +63,8 @@ def save_text_to_pdf(pdf_filename, text_sections):
                 i = 0
             c.drawString(10, height - 30 - i * 12, line)
         c.showPage()
-    c.save()
 
-def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
-    c = canvas.Canvas(pdf_filename, pagesize=letter)
+def save_dataframe_to_pdf(c, dataframes, descriptions):
     width, height = letter
     for df, description in zip(dataframes, descriptions):
         c.drawString(10, height - 20, description)
@@ -81,6 +76,12 @@ def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
                 i = 0
             c.drawString(10, height - 30 - i * 12, line)
         c.showPage()
+
+def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, plot_descriptions):
+    c = canvas.Canvas(pdf_filename, pagesize=letter)
+    save_text_to_pdf(c, text_sections)
+    save_dataframe_to_pdf(c, dataframes, dataframe_descriptions)
+    save_plots_to_pdf(c, plots, plot_descriptions)
     c.save()
 
 def load_data(data_dir):
@@ -428,12 +429,13 @@ def run_advanced_model_exploration():
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
-                    # Save plots and text to PDF
+                    # Save all elements to a single PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
-                    save_plots_to_pdf(pdf_filename, plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
-                    save_text_to_pdf(pdf_filename, [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")])
-                    save_dataframe_to_pdf(pdf_filename, [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"])
-                    st.write(f"Saved analysis plots to {pdf_filename}")
+                    save_all_to_pdf(pdf_filename, 
+                                    [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
+                                    [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
+                                    plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
+                    st.write(f"Saved analysis to {pdf_filename}")
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
@@ -508,7 +510,7 @@ def run_advanced_model_exploration():
 
             # Save additional EDA plots to PDF
             pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
-            save_plots_to_pdf(pdf_filename_eda, plots, descriptions)
+            save_plots_to_pdf(canvas.Canvas(pdf_filename_eda, pagesize=letter), plots, descriptions)
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
