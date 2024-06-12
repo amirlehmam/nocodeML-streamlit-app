@@ -396,12 +396,12 @@ def run_advanced_model_exploration():
                 model = StackingClassifier(estimators=base_learners, final_estimator=final_estimator)
             else:
                 base_learners = [
-                    ('rf', RandomForestRegressor(n_estimators=100, max_depth=10, random state=42)),
-                    ('gb', GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random state=42)),
-                    ('xgb', xgb.XGBRegressor(n_estimators=100, learning rate=0.1, max depth=3, random state=42))
+                    ('rf', RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)),
+                    ('gb', GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
+                    ('xgb', xgb.XGBRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42))
                 ]
-                final_estimator = LogisticRegression(max iter=1000)
-                model = StackingRegressor(estimators=base learners, final estimator=final estimator)
+                final_estimator = LogisticRegression(max_iter=1000)
+                model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
 
         if st.button("Train Model"):
             st.write(f"Training {model_type} for {task_type} task...")
@@ -488,7 +488,7 @@ def run_advanced_model_exploration():
 
                     # Save all elements to a single PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_analysis.pdf')
-                    if task type == "Classification":
+                    if task_type == "Classification":
                         save_all_to_pdf(pdf_filename, 
                                         [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
                                         [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
