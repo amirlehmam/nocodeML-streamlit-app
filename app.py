@@ -3,8 +3,6 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 import os
-import sys
-import subprocess
 import base64
 from streamlit_navigation_bar import st_navbar
 
