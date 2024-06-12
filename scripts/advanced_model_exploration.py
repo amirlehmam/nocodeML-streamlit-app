@@ -369,7 +369,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task type == "Classification":
+            if task_type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
@@ -379,14 +379,14 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task type == "Classification":
+            if task_type == "Classification":
                 model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
-            if task type == "Classification":
+            if task_type == "Classification":
                 base_learners = [
                     ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
                     ('gb', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
@@ -414,7 +414,7 @@ def run_advanced_model_exploration():
                             model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
 
-                    if task type == "Classification":
+                    if task_type == "Classification":
                         accuracy = accuracy_score(st.session_state.y_test, y_pred)
                         st.write(f"Accuracy: {accuracy}")
                         st.write("Classification Report:")
