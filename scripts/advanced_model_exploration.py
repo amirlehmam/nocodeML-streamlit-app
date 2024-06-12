@@ -238,6 +238,11 @@ def summarize_optimal_win_ranges(optimal_ranges):
             })
     return pd.DataFrame(summary)
 
+def reset_session_state():
+    st.session_state.current_step = "load_data"
+    st.session_state.model_type = "Random Forest"
+    st.session_state.feature_importances = {}
+
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
 
@@ -516,6 +521,9 @@ def run_advanced_model_exploration():
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
+
+    if st.button("Restart Exploration"):
+        reset_session_state()
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
