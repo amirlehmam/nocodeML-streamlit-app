@@ -29,14 +29,20 @@ def clean_data(ma_data):
     return ma_data
 
 def check_convergence(df, ma_columns, threshold):
+    convergence = True
+    debug_output = []
     for i in range(len(ma_columns) - 1):
         for j in range(i + 1, len(ma_columns)):
             ma1 = df[ma_columns[i]]
             ma2 = df[ma_columns[j]]
             percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
+            # Collect the debug output
+            debug_output.append(f"Comparing {ma_columns[i]} and {ma_columns[j]}: {percentage_diff.head(10)}")
             if any(percentage_diff > threshold):
-                return False
-    return True
+                convergence = False
+    # Print only the first few debug messages
+    st.write("\n".join(debug_output[:10]))
+    return convergence
 
 def run_moving_average_convergence():
     if "base_dir" not in st.session_state:
