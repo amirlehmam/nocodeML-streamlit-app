@@ -27,10 +27,11 @@ from reportlab.pdfgen import canvas
 from PIL import Image
 from io import BytesIO
 
-def save_plots_to_pdf(pdf_filename, plots):
+def save_plots_to_pdf(pdf_filename, plots, descriptions):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
-    for plot in plots:
+    for plot, description in zip(plots, descriptions):
+        c.drawString(10, height - 20, description)
         plot_data = BytesIO()
         if isinstance(plot, plt.Figure):
             plot.savefig(plot_data, format='png')
@@ -48,7 +49,7 @@ def save_plots_to_pdf(pdf_filename, plots):
         img_width = width - 20
         img_height = aspect * img_width
 
-        c.drawImage(temp_file, 10, height - img_height - 10, width=img_width, height=img_height)
+        c.drawImage(temp_file, 10, height - img_height - 30, width=img_width, height=img_height)
         c.showPage()
     c.save()
     os.remove(temp_file)
@@ -171,6 +172,7 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
 
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
     plots = []
+    descriptions = []
     for item in optimal_ranges:
         feature = item['feature']
         ranges = item['optimal_win_ranges']
@@ -191,7 +193,8 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         ax.legend()
         st.pyplot(fig)
         plots.append(fig)
-    return plots
+        descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type}, {model_name})")
+    return plots, descriptions
 
 def summarize_optimal_win_ranges(optimal_ranges):
     summary = []
@@ -387,7 +390,7 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    plots = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    plots, descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
@@ -397,7 +400,7 @@ def run_advanced_model_exploration():
 
                     # Save plots to PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
-                    save_plots_to_pdf(pdf_filename, plots)
+                    save_plots_to_pdf(pdf_filename, plots, descriptions)
                     st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
@@ -411,6 +414,7 @@ def run_advanced_model_exploration():
             optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
 
             plots = []
+            descriptions = []
 
             # Feature importance heatmap
             if model_type in st.session_state.feature_importances:
@@ -419,6 +423,7 @@ def run_advanced_model_exploration():
                 fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
                 st.plotly_chart(fig)
                 plots.append(fig)
+                descriptions.append("Feature Importance Heatmap")
 
             # Correlation matrix
             st.write("Correlation Matrix of Top Indicators:")
@@ -430,6 +435,7 @@ def run_advanced_model_exploration():
                 fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig)
                 plots.append(fig)
+                descriptions.append("Correlation Matrix of Top Indicators")
 
             # Detailed Indicator Analysis
             st.write("Detailed Indicator Analysis")
@@ -446,6 +452,7 @@ def run_advanced_model_exploration():
                 fig.update_yaxes(title_text='Count')
                 st.plotly_chart(fig)
                 plots.append(fig)
+                descriptions.append(f"Distribution of {selected_indicator} for Winning and Losing Trades")
 
                 # KDE plot with winning ranges
                 kde_win = gaussian_kde(win_data)
@@ -465,10 +472,11 @@ def run_advanced_model_exploration():
                 fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
                 st.plotly_chart(fig)
                 plots.append(fig)
+                descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
 
             # Save additional EDA plots to PDF
             pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
-            save_plots_to_pdf(pdf_filename_eda, plots)
+            save_plots_to_pdf(pdf_filename_eda, plots, descriptions)
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
             st.success("EDA plots generated successfully.")
