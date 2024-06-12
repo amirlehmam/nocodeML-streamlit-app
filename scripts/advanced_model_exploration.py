@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, mean_squared_error, roc_curve, auc
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
 from sklearn.linear_model import LogisticRegression
 import plotly.express as px
 import plotly.graph_objects as go
@@ -293,8 +294,12 @@ def run_advanced_model_exploration():
         st.write("Select model and hyperparameters for exploration")
 
         # Model type and task selection
-        model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select")
         task_type = st.radio("Select Task Type", ["Classification", "Regression"], index=0)
+        if task_type == "Classification":
+            model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select_classification")
+        else:
+            model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select_regression")
+
         st.session_state.model_type_selected = model_type
         st.session_state.task_type_selected = task_type
 
@@ -381,15 +386,21 @@ def run_advanced_model_exploration():
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
-            base_learners = [
-                ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
-                ('gb', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
-                ('xgb', xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss', random_state=42))
-            ]
-            final_estimator = LogisticRegression(max_iter=1000)
             if task_type == "Classification":
+                base_learners = [
+                    ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
+                    ('gb', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
+                    ('xgb', xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss', random_state=42))
+                ]
+                final_estimator = LogisticRegression(max_iter=1000)
                 model = StackingClassifier(estimators=base_learners, final_estimator=final_estimator)
             else:
+                base_learners = [
+                    ('rf', RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)),
+                    ('gb', GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
+                    ('xgb', xgb.XGBRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42))
+                ]
+                final_estimator = LogisticRegression(max_iter=1000)
                 model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
 
         if st.button("Train Model"):
@@ -559,6 +570,15 @@ def run_advanced_model_exploration():
                 st.plotly_chart(fig)
                 plots.append(fig)
                 descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
+
+                # Additional plots for loss mitigation strategy
+                st.write("Loss Mitigation Analysis")
+                loss_conditions = data[data['result'] == 1][indicator_columns].describe().transpose()
+                st.write(loss_conditions)
+                fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
+                st.plotly_chart(fig_loss_cond)
+                plots.append(fig_loss_cond)
+                descriptions.append("Mean Indicator Values for Losses")
 
             # Save additional EDA plots to PDF
             pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
