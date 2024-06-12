@@ -69,6 +69,20 @@ def save_dataframe_to_pdf(pdf_filename, dataframes, descriptions):
         c.showPage()
     c.save()
 
+def save_text_to_pdf(pdf_filename, text_sections):
+    c = canvas.Canvas(pdf_filename, pagesize=letter)
+    width, height = letter
+    for description, text in text_sections:
+        c.drawString(10, height - 20, description)
+        text_lines = text.split('\n')
+        for i, line in enumerate(text_lines):
+            if i * 12 + 30 > height:
+                c.showPage()
+                i = 0
+            c.drawString(10, height - 30 - i * 12, line)
+        c.showPage()
+    c.save()
+
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
@@ -351,11 +365,12 @@ def run_advanced_model_exploration():
                     accuracy = accuracy_score(st.session_state.y_test, y_pred)
                     st.write(f"Accuracy: {accuracy}")
                     st.write("Classification Report:")
-                    st.text(classification_report(st.session_state.y_test, y_pred))
+                    class_report = classification_report(st.session_state.y_test, y_pred)
+                    st.text(class_report)
                     st.write("Confusion Matrix:")
                     cm = confusion_matrix(st.session_state.y_test, y_pred)
-                    fig = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
-                    st.plotly_chart(fig)
+                    fig_cm = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
+                    st.plotly_chart(fig_cm)
 
                     # Save the model
                     model_save_path = os.path.join(base_dir, f"models/{model_type}_model.pkl")
@@ -372,8 +387,8 @@ def run_advanced_model_exploration():
                         feature_importances = model.feature_importances_
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
-                        st.plotly_chart(fig)
+                        fig_feat_imp = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
+                        st.plotly_chart(fig_feat_imp)
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
@@ -386,8 +401,8 @@ def run_advanced_model_exploration():
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
-                        st.plotly_chart(fig)
+                        fig_feat_imp = px.bar(importance_df, x='Importance', y='Feature', orientation='h')
+                        st.plotly_chart(fig_feat_imp)
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
@@ -413,9 +428,10 @@ def run_advanced_model_exploration():
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
-                    # Save plots to PDF
+                    # Save plots and text to PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_analysis.pdf')
-                    save_plots_to_pdf(pdf_filename, plots, descriptions)
+                    save_plots_to_pdf(pdf_filename, plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
+                    save_text_to_pdf(pdf_filename, [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")])
                     st.write(f"Saved analysis plots to {pdf_filename}")
 
                 except Exception as e:
