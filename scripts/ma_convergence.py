@@ -34,8 +34,8 @@ def check_convergence(row, ma_columns, threshold):
             ma1 = row[ma_columns[i]]
             ma2 = row[ma_columns[j]]
             percentage_diff = abs(ma1 - ma2) / ((ma1 + ma2) / 2) * 100
-            # Print debug information for only the first few checks
-            if i < 3 and j < 3:
+            # Check and print only for first few rows
+            if i == 0 and j == 1:
                 st.write(f"Comparing {ma_columns[i]} and {ma_columns[j]}: {percentage_diff}")
             if percentage_diff > threshold:
                 return False
