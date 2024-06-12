@@ -135,12 +135,17 @@ def advanced_model_exploration():
     from scripts.advanced_model_exploration import run_advanced_model_exploration
     run_advanced_model_exploration()
 
+def ma_convergence():
+    from scripts.ma_convergence import run_moving_average_convergence
+    run_moving_average_convergence()
+
 # Mapping page names to functions
 page_dict = {
     'Overview': overview,
     'Data Ingestion': data_ingestion,
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
+    'MA Convergence': ma_convergence,
     'EDA Indicators': advanced_eda_indicators,
     'Win Ranges': optimal_win_ranges,
     '% Away Indicators': model_percentage_away,
@@ -309,7 +314,7 @@ def main():
         )
 
         # Navigation bar
-        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'EDA Indicators',
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'EDA Indicators',
                  'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific']
         styles = {
             "nav": {
