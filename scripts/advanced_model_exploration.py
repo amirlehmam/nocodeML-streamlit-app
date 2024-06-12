@@ -129,7 +129,7 @@ def preprocess_data(data, selected_feature_types):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     st.write("Data preprocessing completed.")
-    return X_train, X_test, y_train, y_test, indicator_columns
+    return X_train, X_test, y_train, y_test, indicator_columns, data
 
 # Define Keras models
 def create_nn_model(input_dim):
@@ -277,7 +277,7 @@ def run_advanced_model_exploration():
         st.write("Loading data...")
         try:
             data = load_data(base_dir)
-            X_train, X_test, y_train, y_test, indicator_columns = preprocess_data(data, selected_feature_types)
+            X_train, X_test, y_train, y_test, indicator_columns, data = preprocess_data(data, selected_feature_types)
             st.session_state.data = data
             st.session_state.X_train = X_train
             st.session_state.X_test = X_test
@@ -359,7 +359,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+                        if task_type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
@@ -573,7 +573,7 @@ def run_advanced_model_exploration():
 
                 # Additional plots for loss mitigation strategy
                 st.write("Loss Mitigation Analysis")
-                loss_conditions = data[data['result'] == 1][indicator_columns].describe().transpose()
+                loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
                 st.write(loss_conditions)
                 fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
                 st.plotly_chart(fig_loss_cond)
