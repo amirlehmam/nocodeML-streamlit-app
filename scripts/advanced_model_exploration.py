@@ -57,11 +57,17 @@ def save_text_to_pdf(c, text_sections):
     for description, text in text_sections:
         c.drawString(10, height - 20, description)
         text_lines = text.split('\n')
+        line_height = 12
+        lines_per_page = (height - 40) // line_height
+        current_line = 0
+
         for i, line in enumerate(text_lines):
-            if i * 12 + 30 > height:
+            if current_line * line_height + 30 > height:
                 c.showPage()
-                i = 0
-            c.drawString(10, height - 30 - i * 12, line)
+                c.drawString(10, height - 20, description)
+                current_line = 0
+            c.drawString(10, height - 30 - current_line * line_height, line)
+            current_line += 1
         c.showPage()
 
 def save_dataframe_to_pdf(c, dataframes, descriptions):
@@ -70,11 +76,17 @@ def save_dataframe_to_pdf(c, dataframes, descriptions):
         c.drawString(10, height - 20, description)
         text = df.to_string()
         text_lines = text.split('\n')
+        line_height = 12
+        lines_per_page = (height - 40) // line_height
+        current_line = 0
+
         for i, line in enumerate(text_lines):
-            if i * 12 + 30 > height:
+            if current_line * line_height + 30 > height:
                 c.showPage()
-                i = 0
-            c.drawString(10, height - 30 - i * 12, line)
+                c.drawString(10, height - 20, description)
+                current_line = 0
+            c.drawString(10, height - 30 - current_line * line_height, line)
+            current_line += 1
         c.showPage()
 
 def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, plot_descriptions):
