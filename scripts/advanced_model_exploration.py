@@ -369,7 +369,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
@@ -379,14 +379,14 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
             st.subheader("Stacking Ensemble Parameters")
-            if task_type == "Classification":
+            if task type == "Classification":
                 base_learners = [
                     ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
                     ('gb', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
@@ -396,12 +396,12 @@ def run_advanced_model_exploration():
                 model = StackingClassifier(estimators=base_learners, final_estimator=final_estimator)
             else:
                 base_learners = [
-                    ('rf', RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)),
-                    ('gb', GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
-                    ('xgb', xgb.XGBRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42))
+                    ('rf', RandomForestRegressor(n_estimators=100, max_depth=10, random state=42)),
+                    ('gb', GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random state=42)),
+                    ('xgb', xgb.XGBRegressor(n_estimators=100, learning rate=0.1, max depth=3, random state=42))
                 ]
-                final_estimator = LogisticRegression(max_iter=1000)
-                model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
+                final_estimator = LogisticRegression(max iter=1000)
+                model = StackingRegressor(estimators=base learners, final estimator=final estimator)
 
         if st.button("Train Model"):
             st.write(f"Training {model_type} for {task_type} task...")
@@ -414,7 +414,7 @@ def run_advanced_model_exploration():
                             model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
 
-                    if task_type == "Classification":
+                    if task type == "Classification":
                         accuracy = accuracy_score(st.session_state.y_test, y_pred)
                         st.write(f"Accuracy: {accuracy}")
                         st.write("Classification Report:")
@@ -488,7 +488,7 @@ def run_advanced_model_exploration():
 
                     # Save all elements to a single PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_analysis.pdf')
-                    if task_type == "Classification":
+                    if task type == "Classification":
                         save_all_to_pdf(pdf_filename, 
                                         [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
                                         [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
@@ -581,7 +581,7 @@ def run_advanced_model_exploration():
                 descriptions.append("Mean Indicator Values for Losses")
 
             # Save additional EDA plots to PDF
-            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_additional_eda.pdf')
+            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{st.session_state.task_type_selected}_additional_eda.pdf')
             save_plots_to_pdf(canvas.Canvas(pdf_filename_eda, pagesize=letter), plots, descriptions)
             st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
 
