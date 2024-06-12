@@ -414,6 +414,12 @@ def run_advanced_model_exploration():
                             model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
 
+                    plots = []
+                    descriptions = []
+                    dataframes = []
+                    dataframe_descriptions = []
+                    text_sections = []
+
                     if task_type == "Classification":
                         accuracy = accuracy_score(st.session_state.y_test, y_pred)
                         st.write(f"Accuracy: {accuracy}")
@@ -424,9 +430,14 @@ def run_advanced_model_exploration():
                         cm = confusion_matrix(st.session_state.y_test, y_pred)
                         fig_cm = px.imshow(cm, labels=dict(x="Predicted", y="True", color="Count"), x=["Negative", "Positive"], y=["Negative", "Positive"], color_continuous_scale='Blues')
                         st.plotly_chart(fig_cm)
+                        text_sections.append(("Classification Report", class_report))
+                        text_sections.append(("Accuracy", f"Accuracy: {accuracy}"))
+                        plots.append(fig_cm)
+                        descriptions.append("Confusion Matrix")
                     else:
                         mse = mean_squared_error(st.session_state.y_test, y_pred)
                         st.write(f"Mean Squared Error: {mse}")
+                        text_sections.append(("Mean Squared Error", f"Mean Squared Error: {mse}"))
 
                     # Save the model
                     model_save_path = os.path.join(base_dir, f"models/{model_type}_{task_type}_model.pkl")
@@ -449,6 +460,8 @@ def run_advanced_model_exploration():
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
+                        plots.append(fig_feat_imp)
+                        descriptions.append("Feature Importance")
                     elif model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         st.write("Calculating feature importances using SHAP...")
                         # Extract the underlying Keras model from the KerasClassifier
@@ -464,6 +477,8 @@ def run_advanced_model_exploration():
                         
                         # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
+                        plots.append(fig_feat_imp)
+                        descriptions.append("Feature Importance")
 
                     st.session_state.current_step = "eda"
                     st.session_state.model_type_selected = model_type
@@ -478,117 +493,102 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    plots, descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    opt_plots, opt_descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
+                    plots.extend(opt_plots)
+                    descriptions.extend(opt_descriptions)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
                     output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
+                    dataframes.append(optimal_win_ranges_summary)
+                    dataframe_descriptions.append("Optimal Win Ranges Summary")
+
+                    # Additional EDA
+                    model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
+                    optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
+
+                    # Feature importance heatmap
+                    if model_type in st.session_state.feature_importances:
+                        st.write("Feature Importance Heatmap:")
+                        feature_importance_values = st.session_state.feature_importances[model_type]
+                        fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
+                        st.plotly_chart(fig)
+                        plots.append(fig)
+                        descriptions.append("Feature Importance Heatmap")
+
+                    # Correlation matrix
+                    st.write("Correlation Matrix of Top Indicators:")
+                    selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
+                    if selected_model in st.session_state.feature_importances:
+                        top_features = st.session_state.feature_importances[selected_model][:10]
+                        top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
+                        corr = st.session_state.data[top_features_list].corr()
+                        fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
+                        st.plotly_chart(fig)
+                        plots.append(fig)
+                        descriptions.append("Correlation Matrix of Top Indicators")
+
+                    # Detailed Indicator Analysis
+                    st.write("Detailed Indicator Analysis")
+                    selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
+                    if selected_indicator:
+                        win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
+                        loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+
+                        fig = go.Figure()
+                        fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
+                        fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
+                        fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
+                        fig.update_xaxes(title_text=selected_indicator)
+                        fig.update_yaxes(title_text='Count')
+                        st.plotly_chart(fig)
+                        plots.append(fig)
+                        descriptions.append(f"Distribution of {selected_indicator} for Winning and Losing Trades")
+
+                        # KDE plot with winning ranges
+                        kde_win = gaussian_kde(win_data)
+                        kde_loss = gaussian_kde(loss_data)
+                        x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
+                        kde_win_density = kde_win(x_grid)
+                        kde_loss_density = kde_loss(x_grid)
+
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+                        fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+                        for range_item in optimal_ranges:
+                            if range_item['feature'] == selected_indicator:
+                                for start, end in range_item['optimal_win_ranges']:
+                                    fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+
+                        fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
+                        st.plotly_chart(fig)
+                        plots.append(fig)
+                        descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
+
+                        # Additional plots for loss mitigation strategy
+                        st.write("Loss Mitigation Analysis")
+                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
+                        st.write(loss_conditions)
+                        fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
+                        st.plotly_chart(fig_loss_cond)
+                        plots.append(fig_loss_cond)
+                        descriptions.append("Mean Indicator Values for Losses")
+                        dataframes.append(loss_conditions)
+                        dataframe_descriptions.append("Loss Mitigation Analysis")
 
                     # Save all elements to a single PDF
-                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_analysis.pdf')
-                    if task_type == "Classification":
-                        save_all_to_pdf(pdf_filename, 
-                                        [("Classification Report", class_report), ("Accuracy", f"Accuracy: {accuracy}")], 
-                                        [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
-                                        plots + [fig_cm, fig_feat_imp], descriptions + ["Confusion Matrix", "Feature Importance"])
-                    else:
-                        save_all_to_pdf(pdf_filename, 
-                                        [("Mean Squared Error", f"Mean Squared Error: {mse}")], 
-                                        [optimal_win_ranges_summary], ["Optimal Win Ranges Summary"], 
-                                        plots + [fig_feat_imp], descriptions + ["Feature Importance"])
-                    st.write(f"Saved analysis to {pdf_filename}")
+                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_complete_analysis.pdf')
+                    save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, descriptions)
+                    st.write(f"Saved complete analysis to {pdf_filename}")
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
 
     if st.session_state.current_step == "eda":
-        # Additional Exploratory Data Analysis
-        st.subheader("Additional Exploratory Data Analysis")
-        with st.spinner("Generating additional EDA plots..."):
-            model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
-            optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
-
-            plots = []
-            descriptions = []
-
-            # Feature importance heatmap
-            if model_type in st.session_state.feature_importances:
-                st.write("Feature Importance Heatmap:")
-                feature_importance_values = st.session_state.feature_importances[model_type]
-                fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                st.plotly_chart(fig)
-                plots.append(fig)
-                descriptions.append("Feature Importance Heatmap")
-
-            # Correlation matrix
-            st.write("Correlation Matrix of Top Indicators:")
-            selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-            if selected_model in st.session_state.feature_importances:
-                top_features = st.session_state.feature_importances[selected_model][:10]
-                top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
-                corr = st.session_state.data[top_features_list].corr()
-                fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                st.plotly_chart(fig)
-                plots.append(fig)
-                descriptions.append("Correlation Matrix of Top Indicators")
-
-            # Detailed Indicator Analysis
-            st.write("Detailed Indicator Analysis")
-            selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
-            if selected_indicator:
-                win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
-                loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
-
-                fig = go.Figure()
-                fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
-                fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
-                fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
-                fig.update_xaxes(title_text=selected_indicator)
-                fig.update_yaxes(title_text='Count')
-                st.plotly_chart(fig)
-                plots.append(fig)
-                descriptions.append(f"Distribution of {selected_indicator} for Winning and Losing Trades")
-
-                # KDE plot with winning ranges
-                kde_win = gaussian_kde(win_data)
-                kde_loss = gaussian_kde(loss_data)
-                x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
-                kde_win_density = kde_win(x_grid)
-                kde_loss_density = kde_loss(x_grid)
-
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-                fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-                for range_item in optimal_ranges:
-                    if range_item['feature'] == selected_indicator:
-                        for start, end in range_item['optimal_win_ranges']:
-                            fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-
-                fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
-                st.plotly_chart(fig)
-                plots.append(fig)
-                descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
-
-                # Additional plots for loss mitigation strategy
-                st.write("Loss Mitigation Analysis")
-                loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
-                st.write(loss_conditions)
-                fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
-                st.plotly_chart(fig_loss_cond)
-                plots.append(fig_loss_cond)
-                descriptions.append("Mean Indicator Values for Losses")
-
-            # Save additional EDA plots to PDF
-            pdf_filename_eda = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{st.session_state.task_type_selected}_additional_eda.pdf')
-            save_plots_to_pdf(canvas.Canvas(pdf_filename_eda, pagesize=letter), plots, descriptions)
-            st.write(f"Saved additional EDA plots to {pdf_filename_eda}")
-
-            st.success("EDA plots generated successfully.")
-
-    if st.button("Restart Exploration"):
-        reset_session_state()
+        if st.button("Restart Exploration"):
+            reset_session_state()
 
 if __name__ == "__main__":
     run_advanced_model_exploration()
