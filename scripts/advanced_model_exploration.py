@@ -1,4 +1,5 @@
 import os
+import warnings
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -27,6 +28,11 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
+
+# Suppress TensorFlow warnings and messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress informational and warning messages
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations
+warnings.filterwarnings("ignore", category=DeprecationWarning)  # Suppress deprecation warnings
 
 def save_plots_to_pdf(c, plots, descriptions):
     width, height = letter
