@@ -1,5 +1,11 @@
 import os
 import warnings
+
+# Suppress TensorFlow warnings and messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress informational and warning messages
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations
+warnings.filterwarnings("ignore", category=DeprecationWarning)  # Suppress deprecation warnings
+
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -29,10 +35,8 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
 
-# Suppress TensorFlow warnings and messages
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress informational and warning messages
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations
-warnings.filterwarnings("ignore", category=DeprecationWarning)  # Suppress deprecation warnings
+# Use TensorFlow 1.x compatibility mode for reset_default_graph
+tf.compat.v1.disable_eager_execution()
 
 def save_plots_to_pdf(c, plots, descriptions):
     width, height = letter
