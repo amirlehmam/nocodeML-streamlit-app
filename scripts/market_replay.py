@@ -1,11 +1,12 @@
 import dask.dataframe as dd
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 from numba import jit
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.patches import Rectangle
+from tqdm import tqdm
+import backtrader as bt
 
 def load_market_data(file_path):
     print("Loading market data...")
@@ -20,17 +21,11 @@ def load_market_data(file_path):
     l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
     l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'Position', 'MarketMaker', 'Price', 'Volume']
 
-    if len(l1_data.columns) == len(l1_columns):
-        l1_data.columns = l1_columns
-    else:
-        l1_data = l1_data.iloc[:, :len(l1_columns)]
-        l1_data.columns = l1_columns
+    l1_data = l1_data.iloc[:, :len(l1_columns)]
+    l1_data.columns = l1_columns
 
-    if len(l2_data.columns) == len(l2_columns):
-        l2_data.columns = l2_columns
-    else:
-        l2_data = l2_data.iloc[:, :len(l2_columns)]
-        l2_data.columns = l2_columns
+    l2_data = l2_data.iloc[:, :len(l2_columns)]
+    l2_data.columns = l2_columns
 
     return l1_data, l2_data
 
@@ -86,7 +81,7 @@ def calculate_renko_bars_numba(prices, brick_size):
 def calculate_renko_bars(data, brick_size):
     print("Calculating Renko bars...")
     data['Date'] = pd.to_datetime(data['Timestamp'], format='%Y%m%d%H%M%S')
-    data['Price'] = data['Price'].str.replace(',', '.').astype(float)
+    data['Price'] = data['Price'].astype(str).str.replace(',', '.').astype(float)
 
     prices = data['Price'].values
 
@@ -131,24 +126,45 @@ def plot_renko_ohlc(renko_df, speed):
 
         ax.set_xlim(0, len(current_data))
         ax.set_xticks(range(0, len(current_data), max(1, len(current_data)//10)))
-        ax.set_xticklabels([current_data['date'].iloc[x].strftime('%Y-%m-%d %H:%M:%S') for x in ax.get_xticks()], rotation=45)
+        ax.set_xticklabels([current_data.index[x].strftime('%Y-%m-%d %H:%M:%S') for x in ax.get_xticks()], rotation=45)
 
     ani = animation.FuncAnimation(fig, update_chart, frames=range(1, len(renko_df) + 1), interval=speed, repeat=False)
     plt.show()
     print("Renko OHLC bars plotted.")
 
-if __name__ == "__main__":
-    print("Script started.")
-    l1_data, l2_data = load_market_data('C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv')
+class RenkoStrategy(bt.Strategy):
+    def __init__(self):
+        pass
 
+    def next(self):
+        pass
+
+def run_backtest(datafile, speed):
+    l1_data, l2_data = load_market_data(datafile)
     combined_data = pd.concat([l1_data, l2_data])
     combined_data.sort_values(by='Timestamp', inplace=True)
 
     renko_df = calculate_renko_bars(combined_data, brick_size=30)
-    if not renko_df.empty:
-        print(renko_df.head())
+    renko_df.set_index('date', inplace=True)
 
-        plot_renko_ohlc(renko_df, speed=1)  # Adjust the speed as needed
-    else:
-        print("No Renko bars to plot.")
-    print("Script completed.")
+    cerebro = bt.Cerebro()
+    data = bt.feeds.PandasData(dataname=renko_df)
+    cerebro.adddata(data)
+    cerebro.addstrategy(RenkoStrategy)
+    
+    print("Running backtest...")
+    cerebro.run()
+    print("Backtest completed.")
+
+    print("Plotting...")
+    plot_renko_ohlc(renko_df, speed)
+    print("Plotting completed.")
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Renko Backtest')
+    parser.add_argument('--data', required=True, help='Path to market data CSV file')
+    parser.add_argument('--speed', type=int, default=100, help='Animation speed')
+    args = parser.parse_args()
+    
+    run_backtest(args.data, args.speed)
