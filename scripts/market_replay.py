@@ -121,7 +121,7 @@ def plot_renko_ohlc(renko_df, speed):
         for i in range(len(current_data)):
             color = 'green' if current_data['uptrend'].iloc[i] else 'red'
             rect = Rectangle((i, current_data['low'].iloc[i]), 
-                             1, 
+                             0.8, 
                              current_data['high'].iloc[i] - current_data['low'].iloc[i], 
                              color=color, alpha=0.7)
             ax.add_patch(rect)
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     if not renko_df.empty:
         print(renko_df.head())
 
-        plot_renko_ohlc(renko_df, speed=0.01)  # Adjust the speed as needed
+        plot_renko_ohlc(renko_df, speed=1)  # Adjust the speed as needed
     else:
         print("No Renko bars to plot.")
     print("Script completed.")
