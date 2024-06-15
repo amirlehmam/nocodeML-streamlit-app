@@ -1,170 +1,167 @@
-import dask.dataframe as dd
-import pandas as pd
-import numpy as np
-from numba import jit
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.patches import Rectangle
-from tqdm import tqdm
-import backtrader as bt
+import matplotlib.patches as patches
+import numpy as np
+import pandas as pd
+import os
+from numba import jit
+import time
 
-def load_market_data(file_path):
-    print("Loading market data...")
-    dtype = {0: 'object', 1: 'object', 2: 'object', 3: 'int64', 4: 'object', 5: 'int64', 6: 'object', 7: 'object', 8: 'object'}
-    data = dd.read_csv(file_path, delimiter=';', header=None, dtype=dtype)
-    data = data.compute()
-    print("Market data loaded.")
-    
-    l1_data = data[data[0] == 'L1'].copy()
-    l2_data = data[data[0] == 'L2'].copy()
+class Renko:
+    def __init__(self, df=None, filename=None, interval=None):
+        if filename:
+            try:
+                df = pd.read_csv(filename, delimiter=';', header=None, engine='python', on_bad_lines='skip')
+                print("Raw Data:")
+                print(df.head(10))
 
-    l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
-    l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'Position', 'MarketMaker', 'Price', 'Volume']
+                # Define the base columns
+                base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
+                extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
+                df.columns = base_columns + extra_columns
 
-    l1_data = l1_data.iloc[:, :len(l1_columns)]
-    l1_data.columns = l1_columns
+                # Parse timestamps
+                df['date'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
 
-    l2_data = l2_data.iloc[:, :len(l2_columns)]
-    l2_data.columns = l2_columns
+                # Initialize a list to collect valid price values
+                price_values = []
+                timestamps = []
 
-    return l1_data, l2_data
+                # Function to check and add valid prices to the list
+                def check_and_add_price(row):
+                    for column in ['Operation', 'Price'] + extra_columns:
+                        price_str = row[column]
+                        if isinstance(price_str, str):
+                            price_str = price_str.replace(',', '.')
+                        try:
+                            price = float(price_str)
+                            if 16000 <= price <= 20000:
+                                price_values.append(price)
+                                timestamps.append(row['date'])
+                        except ValueError:
+                            pass
 
-@jit(nopython=True)
-def calculate_renko_bars_numba(prices, brick_size):
-    renko_bars = []
-    uptrend = True
-    open_price = prices[0]
-    high_price = open_price
-    low_price = open_price
-    close_price = open_price
+                # Iterate through the rows and apply the function
+                df.apply(check_and_add_price, axis=1)
 
-    for i in range(1, len(prices)):
-        price = prices[i]
+                # Create a DataFrame from the collected valid price values
+                df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
 
-        if uptrend:
-            if price >= close_price + brick_size:
-                renko_bars.append((open_price, high_price, low_price, close_price + brick_size, True))
-                open_price = close_price + brick_size
-                close_price = open_price
-                high_price = open_price
-                low_price = open_price
-            elif price <= close_price - 2 * brick_size:
-                uptrend = False
-                renko_bars.append((open_price, high_price, low_price, close_price - brick_size, False))
-                open_price = close_price - brick_size
-                close_price = open_price
-                high_price = open_price
-                low_price = open_price
+                # Debugging statement
+                print("Filtered Data with Prices:")
+                print(df_filtered.head(10))
+
+            except FileNotFoundError:
+                raise FileNotFoundError(f"{filename}\n\nDoes not exist.")
+        elif df is None:
+            raise ValueError("DataFrame or filename must be provided.")
+
+        self.df = df_filtered
+        self.close = df_filtered['Price'].values
+
+    def set_brick_size(self, brick_size=30, brick_threshold=5):
+        """ Setting brick size """
+        self.brick_size = brick_size
+        self.brick_threshold = brick_threshold
+        return self.brick_size
+
+    def _apply_renko(self, i):
+        """ Determine if there are any new bricks to paint with current price """
+        num_bricks = 0
+        gap = (self.close[i] - self.renko['price'][-1]) // self.brick_size
+        direction = np.sign(gap)
+        if direction == 0:
+            return
+        if (gap > 0 and self.renko['direction'][-1] >= 0) or (gap < 0 and self.renko['direction'][-1] <= 0):
+            num_bricks = gap
+        elif np.abs(gap) >= self.brick_threshold:
+            num_bricks = gap - self.brick_threshold * direction
+            self._update_renko(i, direction, self.brick_threshold)
+
+        for brick in range(abs(int(num_bricks))):
+            self._update_renko(i, direction)
+
+    def _update_renko(self, i, direction, brick_multiplier=1):
+        """ Append price and new block to renko dict """
+        renko_price = self.renko['price'][-1] + (direction * brick_multiplier * self.brick_size)
+        self.renko['index'].append(i)
+        self.renko['price'].append(renko_price)
+        self.renko['direction'].append(direction)
+        self.renko['date'].append(self.df['date'].iat[i])
+
+    def build(self):
+        """ Create Renko data """
+        if self.df.empty:
+            raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
+        
+        units = self.df['Price'].iat[0] // self.brick_size
+        start_price = units * self.brick_size
+
+        self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'price': [start_price], 'direction': [0]}
+        for i in range(1, len(self.close)):
+            self._apply_renko(i)
+        return self.renko
+
+    def plot(self, speed=0.1):
+        prices = self.renko['price']
+        directions = self.renko['direction']
+        dates = self.renko['date']
+        brick_size = self.brick_size
+
+        # Debugging output
+        print(f"Prices: {prices}")
+        print(f"Directions: {directions}")
+        print(f"Brick size: {brick_size}")
+
+        fig, ax = plt.subplots(1, figsize=(10, 5))
+        fig.suptitle(f"Renko Chart (brick size = {round(brick_size, 2)})", fontsize=20)
+        ax.set_ylabel("Price ($)")
+        plt.rc('axes', labelsize=20)
+        plt.rc('font', size=16)
+
+        x_min = 0
+        x_max = 50  # Initial x-axis limit
+        y_min = min(prices) - 2 * brick_size
+        y_max = max(prices) + 2 * brick_size
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        for x, (price, direction, date) in enumerate(zip(prices, directions, dates)):
+            if direction == 1:
+                facecolor = 'g'
+                y = price - brick_size
             else:
-                high_price = max(high_price, price)
-                low_price = min(low_price, price)
-        else:
-            if price <= close_price - brick_size:
-                renko_bars.append((open_price, high_price, low_price, close_price - brick_size, False))
-                open_price = close_price - brick_size
-                close_price = open_price
-                high_price = open_price
-                low_price = open_price
-            elif price >= close_price + 2 * brick_size:
-                uptrend = True
-                renko_bars.append((open_price, high_price, low_price, close_price + brick_size, True))
-                open_price = close_price + brick_size
-                close_price = open_price
-                high_price = open_price
-                low_price = open_price
-            else:
-                high_price = max(high_price, price)
-                low_price = min(low_price, price)
+                facecolor = 'r'
+                y = price
 
-    return renko_bars
+            ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
+            
+            if x + 1 >= x_max:  # Extend x-axis limit dynamically
+                x_max += 50
+                ax.set_xlim(x_min, x_max)
 
-def calculate_renko_bars(data, brick_size):
-    print("Calculating Renko bars...")
-    data['Date'] = pd.to_datetime(data['Timestamp'], format='%Y%m%d%H%M%S')
-    data['Price'] = data['Price'].astype(str).str.replace(',', '.').astype(float)
+            if price < y_min + 2 * brick_size:
+                y_min = price - 2 * brick_size
+                ax.set_ylim(y_min, y_max)
+            
+            if price > y_max - 2 * brick_size:
+                y_max = price + 2 * brick_size
+                ax.set_ylim(y_min, y_max)
 
-    prices = data['Price'].values
+            plt.pause(speed)
 
-    renko_bars = calculate_renko_bars_numba(prices, brick_size)
+        # Convert x-ticks to dates
+        x_ticks = ax.get_xticks()
+        x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
+        ax.set_xticklabels(x_labels, rotation=45, ha='right')
 
-    renko_df = pd.DataFrame(renko_bars, columns=['open', 'high', 'low', 'close', 'uptrend'])
-    renko_df['date'] = data['Date'].iloc[:len(renko_df)].values
+        plt.show(block=True)  # Ensure the plot window stays open
 
-    if renko_df.empty:
-        print("No Renko bars calculated.")
-    else:
-        print("Renko bars calculated.")
-    return renko_df
 
-def plot_renko_ohlc(renko_df, speed):
-    print("Plotting Renko OHLC bars...")
-
-    fig, ax = plt.subplots()
-    ax.set_title('Renko OHLC Chart')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Price')
-    ax.grid(True)
-
-    def update_chart(frame):
-        ax.clear()
-        ax.set_title('Renko OHLC Chart')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Price')
-        ax.grid(True)
-
-        current_data = renko_df.iloc[:frame]
-        for i in range(len(current_data)):
-            color = 'green' if current_data['uptrend'].iloc[i] else 'red'
-            rect = Rectangle((i, current_data['low'].iloc[i]), 
-                             0.8, 
-                             current_data['high'].iloc[i] - current_data['low'].iloc[i], 
-                             color=color, alpha=0.7)
-            ax.add_patch(rect)
-            ax.plot([i, i], 
-                    [current_data['low'].iloc[i], current_data['high'].iloc[i]], 
-                    color=color)
-
-        ax.set_xlim(0, len(current_data))
-        ax.set_xticks(range(0, len(current_data), max(1, len(current_data)//10)))
-        ax.set_xticklabels([current_data.index[x].strftime('%Y-%m-%d %H:%M:%S') for x in ax.get_xticks()], rotation=45)
-
-    ani = animation.FuncAnimation(fig, update_chart, frames=range(1, len(renko_df) + 1), interval=speed, repeat=False)
-    plt.show()
-    print("Renko OHLC bars plotted.")
-
-class RenkoStrategy(bt.Strategy):
-    def __init__(self):
-        pass
-
-    def next(self):
-        pass
-
-def run_backtest(datafile, speed):
-    l1_data, l2_data = load_market_data(datafile)
-    combined_data = pd.concat([l1_data, l2_data])
-    combined_data.sort_values(by='Timestamp', inplace=True)
-
-    renko_df = calculate_renko_bars(combined_data, brick_size=30)
-    renko_df.set_index('date', inplace=True)
-
-    cerebro = bt.Cerebro()
-    data = bt.feeds.PandasData(dataname=renko_df)
-    cerebro.adddata(data)
-    cerebro.addstrategy(RenkoStrategy)
-    
-    print("Running backtest...")
-    cerebro.run()
-    print("Backtest completed.")
-
-    print("Plotting...")
-    plot_renko_ohlc(renko_df, speed)
-    print("Plotting completed.")
-
+# Usage example
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description='Renko Backtest')
-    parser.add_argument('--data', required=True, help='Path to market data CSV file')
-    parser.add_argument('--speed', type=int, default=100, help='Animation speed')
-    args = parser.parse_args()
-    
-    run_backtest(args.data, args.speed)
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240305.csv"
+    renko_chart = Renko(filename=filename)
+    renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
+    renko_data = renko_chart.build()
+    renko_chart.plot(speed=0.1)
