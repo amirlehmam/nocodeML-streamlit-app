@@ -35,7 +35,7 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
 
-# Use TensorFlow 1.x compatibility mode for reset_default_graph
+# Use TensorFlow 1.x compatibility mode
 tf.compat.v1.disable_eager_execution()
 
 def save_plots_to_pdf(c, plots, descriptions):
@@ -134,9 +134,10 @@ def preprocess_data(data, selected_feature_types):
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
     # Feature Engineering: Add derived metrics (changes, slopes)
-    for col in indicator_columns:
-        data[f'{col}_change'] = data[col].diff()
-        data[f'{col}_slope'] = data[col].diff().diff()
+    changes = data[indicator_columns].diff().add_suffix('_change')
+    slopes = data[indicator_columns].diff().diff().add_suffix('_slope')
+    
+    data = pd.concat([data, changes, slopes], axis=1)
 
     # Fill NaN values with column mean
     data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(col.mean()))
@@ -155,6 +156,7 @@ def preprocess_data(data, selected_feature_types):
 
 # Define Keras models
 def create_nn_model(input_dim):
+    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
     model.add(Dense(64, input_dim=input_dim, activation='relu'))
     model.add(Dense(32, activation='relu'))
@@ -164,6 +166,7 @@ def create_nn_model(input_dim):
     return model
 
 def create_rnn_model(input_shape, rnn_type='LSTM'):
+    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
     if rnn_type == 'LSTM':
         model.add(LSTM(64, input_shape=input_shape, return_sequences=True))
@@ -176,6 +179,7 @@ def create_rnn_model(input_shape, rnn_type='LSTM'):
     return model
 
 def create_cnn_model(input_shape):
+    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
     model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
     model.add(MaxPooling1D(pool_size=2))
@@ -361,7 +365,7 @@ def run_advanced_model_exploration():
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = lgb.LGBMClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
             else:
                 model = lgb.LGBMRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
@@ -386,12 +390,12 @@ def run_advanced_model_exploration():
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
-        elif model_type == "RNN (GRU)":
+        elif model type == "RNN (GRU)":
             st.subheader("RNN (GRU) Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
