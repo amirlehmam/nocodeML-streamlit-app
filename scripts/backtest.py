@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from numba import jit
 from tqdm import tqdm
+import numba
+from numba import jit
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -424,7 +425,7 @@ class Delta2Strategy:
                 print(log)
 
     def execute_strategy(self):
-        for i in tqdm(range(len(self.data)), desc="Executing Strategy"):
+        for i in tqdm(range(len(self.data)), desc="Executing Strategy", unit="bar"):
             self._bar_update()
 
     def plot_trades(self, renko_data, speed=0.1):
@@ -542,31 +543,29 @@ class Renko:
         self.brick_threshold = brick_threshold
         return self.brick_size
 
+    @jit(nopython=True)
     def _apply_renko(self, i, close, renko_price, renko_direction, renko_date, renko_index, brick_size, brick_threshold):
-        """ Determine if there are any new bricks to paint with current price """
         num_bricks = 0
         gap = (close[i] - renko_price[-1]) // brick_size
         direction = np.sign(gap)
         if direction == 0:
-            return 0, renko_price, renko_direction, renko_date, renko_index
+            return renko_price[-1], renko_direction[-1], renko_date[-1], renko_index[-1], num_bricks
         if (gap > 0 and renko_direction[-1] >= 0) or (gap < 0 and renko_direction[-1] <= 0):
             num_bricks = gap
         elif np.abs(gap) >= brick_threshold:
             num_bricks = gap - brick_threshold * direction
-            renko_price, renko_direction, renko_date, renko_index = self._update_renko(i, direction, renko_price, renko_direction, renko_date, renko_index, brick_threshold)
+            renko_price.append(renko_price[-1] + (brick_threshold * direction * brick_size))
+            renko_direction.append(direction)
+            renko_date.append(renko_date[-1])
+            renko_index.append(i)
 
-        for brick in range(abs(int(num_bricks))):
-            renko_price, renko_direction, renko_date, renko_index = self._update_renko(i, direction, renko_price, renko_direction, renko_date, renko_index, 1)
+        for _ in range(abs(int(num_bricks))):
+            renko_price.append(renko_price[-1] + (direction * brick_size))
+            renko_direction.append(direction)
+            renko_date.append(renko_date[-1])
+            renko_index.append(i)
 
-        return num_bricks, renko_price, renko_direction, renko_date, renko_index
-
-    def _update_renko(self, i, direction, renko_price, renko_direction, renko_date, renko_index, brick_multiplier=1):
-        """ Append price and new block to renko dict """
-        renko_price.append(renko_price[-1] + (direction * brick_multiplier * self.brick_size))
-        renko_direction.append(direction)
-        renko_date.append(self.df['date'].iat[i])
-        renko_index.append(i)
-        return renko_price, renko_direction, renko_date, renko_index
+        return renko_price[-1], renko_direction[-1], renko_date[-1], renko_index[-1], num_bricks
 
     def build(self):
         """ Create Renko data """
@@ -580,6 +579,7 @@ class Renko:
         renko_direction = [0]
         renko_date = [self.df['date'].iat[0]]
         renko_index = [0]
+
         for i in tqdm(range(1, len(self.close)), desc="Building Renko data"):
             _, renko_price, renko_direction, renko_date, renko_index = self._apply_renko(i, self.close, renko_price, renko_direction, renko_date, renko_index, self.brick_size, self.brick_threshold)
 
@@ -653,10 +653,10 @@ if __name__ == "__main__":
     renko_df = pd.DataFrame({
         'close': renko_chart.df['Price'],
         'date': renko_chart.df['date'],
-        'volume': np.ones(len(renko_chart.df)),  # Placeholder volume data
-        'high': renko_chart.df['Price'],  # Placeholder high data
-        'low': renko_chart.df['Price'],   # Placeholder low data
-        'open': renko_chart.df['Price']   # Placeholder open data
+        'high': renko_chart.df['Price'],  # Placeholder, replace with actual 'high' data if available
+        'low': renko_chart.df['Price'],   # Placeholder, replace with actual 'low' data if available
+        'open': renko_chart.df['Price'],  # Placeholder, replace with actual 'open' data if available
+        'volume': 1  # Placeholder volume data
     })
 
     strategy = Delta2Strategy(renko_df)
