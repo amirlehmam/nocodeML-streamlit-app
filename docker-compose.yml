@@ -1,38 +1,28 @@
-version: '3'
+version: '3.8'
 
 services:
-
   streamlit:
-
     build: .
-
+    container_name: nocodeml_streamlit
     ports:
-
       - "8501:8501"
-
     networks:
-
-      - nocode_ml_network
-
-    container_name: streamlit_container
-
+      - webnet
 
   nginx:
-
     image: nginx:latest
-
+    container_name: nocodeml_nginx
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-
       - ./nginx/conf.d:/etc/nginx/conf.d
-
-      - ./nginx/certs:/etc/letsencrypt
-
-    network_mode: "host"
-
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - streamlit
+    networks:
+      - webnet
 
 networks:
-
-  nocode_ml_network:
-
-    driver: bridge
+  webnet:
 
