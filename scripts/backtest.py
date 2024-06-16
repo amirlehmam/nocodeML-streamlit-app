@@ -659,6 +659,7 @@ if __name__ == "__main__":
         'volume': 1  # Placeholder volume data
     })
 
+
     strategy = Delta2Strategy(renko_df)
     strategy.calculate_indicators()
     strategy.execute_strategy()
