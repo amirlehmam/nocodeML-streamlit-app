@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import yfinance as yf
-from numba import jit
+from tqdm import tqdm
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -24,11 +23,11 @@ def cross_above(series1, series2):
 def cross_below(series1, series2):
     return (series1.shift(1) > series2.shift(1)) & (series1 < series2)
 
-def draw_triangle_up(data, index, color):
-    plt.plot(index, data[index], marker='^', color=color, markersize=10)
+def draw_triangle_up(ax, x, y, color):
+    ax.plot(x, y, marker='^', color=color, markersize=10)
 
-def draw_triangle_down(data, index, color):
-    plt.plot(index, data[index], marker='v', color=color, markersize=10)
+def draw_triangle_down(ax, x, y, color):
+    ax.plot(x, y, marker='v', color=color, markersize=10)
 
 # Strategy Class
 class Delta2Strategy:
@@ -215,14 +214,18 @@ class Delta2Strategy:
     def calculate_dm(self, period):
         dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
         dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], 
+                                          (self.data['high'] - self.data['close'].shift()).abs(), 
+                                          (self.data['low'] - self.data['close'].shift()).abs()]))
         return dm_plus.rolling(window=period).mean() / tr.rolling(window=period).mean(), dm_minus.rolling(window=period).mean() / tr.rolling(window=period).mean()
 
     def calculate_disparity_index(self, period):
         return (self.data['close'] - self.data['close'].rolling(window=period).mean()) / self.data['close'].rolling(window=period).mean()
 
     def calculate_atr(self, period):
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], 
+                                          (self.data['high'] - self.data['close'].shift()).abs(), 
+                                          (self.data['low'] - self.data['close'].shift()).abs()]))
         self.data['atr'] = tr.rolling(window=period).mean()
         return self.data['atr']
 
@@ -236,7 +239,9 @@ class Delta2Strategy:
     def calculate_adx(self, period):
         dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
         dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], 
+                                          (self.data['high'] - self.data['close'].shift()).abs(), 
+                                          (self.data['low'] - self.data['close'].shift()).abs()]))
         dx = (abs(dm_plus - dm_minus) / (dm_plus + dm_minus)).rolling(window=period).mean()
         self.data['adx'] = dx.ewm(span=period).mean()
         return self.data['adx']
@@ -244,7 +249,9 @@ class Delta2Strategy:
     def calculate_vortex(self, period):
         vm_plus = pd.Series(self.data['high'] - self.data['low'].shift()).abs()
         vm_minus = pd.Series(self.data['low'] - self.data['high'].shift()).abs()
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], 
+                                          (self.data['high'] - self.data['close'].shift()).abs(), 
+                                          (self.data['low'] - self.data['close'].shift()).abs()]))
         return vm_plus.rolling(window=period).sum() / tr.rolling(window=period).sum(), vm_minus.rolling(window=period).sum() / tr.rolling(window=period).sum()
 
     def calculate_pfe(self, period, smoothing_period):
@@ -424,7 +431,7 @@ class Delta2Strategy:
                 print(log)
 
     def execute_strategy(self):
-        for i in range(len(self.data)):
+        for i in tqdm(range(len(self.data)), desc="Executing Strategy"):
             self._bar_update()
 
     def plot_trades(self, renko_data, speed=0.1):
@@ -457,11 +464,11 @@ class Delta2Strategy:
                 if log['timestamp'] == date:
                     if log['action'] == 'enter':
                         if log['direction'] == 'long':
-                            draw_triangle_up(self.data['close'], log['timestamp'], 'blue')
+                            draw_triangle_up(ax, x + 1, price, 'blue')
                         elif log['direction'] == 'short':
-                            draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+                            draw_triangle_down(ax, x + 1, price, 'blue')
                     elif log['action'] == 'exit':
-                        draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+                        draw_triangle_down(ax, x + 1, price, 'blue')
 
             if x + 1 >= x_max:  # Extend x-axis limit dynamically
                 x_max += 50
@@ -484,6 +491,7 @@ class Delta2Strategy:
 
         plt.show(block=True)  # Ensure the plot window stays open
 
+# Renko Class
 class Renko:
     def __init__(self, df=None, filename=None, interval=None):
         if filename:
@@ -545,7 +553,7 @@ class Renko:
     def _apply_renko(self, i):
         """ Determine if there are any new bricks to paint with current price """
         num_bricks = 0
-        gap = (self.close[i] - self.renko['price'][-1]) // self.brick_size
+        gap = (self.close[i] - self.renko['close'][-1]) // self.brick_size
         direction = np.sign(gap)
         if direction == 0:
             return
@@ -560,9 +568,9 @@ class Renko:
 
     def _update_renko(self, i, direction, brick_multiplier=1):
         """ Append price and new block to renko dict """
-        renko_price = self.renko['price'][-1] + (direction * brick_multiplier * self.brick_size)
+        renko_price = self.renko['close'][-1] + (direction * brick_multiplier * self.brick_size)
         self.renko['index'].append(i)
-        self.renko['price'].append(renko_price)
+        self.renko['close'].append(renko_price)
         self.renko['direction'].append(direction)
         self.renko['date'].append(self.df['date'].iat[i])
 
@@ -574,16 +582,22 @@ class Renko:
         units = self.df['Price'].iat[0] // self.brick_size
         start_price = units * self.brick_size
 
-        self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'price': [start_price], 'direction': [0]}
-        for i in range(1, len(self.close)):
+        self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'close': [start_price], 'direction': [0]}
+        for i in tqdm(range(1, len(self.close)), desc="Building Renko data"):
             self._apply_renko(i)
+        self.renko['brick_size'] = self.brick_size  # Store brick size in renko data
         return self.renko
 
-    def plot(self, strategy, speed=0.1):
-        prices = self.renko['price']
+    def plot(self, speed=0.1):
+        prices = self.renko['close']
         directions = self.renko['direction']
         dates = self.renko['date']
         brick_size = self.brick_size
+
+        # Debugging output
+        print(f"Prices: {prices}")
+        print(f"Directions: {directions}")
+        print(f"Brick size: {brick_size}")
 
         fig, ax = plt.subplots(1, figsize=(10, 5))
         fig.suptitle(f"Renko Chart (brick size = {round(brick_size, 2)})", fontsize=20)
@@ -621,16 +635,6 @@ class Renko:
                 y_max = price + 2 * brick_size
                 ax.set_ylim(y_min, y_max)
 
-            if date in strategy.trade_log:
-                for log in strategy.trade_log[date]:
-                    if log['action'] == 'enter':
-                        if log['direction'] == 'long':
-                            draw_triangle_up(prices, x + 1, 'blue')
-                        elif log['direction'] == 'short':
-                            draw_triangle_down(prices, x + 1, 'blue')
-                    elif log['action'] == 'exit':
-                        draw_triangle_down(prices, x + 1, 'red')
-
             plt.pause(speed)
 
         # Convert x-ticks to dates
@@ -647,11 +651,8 @@ if __name__ == "__main__":
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
 
-    # Prepare data for strategy
-    renko_df = pd.DataFrame(renko_data)
-    renko_df.set_index('date', inplace=True)
-    renko_df['close'] = renko_df['price']
-    renko_df['volume'] = 1  # Dummy volume
+    # Initialize and run the strategy with renko data
+    renko_df = pd.DataFrame({'close': renko_chart.df['Price'], 'date': renko_chart.df['date'], 'volume': 1})
     renko_df['high'] = renko_df['close']
     renko_df['low'] = renko_df['close']
 
@@ -659,5 +660,11 @@ if __name__ == "__main__":
     strategy.calculate_indicators()
     strategy.execute_strategy()
 
-    renko_chart.plot(strategy, speed=0.1)
-    strategy.plot_performance()
+    # Plot trades with Renko chart
+    strategy.plot_trades(renko_data, speed=0.1)
+
+    # Print strategy performance
+    print("Final PnL:", strategy.pnl)
+    print("Trade Log:")
+    for log in strategy.trade_log:
+        print(log)
