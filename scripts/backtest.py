@@ -1,10 +1,9 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
-import os
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import yfinance as yf
 from numba import jit
-import time
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -20,10 +19,10 @@ def is_falling(arr):
     return arr[-1] < arr[-2]
 
 def cross_above(series1, series2):
-    return series1.shift(1) < series2.shift(1) and series1 > series2
+    return (series1.shift(1) < series2.shift(1)) & (series1 > series2)
 
 def cross_below(series1, series2):
-    return series1.shift(1) > series2.shift(1) and series1 < series2
+    return (series1.shift(1) > series2.shift(1)) & (series1 < series2)
 
 def draw_triangle_up(data, index, color):
     plt.plot(index, data[index], marker='^', color=color, markersize=10)
@@ -31,6 +30,7 @@ def draw_triangle_up(data, index, color):
 def draw_triangle_down(data, index, color):
     plt.plot(index, data[index], marker='v', color=color, markersize=10)
 
+# Strategy Class
 class Delta2Strategy:
     def __init__(self, data):
         self.data = data
@@ -61,6 +61,7 @@ class Delta2Strategy:
         self.enable_awesome = True
         self.enable_rsi = True
         self.enable_dynamic_momentum = True
+        self.enable_adx_filter = True
         self.sunday = True
         self.monday = True
         self.tuesday = True
@@ -138,6 +139,8 @@ class Delta2Strategy:
         self.ema382 = self.calculate_ema(382)
         self.ema236 = self.calculate_ema(236)
         self.volume = self.data['volume']
+        self.aroon = self.calculate_aroon(14)
+        self.directional_movement = self.calculate_dm(14)
         self.disparity_index = self.calculate_disparity_index(25)
         self.atr_filter = self.calculate_atr(14)
         self.macd = self.calculate_macd(self.macd_fast_ema, self.macd_slow_ema, self.ema_signal_line)
@@ -204,12 +207,24 @@ class Delta2Strategy:
                 self.data['close'].rolling(window=period).mean() * 1.05,
                 self.data['close'].rolling(window=period).mean() * 0.95)
 
+    def calculate_aroon(self, period):
+        aroon_up = pd.Series(self.data['high'].rolling(window=period).apply(lambda x: (x.argmax() + 1) / period))
+        aroon_down = pd.Series(self.data['low'].rolling(window=period).apply(lambda x: (x.argmin() + 1) / period))
+        return aroon_up, aroon_down
+
+    def calculate_dm(self, period):
+        dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
+        dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        return dm_plus.rolling(window=period).mean() / tr.rolling(window=period).mean(), dm_minus.rolling(window=period).mean() / tr.rolling(window=period).mean()
+
     def calculate_disparity_index(self, period):
         return (self.data['close'] - self.data['close'].rolling(window=period).mean()) / self.data['close'].rolling(window=period).mean()
 
     def calculate_atr(self, period):
-        tr = self.data['close'].diff().abs()
-        return tr.rolling(window=period).mean()
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        self.data['atr'] = tr.rolling(window=period).mean()
+        return self.data['atr']
 
     def calculate_macd(self, fast_period, slow_period, signal_period):
         ema_fast = self.data['close'].ewm(span=fast_period).mean()
@@ -219,16 +234,17 @@ class Delta2Strategy:
         return macd_line, signal_line, macd_line - signal_line
 
     def calculate_adx(self, period):
-        dm_plus = self.data['close'].diff().clip(lower=0)
-        dm_minus = self.data['close'].diff().clip(upper=0).abs()
-        tr = self.data['close'].diff().abs()
+        dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
+        dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
         dx = (abs(dm_plus - dm_minus) / (dm_plus + dm_minus)).rolling(window=period).mean()
-        return dx.ewm(span=period).mean()
+        self.data['adx'] = dx.ewm(span=period).mean()
+        return self.data['adx']
 
     def calculate_vortex(self, period):
-        vm_plus = self.data['close'] - self.data['close'].shift()
-        vm_minus = self.data['close'] - self.data['close'].shift()
-        tr = self.data['close'].diff().abs()
+        vm_plus = pd.Series(self.data['high'] - self.data['low'].shift()).abs()
+        vm_minus = pd.Series(self.data['low'] - self.data['high'].shift()).abs()
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
         return vm_plus.rolling(window=period).sum() / tr.rolling(window=period).sum(), vm_minus.rolling(window=period).sum() / tr.rolling(window=period).sum()
 
     def calculate_pfe(self, period, smoothing_period):
@@ -238,15 +254,15 @@ class Delta2Strategy:
         return price_change / delta
 
     def calculate_williams_r(self, period):
-        high_max = self.data['close'].rolling(window=period).max()
-        low_min = self.data['close'].rolling(window=period).min()
+        high_max = self.data['high'].rolling(window=period).max()
+        low_min = self.data['low'].rolling(window=period).min()
         return (high_max - self.data['close']) / (high_max - low_min) * -100
 
     def calculate_momentum(self, period):
         return self.data['close'].diff(period)
 
     def calculate_cci(self, period):
-        typical_price = self.data['close']
+        typical_price = (self.data['high'] + self.data['low'] + self.data['close']) / 3
         return (typical_price - typical_price.rolling(window=period).mean()) / (0.015 * typical_price.rolling(window=period).std())
 
     def calculate_rsi(self, period, smoothing_period):
@@ -264,13 +280,13 @@ class Delta2Strategy:
         return trix, trix_signal
 
     def calculate_chaikin(self, fast_period, slow_period):
-        ad = (2 * self.data['close'] - self.data['close'] - self.data['close']) / (self.data['close'] - self.data['close']) * self.data['volume']
+        ad = (2 * self.data['close'] - self.data['low'] - self.data['high']) / (self.data['high'] - self.data['low']) * self.data['volume']
         chaikin_osc = ad.ewm(span=fast_period).mean() - ad.ewm(span=slow_period).mean()
         return chaikin_osc
 
     def calculate_fisher_transform(self, period):
-        high = self.data['close'].rolling(window=period).max()
-        low = self.data['close'].rolling(window=period).min()
+        high = self.data['high'].rolling(window=period).max()
+        low = self.data['low'].rolling(window=period).min()
         value = 0.33 * 2 * ((self.data['close'] - low) / (high - low) - 0.5) + 0.67 * self.data['close'].shift()
         return value
 
@@ -287,8 +303,8 @@ class Delta2Strategy:
         return upper_band, middle_band, lower_band
 
     def calculate_stochastics_fast(self, period_k, period_d):
-        min_low = self.data['close'].rolling(window=period_k).min()
-        max_high = self.data['close'].rolling(window=period_k).max()
+        min_low = self.data['low'].rolling(window=period_k).min()
+        max_high = self.data['high'].rolling(window=period_k).max()
         fast_k = 100 * (self.data['close'] - min_low) / (max_high - min_low)
         fast_d = fast_k.rolling(window=period_d).mean()
         return fast_k, fast_d
@@ -351,12 +367,12 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['close'][index]
-            self.stop_loss = self.data['close'][index] - 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 0.98
+            self.stop_loss = self.data['PSAR'][index] if 'PSAR' in self.data.columns else 0.0
             self.take_profit = self.entry_price + 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 1.02
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['close'][index]
-            self.stop_loss = self.data['close'][index] + 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 1.02
+            self.stop_loss = self.data['PSAR'][index] if 'PSAR' in self.data.columns else 0.0
             self.take_profit = self.entry_price - 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 0.98
         self._log_entry(index, direction)
 
@@ -411,30 +427,62 @@ class Delta2Strategy:
         for i in range(len(self.data)):
             self._bar_update()
 
-    def plot_trades(self):
-        plt.figure(figsize=(12, 6))
-        plt.plot(self.data['close'], label='Close Price')
-        plt.plot(self.data['smoothed_fib_weighted_ma'], label='Smoothed Fib Weighted MA')
-        for log in self.trade_log:
-            if log['action'] == 'enter':
-                if log['direction'] == 'long':
-                    draw_triangle_up(self.data['close'], log['timestamp'], 'green')
-                elif log['direction'] == 'short':
-                    draw_triangle_down(self.data['close'], log['timestamp'], 'red')
-            elif log['action'] == 'exit':
-                draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
-        plt.legend()
-        plt.show()
+    def plot_trades(self, renko_data, speed=0.1):
+        fig, ax = plt.subplots(1, figsize=(10, 5))
+        fig.suptitle(f"Renko Chart (brick size = {renko_data['brick_size']})", fontsize=20)
+        ax.set_ylabel("Price ($)")
+        plt.rc('axes', labelsize=20)
+        plt.rc('font', size=16)
 
-    def plot_performance(self):
-        df = pd.DataFrame(self.trade_log)
-        if df.empty:
-            print("No trades to display performance.")
-            return
-        df.set_index('timestamp', inplace=True)
-        df['cumulative_pnl'] = df['pnl'].cumsum()
-        df['cumulative_pnl'].plot(figsize=(12, 6), title='Cumulative PnL')
-        plt.show()
+        x_min = 0
+        x_max = 50  # Initial x-axis limit
+        y_min = min(renko_data['price']) - 2 * renko_data['brick_size']
+        y_max = max(renko_data['price']) + 2 * renko_data['brick_size']
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        for x, (price, direction, date) in enumerate(zip(renko_data['price'], renko_data['direction'], renko_data['date'])):
+            if direction == 1:
+                facecolor = 'g'
+                y = price - renko_data['brick_size']
+            else:
+                facecolor = 'r'
+                y = price
+
+            ax.add_patch(patches.Rectangle((x + 1, y), height=renko_data['brick_size'], width=1, facecolor=facecolor))
+            
+            # Annotate trade actions on the Renko chart
+            for log in self.trade_log:
+                if log['timestamp'] == date:
+                    if log['action'] == 'enter':
+                        if log['direction'] == 'long':
+                            draw_triangle_up(self.data['close'], log['timestamp'], 'blue')
+                        elif log['direction'] == 'short':
+                            draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+                    elif log['action'] == 'exit':
+                        draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+
+            if x + 1 >= x_max:  # Extend x-axis limit dynamically
+                x_max += 50
+                ax.set_xlim(x_min, x_max)
+
+            if price < y_min + 2 * renko_data['brick_size']:
+                y_min = price - 2 * renko_data['brick_size']
+                ax.set_ylim(y_min, y_max)
+            
+            if price > y_max - 2 * renko_data['brick_size']:
+                y_max = price + 2 * renko_data['brick_size']
+                ax.set_ylim(y_min, y_max)
+
+            plt.pause(speed)
+
+        # Convert x-ticks to dates
+        x_ticks = ax.get_xticks()
+        x_labels = [renko_data['date'][int(tick)-1] if 0 <= int(tick)-1 < len(renko_data['date']) else '' for tick in x_ticks]
+        ax.set_xticklabels(x_labels, rotation=45, ha='right')
+
+        plt.show(block=True)  # Ensure the plot window stays open
 
 class Renko:
     def __init__(self, df=None, filename=None, interval=None):
