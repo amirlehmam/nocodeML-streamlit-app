@@ -7,7 +7,7 @@ import logging
 import threading
 
 
-logging.basicConfig(filename='/home/ec2-user/nocodeML-streamlit-app/webhook_listener.log', level=logging.INFO)
+logging.basicConfig(filename='/home/ec2-user/NoCodeML/webhook_listener.log', level=logging.INFO)
 
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 def run_update_script():
 
-    os.system('/home/ec2-user/nocodeML-streamlit-app/update_and_restart.sh')
+    os.system('/home/ec2-user/NoCodeML/update_and_restart.sh')
 
 
 @app.route('/payload', methods=['POST'])
