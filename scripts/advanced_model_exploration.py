@@ -365,7 +365,7 @@ def run_advanced_model_exploration():
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            if task type == "Classification":
+            if task_type == "Classification":
                 model = lgb.LGBMClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
             else:
                 model = lgb.LGBMRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
@@ -395,7 +395,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task type == "Classification":
+            if task_type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
