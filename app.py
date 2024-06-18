@@ -142,12 +142,12 @@ page_dict = {
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
     'MA Convergence': ma_convergence,
-    'EDA Indicators': advanced_eda_indicators,
-    'Win Ranges': optimal_win_ranges,
-    '% Away Indicators': model_percentage_away,
-    'Model Focus': specific_model_focus,
-    'EDA Specific': advanced_eda_specific_model,
-    'Ranges Specific': win_ranges_specific_model,
+#    'EDA Indicators': advanced_eda_indicators,
+#    'Win Ranges': optimal_win_ranges,
+#    '% Away Indicators': model_percentage_away,
+#    'Model Focus': specific_model_focus,
+#    'EDA Specific': advanced_eda_specific_model,
+#    'Ranges Specific': win_ranges_specific_model,
     'Strategy Performance': strategy_performance
 }
 
@@ -311,8 +311,7 @@ def main():
         )
 
         # Navigation bar
-        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'EDA Indicators',
-                 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific', 'Strategy Performance']
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'Strategy Performance']
         styles = {
             "nav": {
                 "background-color": "royalblue",
