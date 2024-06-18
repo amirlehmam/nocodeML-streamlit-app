@@ -36,7 +36,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-# Use TensorFlow 1.x compatibility mode
+# Ensure TensorFlow 1.x compatibility mode
 tf.compat.v1.disable_eager_execution()
 
 # Utility function to save plots to PDF
