@@ -401,7 +401,7 @@ def run_advanced_model_exploration():
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
-        elif model type == "RNN (GRU)":
+        elif model_type == "RNN (GRU)":
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
