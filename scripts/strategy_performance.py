@@ -3,7 +3,6 @@ import pandas as pd
 import streamlit as st
 import quantstats as qs
 import numpy as np
-import yfinance as yf
 
 # Function to load and preprocess data
 def load_and_preprocess_data(data_dir):
@@ -34,6 +33,8 @@ def calculate_additional_metrics(data):
     metrics = {}
     metrics['Winning Trades'] = len(data[data['result'] == 1])
     metrics['Losing Trades'] = len(data[data['result'] == 0])
+    metrics['Number of Exits'] = data['event'].str.contains('exit', case=False).sum()
+    metrics['Times SL Hit'] = data['event'].str.contains('sl', case=False).sum()
     return metrics
 
 # Function to calculate maximum drawdown in dollars
@@ -81,8 +82,8 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     })
 
     st.write("### Key Performance Metrics")
-    st.dataframe(metrics_df)
 
+    st.dataframe(metrics_df)
     st.write("### Detailed Performance Report")
     st.write(qs.reports.metrics(returns, mode='full'))
 
@@ -106,21 +107,6 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     
     st.components.v1.html(html_content, height=800, scrolling=True)
 
-# Function to fetch Nasdaq-100 data from Yahoo Finance
-def fetch_nasdaq_100_data(start_date, end_date):
-    nasdaq_100 = yf.download('NQ=F', start=start_date, end=end_date)
-    nasdaq_100['Return'] = nasdaq_100['Adj Close'].pct_change().dropna()
-    nasdaq_100['Cumulative Return'] = (1 + nasdaq_100['Return']).cumprod() - 1
-    return nasdaq_100
-
-# Function to compare strategy with Nasdaq-100
-def compare_with_nasdaq_100(data, nasdaq_100):
-    data['Cumulative Return'] = (1 + data['price'].pct_change().dropna()).cumprod() - 1
-    fig = px.line(title="Cumulative Returns vs Nasdaq-100")
-    fig.add_scatter(x=data.index, y=data['Cumulative Return'], mode='lines', name='Strategy')
-    fig.add_scatter(x=nasdaq_100.index, y=nasdaq_100['Cumulative Return'], mode='lines', name='Nasdaq-100')
-    st.plotly_chart(fig)
-
 # Main function for Streamlit app
 def run_strategy_performance():
     st.title("Strategy Performance Analysis")
@@ -134,8 +120,6 @@ def run_strategy_performance():
         data = load_and_preprocess_data(base_dir)
         if data is not None:
             calculate_performance_metrics(data)
-            nasdaq_100 = fetch_nasdaq_100_data(data.index.min(), data.index.max())
-            compare_with_nasdaq_100(data, nasdaq_100)
 
 if __name__ == "__main__":
     run_strategy_performance()
