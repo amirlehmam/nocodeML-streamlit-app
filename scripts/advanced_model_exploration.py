@@ -390,7 +390,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
-            if task type == "Classification":
+            if task_type == "Classification":
                 model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
