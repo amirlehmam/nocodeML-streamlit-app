@@ -5,8 +5,6 @@ import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-import seaborn as sns
-import matplotlib.pyplot as plt
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
@@ -47,11 +45,8 @@ def save_plots_to_pdf(c, plots, descriptions):
     for plot, description in zip(plots, descriptions):
         c.drawString(10, height - 20, description)
         plot_data = BytesIO()
-        if isinstance(plot, plt.Figure):
-            plot.savefig(plot_data, format='png')
-        elif isinstance(plot, go.Figure):
-            img_bytes = plot.to_image(format='png')
-            plot_data.write(img_bytes)
+        img_bytes = plot.to_image(format='png')
+        plot_data.write(img_bytes)
         plot_data.seek(0)
         img = Image.open(plot_data)
         img_width, img_height = img.size
@@ -247,29 +242,32 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
 
     return optimal_ranges
 
-# Function to plot optimal win ranges
+# Function to plot optimal win ranges using Plotly
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
     plots = []
     descriptions = []
     for item in optimal_ranges:
         feature = item['feature']
         ranges = item['optimal_win_ranges']
-        
-        fig, ax = plt.subplots(figsize=(12, 6))
+
         win_values = data[data[target] == 0][feature].dropna()
         loss_values = data[data[target] == 1][feature].dropna()
 
-        sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True, ax=ax)
-        sns.histplot(loss_values, color='red', label='Loss', kde=True, stat='density', element='step', fill=True, ax=ax)
-        
-        for range_start, range_end in ranges:
-            ax.axvspan(range_start, range_end, color='blue', alpha=0.3)
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75, nbinsx=50))
+        fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75, nbinsx=50))
 
-        ax.set_title(f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})')
-        ax.set_xlabel(feature)
-        ax.set_ylabel('Density')
-        ax.legend()
-        st.pyplot(fig)
+        for range_start, range_end in ranges:
+            fig.add_shape(type="rect", x0=range_start, x1=range_end, y0=0, y1=1,
+                          fillcolor="blue", opacity=0.3, layer="below", line_width=0)
+
+        fig.update_layout(
+            title=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})',
+            xaxis_title=feature,
+            yaxis_title='Count',
+            barmode='overlay'
+        )
+        st.plotly_chart(fig)
         plots.append(fig)
         descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type}, {model_name})")
     return plots, descriptions
@@ -362,7 +360,7 @@ def run_advanced_model_exploration():
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = GradientBoostingClassifier(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
             else:
                 model = GradientBoostingRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
@@ -389,7 +387,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
@@ -398,12 +396,12 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
-        elif model_type == "RNN (GRU)":
+        elif model type == "RNN (GRU)":
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
@@ -416,13 +414,13 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
-            if task_type == "Classification":
+            if task type == "Classification":
                 base_learners = [
                     ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
                     ('gb', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)),
@@ -495,7 +493,7 @@ def run_advanced_model_exploration():
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
                         descriptions.append("Feature Importance")
-                    elif model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
+                    elif model type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         st.write("Calculating feature importances using SHAP...")
                         underlying_model = model.model_
                         explainer = shap.Explainer(underlying_model, st.session_state.X_train)
