@@ -493,7 +493,7 @@ def run_advanced_model_exploration():
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
                         descriptions.append("Feature Importance")
-                    elif model type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
+                    elif model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         st.write("Calculating feature importances using SHAP...")
                         underlying_model = model.model_
                         explainer = shap.Explainer(underlying_model, st.session_state.X_train)
