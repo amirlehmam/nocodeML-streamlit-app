@@ -25,7 +25,7 @@ from sklearn.ensemble import (
     StackingClassifier, RandomForestRegressor, 
     GradientBoostingRegressor, StackingRegressor
 )
-from sklearn.linear import LogisticRegression
+from sklearn.linear_model import LogisticRegression
 from scikeras.wrappers import KerasClassifier, KerasRegressor
 from tqdm import tqdm
 from tqdm.keras import TqdmCallback
