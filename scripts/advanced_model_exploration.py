@@ -8,8 +8,8 @@ import plotly.graph_objects as go
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
+import keras
+from keras import layers
 from PIL import Image
 from io import BytesIO
 from scipy.stats import gaussian_kde
@@ -24,7 +24,7 @@ from sklearn.ensemble import (
     StackingClassifier, RandomForestRegressor, 
     GradientBoostingRegressor, StackingRegressor
 )
-from sklearn.linear import LogisticRegression
+from sklearn.linear_model import LogisticRegression
 from scikeras.wrappers import KerasClassifier, KerasRegressor
 from tqdm import tqdm
 from tqdm.keras import TqdmCallback
@@ -167,37 +167,37 @@ def preprocess_data(data, selected_feature_types):
 # Function to create neural network model
 def create_nn_model(input_dim):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
-    model = Sequential()
-    model.add(Dense(64, input_dim=input_dim, activation='relu'))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(16, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
+    model = keras.Sequential()
+    model.add(keras.layers.Dense(64, input_dim=input_dim, activation='relu'))
+    model.add(keras.layers.Dense(32, activation='relu'))
+    model.add(keras.layers.Dense(16, activation='relu'))
+    model.add(keras.layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
 # Function to create RNN model
 def create_rnn_model(input_shape, rnn_type='LSTM'):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
-    model = Sequential()
+    model = keras.Sequential()
     if rnn_type == 'LSTM':
-        model.add(LSTM(64, input_shape=input_shape, return_sequences=True))
+        model.add(keras.layers.LSTM(64, input_shape=input_shape, return_sequences=True))
     else:
-        model.add(GRU(64, input_shape=input_shape, return_sequences=True))
-    model.add(LSTM(32))
-    model.add(Dense(16, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
+        model.add(keras.layers.GRU(64, input_shape=input_shape, return_sequences=True))
+    model.add(keras.layers.LSTM(32))
+    model.add(keras.layers.Dense(16, activation='relu'))
+    model.add(keras.layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
 # Function to create CNN model
 def create_cnn_model(input_shape):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
-    model = Sequential()
-    model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
-    model.add(MaxPooling1D(pool_size=2))
-    model.add(Flatten())
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
+    model = keras.Sequential()
+    model.add(keras.layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
+    model.add(keras.layers.MaxPooling1D(pool_size=2))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(32, activation='relu'))
+    model.add(keras.layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
