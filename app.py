@@ -142,21 +142,12 @@ page_dict = {
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
     'MA Convergence': ma_convergence,
-<<<<<<< HEAD
-#    'EDA Indicators': advanced_eda_indicators,
-#    'Win Ranges': optimal_win_ranges,
-#    '% Away Indicators': model_percentage_away,
-#    'Model Focus': specific_model_focus,
-#    'EDA Specific': advanced_eda_specific_model,
-#    'Ranges Specific': win_ranges_specific_model,
-=======
  #   'EDA Indicators': advanced_eda_indicators,
  #   'Win Ranges': optimal_win_ranges,
  #   '% Away Indicators': model_percentage_away,
  #   'Model Focus': specific_model_focus,
  #   'EDA Specific': advanced_eda_specific_model,
  #   'Ranges Specific': win_ranges_specific_model,
->>>>>>> origin/main
     'Strategy Performance': strategy_performance
 }
 
