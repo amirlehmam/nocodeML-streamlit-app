@@ -21,7 +21,7 @@ from sklearn.metrics import (
 )
 from sklearn.ensemble import (
     RandomForestClassifier, GradientBoostingClassifier, 
-    AdaBoostClassifier, StackingClassifier, RandomForestRegressor, 
+    StackingClassifier, RandomForestRegressor, 
     GradientBoostingRegressor, StackingRegressor
 )
 from sklearn.linear_model import LogisticRegression
@@ -31,6 +31,7 @@ from tqdm.keras import TqdmCallback
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+import joblib
 
 # Suppress TensorFlow warnings and messages
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -40,7 +41,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Use TensorFlow 1.x compatibility mode
 tf.compat.v1.disable_eager_execution()
 
-# Function to save plots to PDF
+# Utility function to save plots to PDF
 def save_plots_to_pdf(c, plots, descriptions):
     width, height = letter
     for plot, description in zip(plots, descriptions):
@@ -65,7 +66,7 @@ def save_plots_to_pdf(c, plots, descriptions):
         c.drawImage(ImageReader(img), 10, height - img_height - 30, width=img_width, height=img_height)
         c.showPage()
 
-# Function to save text sections to PDF
+# Utility function to save text sections to PDF
 def save_text_to_pdf(c, text_sections):
     width, height = letter
     for description, text in text_sections:
@@ -75,7 +76,7 @@ def save_text_to_pdf(c, text_sections):
         lines_per_page = (height - 40) // line_height
         current_line = 0
 
-        for i, line in enumerate(text_lines):
+        for line in text_lines:
             if current_line * line_height + 30 > height:
                 c.showPage()
                 c.drawString(10, height - 20, description)
@@ -84,7 +85,7 @@ def save_text_to_pdf(c, text_sections):
             current_line += 1
         c.showPage()
 
-# Function to save dataframes to PDF
+# Utility function to save dataframes to PDF
 def save_dataframe_to_pdf(c, dataframes, descriptions):
     width, height = letter
     for df, description in zip(dataframes, descriptions):
@@ -95,7 +96,7 @@ def save_dataframe_to_pdf(c, dataframes, descriptions):
         lines_per_page = (height - 40) // line_height
         current_line = 0
 
-        for i, line in enumerate(text_lines):
+        for line in text_lines:
             if current_line * line_height + 30 > height:
                 c.showPage()
                 c.drawString(10, height - 20, description)
@@ -104,7 +105,7 @@ def save_dataframe_to_pdf(c, dataframes, descriptions):
             current_line += 1
         c.showPage()
 
-# Function to save all elements to PDF
+# Utility function to save all elements to PDF
 def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, plot_descriptions):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     save_text_to_pdf(c, text_sections)
@@ -115,7 +116,11 @@ def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descripti
 # Function to load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+    data_path = os.path.join(data_dir, "merged_trade_indicator_event.csv")
+    if not os.path.exists(data_path):
+        st.error(f"File not found: {data_path}")
+        return None
+    data = pd.read_csv(data_path)
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
@@ -315,15 +320,16 @@ def run_advanced_model_exploration():
         st.write("Loading data...")
         try:
             data = load_data(base_dir)
-            X_train, X_test, y_train, y_test, indicator_columns, data = preprocess_data(data, selected_feature_types)
-            st.session_state.data = data
-            st.session_state.X_train = X_train
-            st.session_state.X_test = X_test
-            st.session_state.y_train = y_train
-            st.session_state.y_test = y_test
-            st.session_state.indicator_columns = indicator_columns
-            st.session_state.current_step = "model_selection"
-            st.success("Data loaded and preprocessed successfully.")
+            if data is not None:
+                X_train, X_test, y_train, y_test, indicator_columns, data = preprocess_data(data, selected_feature_types)
+                st.session_state.data = data
+                st.session_state.X_train = X_train
+                st.session_state.X_test = X_test
+                st.session_state.y_train = y_train
+                st.session_state.y_test = y_test
+                st.session_state.indicator_columns = indicator_columns
+                st.session_state.current_step = "model_selection"
+                st.success("Data loaded and preprocessed successfully.")
         except Exception as e:
             st.error(f"Error loading data: {e}")
             return
@@ -401,7 +407,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
@@ -470,7 +476,7 @@ def run_advanced_model_exploration():
 
                     # Save the model
                     model_save_path = os.path.join(base_dir, f"models/{model_type}_{task_type}_model.pkl")
-                    pd.to_pickle(model, model_save_path)
+                    joblib.dump(model, model_save_path)
                     st.write(f"Model saved to {model_save_path}")
 
                     # Feature importance
