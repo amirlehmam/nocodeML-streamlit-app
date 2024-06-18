@@ -95,29 +95,29 @@ def data_ingestion():
     from scripts.data_ingestion_preparation import run_data_ingestion_preparation
     run_data_ingestion_preparation()
 
-def advanced_eda_indicators():
-    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-    run_advanced_eda_indicators()
+#def advanced_eda_indicators():
+#    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
+#    run_advanced_eda_indicators()
 
-def optimal_win_ranges():
-    from scripts.optimal_win_ranges import run_optimal_win_ranges
-    run_optimal_win_ranges()
+#def optimal_win_ranges():
+#    from scripts.optimal_win_ranges import run_optimal_win_ranges
+#    run_optimal_win_ranges()
 
-def model_percentage_away():
-    from scripts.model_percentage_away import run_model_percentage_away
-    run_model_percentage_away()
+#def model_percentage_away():
+#    from scripts.model_percentage_away import run_model_percentage_away
+#    run_model_percentage_away()
 
-def specific_model_focus():
-    from scripts.specific_model_focus import run_specific_model_focus
-    run_specific_model_focus()
+#def specific_model_focus():
+#    from scripts.specific_model_focus import run_specific_model_focus
+#    run_specific_model_focus()
 
-def advanced_eda_specific_model():
-    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-    run_advanced_eda_specific_model()
+#def advanced_eda_specific_model():
+#    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
+#    run_advanced_eda_specific_model()
 
-def win_ranges_specific_model():
-    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-    run_win_ranges_specific_model()
+#def win_ranges_specific_model():
+#    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
+#    run_win_ranges_specific_model()
 
 def advanced_trading_dashboard():
     from scripts.model_dashboard import run_model_dashboard
@@ -142,12 +142,12 @@ page_dict = {
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
     'MA Convergence': ma_convergence,
-    'EDA Indicators': advanced_eda_indicators,
-    'Win Ranges': optimal_win_ranges,
-    '% Away Indicators': model_percentage_away,
-    'Model Focus': specific_model_focus,
-    'EDA Specific': advanced_eda_specific_model,
-    'Ranges Specific': win_ranges_specific_model,
+ #   'EDA Indicators': advanced_eda_indicators,
+ #   'Win Ranges': optimal_win_ranges,
+ #   '% Away Indicators': model_percentage_away,
+ #   'Model Focus': specific_model_focus,
+ #   'EDA Specific': advanced_eda_specific_model,
+ #   'Ranges Specific': win_ranges_specific_model,
     'Strategy Performance': strategy_performance
 }
 
@@ -311,8 +311,7 @@ def main():
         )
 
         # Navigation bar
-        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'EDA Indicators',
-                 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific', 'Strategy Performance']
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'Strategy Performance']
         styles = {
             "nav": {
                 "background-color": "royalblue",

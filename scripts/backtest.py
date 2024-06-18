@@ -353,14 +353,17 @@ class Delta2Strategy:
 
     def _manage_positions(self):
         for i in range(len(self.data)):
-            if self.position == 0 and self.signals['buy_signal'][i]:
-                self._enter_position(i, 'long')
-            elif self.position > 0 and self.signals['sell_signal'][i]:
-                self._exit_position(i)
-            elif self.position < 0 and self.signals['buy_signal'][i]:
-                self._exit_position(i)
-            if self.position != 0:
-                self._apply_money_management(i)
+            if self.position == 0:
+                if self.signals['buy_signal'][i]:
+                    self._enter_position(i, 'long')
+                elif self.signals['sell_signal'][i]:
+                    self._enter_position(i, 'short')
+            elif self.position > 0:
+                if self.signals['sell_signal'][i] or self.data['close'][i] <= self.stop_loss or self.data['close'][i] >= self.take_profit:
+                    self._exit_position(i)
+            elif self.position < 0:
+                if self.signals['buy_signal'][i] or self.data['close'][i] >= self.stop_loss or self.data['close'][i] <= self.take_profit:
+                    self._exit_position(i)
 
     def _enter_position(self, index, direction):
         if direction == 'long':
@@ -385,14 +388,6 @@ class Delta2Strategy:
         self.stop_loss = 0.0
         self.take_profit = 0.0
         self._log_exit(index)
-
-    def _apply_money_management(self, index):
-        if self.position > 0:
-            if self.data['close'][index] <= self.stop_loss or self.data['close'][index] >= self.take_profit:
-                self._exit_position(index)
-        elif self.position < 0:
-            if self.data['close'][index] >= self.stop_loss or self.data['close'][index] <= self.take_profit:
-                self._exit_position(index)
 
     def _log_entry(self, index, direction):
         log_entry = {
@@ -425,6 +420,8 @@ class Delta2Strategy:
     def execute_strategy(self):
         for i in tqdm(range(len(self.data)), desc="Executing Strategy", unit="bar"):
             self._bar_update()
+            if i % 10000 == 0:
+                print(f"Processed {i} bars")
 
     def plot_trades(self, renko_data, speed=0.1):
         fig, ax = plt.subplots(1, figsize=(10, 5))
