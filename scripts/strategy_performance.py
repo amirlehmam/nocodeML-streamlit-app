@@ -1,4 +1,3 @@
-# strategy_perfomance.py
 import os
 import pandas as pd
 import streamlit as st
@@ -23,7 +22,7 @@ def load_and_preprocess_data(data_dir):
 
     # Ensure correct data types
     data['price'] = data['price'].astype(float)
-    data['amount'] = data['amount'].replace('[\$,]', '', regex=True).astype(float)
+    data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
     
     return data
