@@ -3,8 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from tqdm import tqdm
-import numba
-from numba import jit
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -543,7 +541,6 @@ class Renko:
         self.brick_threshold = brick_threshold
         return self.brick_size
 
-    @jit(nopython=True)
     def _apply_renko(self, i, close, renko_price, renko_direction, renko_date, renko_index, brick_size, brick_threshold):
         num_bricks = 0
         gap = (close[i] - renko_price[-1]) // brick_size
@@ -581,7 +578,9 @@ class Renko:
         renko_index = [0]
 
         for i in tqdm(range(1, len(self.close)), desc="Building Renko data"):
-            _, renko_price, renko_direction, renko_date, renko_index = self._apply_renko(i, self.close, renko_price, renko_direction, renko_date, renko_index, self.brick_size, self.brick_threshold)
+            renko_price[-1], renko_direction[-1], renko_date[-1], renko_index[-1], _ = self._apply_renko(
+                i, self.close, renko_price, renko_direction, renko_date, renko_index, self.brick_size, self.brick_threshold
+            )
 
         self.renko = {'index': renko_index, 'date': renko_date, 'price': renko_price, 'direction': renko_direction, 'brick_size': self.brick_size}
         return self.renko
