@@ -40,7 +40,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Enable eager execution for TensorFlow 2.x
-tf.config.experimental_run_functions_eagerly(True)
+tf.config.run_functions_eagerly(True)
 
 # Utility function to save plots to PDF
 def save_plots_to_pdf(c, plots, descriptions):
@@ -169,10 +169,10 @@ def preprocess_data(data, selected_feature_types):
 def create_nn_model(input_dim):
     tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
-    model.add(keras.layers.Dense(64, input_dim=input_dim, activation='relu'))
-    model.add(keras.layers.Dense(32, activation='relu'))
-    model.add(keras.layers.Dense(16, activation='relu'))
-    model.add(keras.layers.Dense(1, activation='sigmoid'))
+    model.add(layers.Dense(64, input_dim=input_dim, activation='relu'))
+    model.add(layers.Dense(32, activation='relu'))
+    model.add(layers.Dense(16, activation='relu'))
+    model.add(layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
@@ -181,12 +181,12 @@ def create_rnn_model(input_shape, rnn_type='LSTM'):
     tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
     if rnn_type == 'LSTM':
-        model.add(keras.layers.LSTM(64, input_shape=input_shape, return_sequences=True))
+        model.add(layers.LSTM(64, input_shape=input_shape, return_sequences=True))
     else:
-        model.add(keras.layers.GRU(64, input_shape=input_shape, return_sequences=True))
-    model.add(keras.layers.LSTM(32))
-    model.add(keras.layers.Dense(16, activation='relu'))
-    model.add(keras.layers.Dense(1, activation='sigmoid'))
+        model.add(layers.GRU(64, input_shape=input_shape, return_sequences=True))
+    model.add(layers.LSTM(32))
+    model.add(layers.Dense(16, activation='relu'))
+    model.add(layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
@@ -194,11 +194,11 @@ def create_rnn_model(input_shape, rnn_type='LSTM'):
 def create_cnn_model(input_shape):
     tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
-    model.add(keras.layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
-    model.add(keras.layers.MaxPooling1D(pool_size=2))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(32, activation='relu'))
-    model.add(keras.layers.Dense(1, activation='sigmoid'))
+    model.add(layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
+    model.add(layers.MaxPooling1D(pool_size=2))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(32, activation='relu'))
+    model.add(layers.Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
@@ -390,7 +390,7 @@ def run_advanced_model_exploration():
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
-            if task_type == "Classification":
+            if task type == "Classification":
                 model = KerasClassifier(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
