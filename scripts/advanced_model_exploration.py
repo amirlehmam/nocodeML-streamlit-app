@@ -1,20 +1,8 @@
 import os
 import warnings
-
-# Suppress TensorFlow warnings and messages
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress informational and warning messages
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations
-warnings.filterwarnings("ignore", category=DeprecationWarning)  # Suppress deprecation warnings
-
 import pandas as pd
 import numpy as np
 import streamlit as st
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, mean_squared_error, roc_curve, auc
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
-from sklearn.linear_model import LogisticRegression
 import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
@@ -22,22 +10,37 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
+from PIL import Image
+from io import BytesIO
+from scipy.stats import gaussian_kde
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score, classification_report, confusion_matrix, 
+    mean_squared_error, roc_curve, auc
+)
+from sklearn.ensemble import (
+    RandomForestClassifier, GradientBoostingClassifier, 
+    AdaBoostClassifier, StackingClassifier, RandomForestRegressor, 
+    GradientBoostingRegressor, StackingRegressor
+)
+from sklearn.linear import LogisticRegression
 from scikeras.wrappers import KerasClassifier, KerasRegressor
 from tqdm import tqdm
 from tqdm.keras import TqdmCallback
-from scipy.stats import gaussian_kde
-import shap
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-from PIL import Image
-from io import BytesIO
+
+# Suppress TensorFlow warnings and messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Use TensorFlow 1.x compatibility mode
 tf.compat.v1.disable_eager_execution()
 
+# Function to save plots to PDF
 def save_plots_to_pdf(c, plots, descriptions):
     width, height = letter
     for plot, description in zip(plots, descriptions):
@@ -62,6 +65,7 @@ def save_plots_to_pdf(c, plots, descriptions):
         c.drawImage(ImageReader(img), 10, height - img_height - 30, width=img_width, height=img_height)
         c.showPage()
 
+# Function to save text sections to PDF
 def save_text_to_pdf(c, text_sections):
     width, height = letter
     for description, text in text_sections:
@@ -80,6 +84,7 @@ def save_text_to_pdf(c, text_sections):
             current_line += 1
         c.showPage()
 
+# Function to save dataframes to PDF
 def save_dataframe_to_pdf(c, dataframes, descriptions):
     width, height = letter
     for df, description in zip(dataframes, descriptions):
@@ -99,6 +104,7 @@ def save_dataframe_to_pdf(c, dataframes, descriptions):
             current_line += 1
         c.showPage()
 
+# Function to save all elements to PDF
 def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, plot_descriptions):
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     save_text_to_pdf(c, text_sections)
@@ -106,12 +112,14 @@ def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descripti
     save_plots_to_pdf(c, plots, plot_descriptions)
     c.save()
 
+# Function to load data
 def load_data(data_dir):
     st.write(f"Loading data from {data_dir}...")
     data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
+# Function to preprocess data
 def preprocess_data(data, selected_feature_types):
     st.write("Preprocessing data...")
     if data.shape[1] < 8:
@@ -154,7 +162,7 @@ def preprocess_data(data, selected_feature_types):
     st.write("Data preprocessing completed.")
     return X_train, X_test, y_train, y_test, indicator_columns, data
 
-# Define Keras models
+# Function to create neural network model
 def create_nn_model(input_dim):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
@@ -165,6 +173,7 @@ def create_nn_model(input_dim):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
+# Function to create RNN model
 def create_rnn_model(input_shape, rnn_type='LSTM'):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
@@ -178,6 +187,7 @@ def create_rnn_model(input_shape, rnn_type='LSTM'):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
+# Function to create CNN model
 def create_cnn_model(input_shape):
     tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
     model = Sequential()
@@ -189,6 +199,7 @@ def create_cnn_model(input_shape):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
+# Function to calculate optimal win ranges
 def calculate_optimal_win_ranges(data, target='result', features=None):
     optimal_ranges = []
 
@@ -231,6 +242,7 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
 
     return optimal_ranges
 
+# Function to plot optimal win ranges
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
     plots = []
     descriptions = []
@@ -257,6 +269,7 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type}, {model_name})")
     return plots, descriptions
 
+# Function to summarize optimal win ranges
 def summarize_optimal_win_ranges(optimal_ranges):
     summary = []
     for item in optimal_ranges:
@@ -269,11 +282,13 @@ def summarize_optimal_win_ranges(optimal_ranges):
             })
     return pd.DataFrame(summary)
 
+# Function to reset session state
 def reset_session_state():
     st.session_state.current_step = "load_data"
     st.session_state.model_type = "Random Forest"
     st.session_state.feature_importances = {}
 
+# Function to run advanced model exploration
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
 
@@ -282,17 +297,14 @@ def run_advanced_model_exploration():
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
-    # Initialize feature_importances in session state
     if "feature_importances" not in st.session_state:
         st.session_state.feature_importances = {}
 
-    # Initialize session state for current step and model type
     if "current_step" not in st.session_state:
         st.session_state.current_step = "load_data"
     if "model_type" not in st.session_state:
         st.session_state.model_type = "Random Forest"
 
-    # Add multiselect for feature types
     selected_feature_types = st.multiselect(
         "Select Feature Types",
         ["Non-Market Value Data", "Percent Away Indicators", "Binary Indicators"],
@@ -319,29 +331,28 @@ def run_advanced_model_exploration():
     if "data" in st.session_state and "X_train" in st.session_state and st.session_state.current_step == "model_selection":
         st.write("Select model and hyperparameters for exploration")
 
-        # Model type and task selection
         task_type = st.radio("Select Task Type", ["Classification", "Regression"], index=0)
-        if task_type == "Classification":
-            model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select_classification")
-        else:
-            model_type = st.selectbox("Select Model Type", ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"], key="model_type_select_regression")
+        model_type = st.selectbox(
+            "Select Model Type", 
+            ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM", "Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN", "Stacking Ensemble"],
+            key="model_type_select"
+        )
 
         st.session_state.model_type_selected = model_type
         st.session_state.task_type_selected = task_type
 
         model_params = {}
-        model = None  # Initialize model as None
+        model = None
+
         if model_type == "Random Forest":
-            st.subheader("Random Forest Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=10)
             if task_type == "Classification":
                 model = RandomForestClassifier(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
             else:
                 model = RandomForestRegressor(n_estimators=model_params['n_estimators'], max_depth=model_params['max_depth'], random_state=42)
-        
+
         elif model_type == "Gradient Boosting":
-            st.subheader("Gradient Boosting Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
@@ -351,7 +362,6 @@ def run_advanced_model_exploration():
                 model = GradientBoostingRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "XGBoost":
-            st.subheader("XGBoost Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
@@ -361,7 +371,6 @@ def run_advanced_model_exploration():
                 model = xgb.XGBRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "LightGBM":
-            st.subheader("LightGBM Parameters")
             model_params['n_estimators'] = st.slider("Number of Trees", min_value=10, max_value=500, value=100)
             model_params['learning_rate'] = st.slider("Learning Rate", min_value=0.01, max_value=0.3, value=0.1)
             model_params['max_depth'] = st.slider("Max Depth of Trees", min_value=1, max_value=20, value=3)
@@ -371,7 +380,6 @@ def run_advanced_model_exploration():
                 model = lgb.LGBMRegressor(n_estimators=model_params['n_estimators'], learning_rate=model_params['learning_rate'], max_depth=model_params['max_depth'], random_state=42)
 
         elif model_type == "Neural Network":
-            st.subheader("Neural Network Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_dim = st.session_state.X_train.shape[1]
@@ -381,7 +389,6 @@ def run_advanced_model_exploration():
                 model = KerasRegressor(model=create_nn_model, model__input_dim=input_dim, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "RNN (LSTM)":
-            st.subheader("RNN (LSTM) Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
@@ -390,8 +397,7 @@ def run_advanced_model_exploration():
             else:
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='LSTM', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
-        elif model type == "RNN (GRU)":
-            st.subheader("RNN (GRU) Parameters")
+        elif model_type == "RNN (GRU)":
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
@@ -401,7 +407,6 @@ def run_advanced_model_exploration():
                 model = KerasRegressor(model=create_rnn_model, model__input_shape=input_shape, model__rnn_type='GRU', epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
 
         elif model_type == "CNN":
-            st.subheader("CNN Parameters")
             model_params['epochs'] = st.slider("Number of Epochs", min_value=10, max_value=1000, value=100)
             model_params['batch_size'] = st.slider("Batch Size", min_value=10, max_value=128, value=32)
             input_shape = (st.session_state.X_train.shape[1], 1)
@@ -411,7 +416,6 @@ def run_advanced_model_exploration():
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
         
         elif model_type == "Stacking Ensemble":
-            st.subheader("Stacking Ensemble Parameters")
             if task_type == "Classification":
                 base_learners = [
                     ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
@@ -436,8 +440,7 @@ def run_advanced_model_exploration():
                     if model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         model.fit(st.session_state.X_train, st.session_state.y_train, callbacks=[TqdmCallback(verbose=1)])
                     else:
-                        for _ in tqdm(range(1), desc=f"Training {model_type}"):
-                            model.fit(st.session_state.X_train, st.session_state.y_train)
+                        model.fit(st.session_state.X_train, st.session_state.y_train)
                     y_pred = model.predict(st.session_state.X_test)
 
                     plots = []
@@ -480,28 +483,23 @@ def run_advanced_model_exploration():
                         feature_importances = model.feature_importances_
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        top_15_importance_df = importance_df.head(15)  # Select top 15 features
+                        top_15_importance_df = importance_df.head(15)
                         fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
-                        
-                        # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
                         descriptions.append("Feature Importance")
                     elif model_type in ["Neural Network", "RNN (LSTM)", "RNN (GRU)", "CNN"]:
                         st.write("Calculating feature importances using SHAP...")
-                        # Extract the underlying Keras model from the KerasClassifier
                         underlying_model = model.model_
                         explainer = shap.Explainer(underlying_model, st.session_state.X_train)
                         shap_values = explainer(st.session_state.X_test)
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        top_15_importance_df = importance_df.head(15)  # Select top 15 features
+                        top_15_importance_df = importance_df.head(15)
                         fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
-                        
-                        # Initialize feature_importances in session state
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
                         descriptions.append("Feature Importance")
@@ -509,7 +507,6 @@ def run_advanced_model_exploration():
                     st.session_state.current_step = "eda"
                     st.session_state.model_type_selected = model_type
 
-                    # Optimal Win Ranges
                     st.subheader("Optimal Win Ranges")
                     top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(st.session_state.indicator_columns)], index=2)
                     if not importance_df.empty:
@@ -531,11 +528,9 @@ def run_advanced_model_exploration():
                     dataframes.append(optimal_win_ranges_summary)
                     dataframe_descriptions.append("Optimal Win Ranges Summary")
 
-                    # Additional EDA
-                    model_type = st.session_state.model_type_selected  # Ensure model_type is retrieved from session state
-                    optimal_ranges = st.session_state.optimal_ranges  # Ensure optimal_ranges is retrieved from session state
+                    model_type = st.session_state.model_type_selected
+                    optimal_ranges = st.session_state.optimal_ranges
 
-                    # Feature importance heatmap
                     if model_type in st.session_state.feature_importances:
                         st.write("Feature Importance Heatmap:")
                         feature_importance_values = st.session_state.feature_importances[model_type]
@@ -544,7 +539,6 @@ def run_advanced_model_exploration():
                         plots.append(fig)
                         descriptions.append("Feature Importance Heatmap")
 
-                    # Correlation matrix
                     st.write("Correlation Matrix of Top Indicators:")
                     selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
                     if selected_model in st.session_state.feature_importances:
@@ -556,7 +550,6 @@ def run_advanced_model_exploration():
                         plots.append(fig)
                         descriptions.append("Correlation Matrix of Top Indicators")
 
-                    # Detailed Indicator Analysis
                     st.write("Detailed Indicator Analysis")
                     selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
                     if selected_indicator:
@@ -573,7 +566,6 @@ def run_advanced_model_exploration():
                         plots.append(fig)
                         descriptions.append(f"Distribution of {selected_indicator} for Winning and Losing Trades")
 
-                        # KDE plot with winning ranges
                         kde_win = gaussian_kde(win_data)
                         kde_loss = gaussian_kde(loss_data)
                         x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
@@ -593,7 +585,6 @@ def run_advanced_model_exploration():
                         plots.append(fig)
                         descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
 
-                        # Additional plots for loss mitigation strategy
                         st.write("Loss Mitigation Analysis")
                         loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
                         st.write(loss_conditions)
@@ -604,7 +595,6 @@ def run_advanced_model_exploration():
                         dataframes.append(loss_conditions)
                         dataframe_descriptions.append("Loss Mitigation Analysis")
 
-                    # Save all elements to a single PDF
                     pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_complete_analysis.pdf')
                     save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, descriptions)
                     st.write(f"Saved complete analysis to {pdf_filename}")
