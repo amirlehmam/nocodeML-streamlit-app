@@ -28,7 +28,7 @@ def load_and_preprocess_data(data_dir):
     return data
 
 # Function to calculate and display performance metrics
-def calculate_performance_metrics(data, output_path="tearsheet.html", custom_css_path="custom_style.css"):
+def calculate_performance_metrics(data, output_path="tearsheet.html"):
     # Ensure 'time' is the index and sorted
     data.set_index('time', inplace=True)
     data.sort_index(inplace=True)
@@ -45,6 +45,9 @@ def calculate_performance_metrics(data, output_path="tearsheet.html", custom_css
     # Read the generated HTML file and embed it in the Streamlit app
     with open(output_path, 'r') as f:
         html_content = f.read()
+    
+    # Get the absolute path of the custom CSS file
+    custom_css_path = os.path.join(os.path.dirname(__file__), 'custom_style.css')
     
     # Insert custom CSS into the HTML content
     with open(custom_css_path, 'r') as css_file:
