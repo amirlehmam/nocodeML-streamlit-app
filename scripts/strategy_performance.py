@@ -82,6 +82,7 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     })
 
     st.write("### Key Performance Metrics")
+    
     st.dataframe(metrics_df)
 
     st.write("### Detailed Performance Report")
