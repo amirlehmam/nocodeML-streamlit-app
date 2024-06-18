@@ -1,5 +1,4 @@
 # strategy_perfomance.py
-
 import os
 import pandas as pd
 import streamlit as st
@@ -30,7 +29,7 @@ def load_and_preprocess_data(data_dir):
     return data
 
 # Function to calculate and display performance metrics
-def calculate_performance_metrics(data, output_path="tearsheet.html"):
+def calculate_performance_metrics(data, output_path="tearsheet.html", custom_css_path="custom_style.css"):
     # Ensure 'time' is the index and sorted
     data.set_index('time', inplace=True)
     data.sort_index(inplace=True)
@@ -47,7 +46,14 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     # Read the generated HTML file and embed it in the Streamlit app
     with open(output_path, 'r') as f:
         html_content = f.read()
-        
+    
+    # Insert custom CSS into the HTML content
+    with open(custom_css_path, 'r') as css_file:
+        css_content = css_file.read()
+    
+    style_tag = f'<style>{css_content}</style>'
+    html_content = html_content.replace('<head>', f'<head>{style_tag}')
+    
     st.components.v1.html(html_content, height=800, scrolling=True)
 
 # Main function for Streamlit app

@@ -132,7 +132,7 @@ def ma_convergence():
     run_moving_average_convergence()
 
 def strategy_performance():
-    from strategy_performance import run_strategy_performance
+    from scripts.strategy_performance import run_strategy_performance
     run_strategy_performance()
 
 # Mapping page names to functions
