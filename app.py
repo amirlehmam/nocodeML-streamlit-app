@@ -131,6 +131,10 @@ def ma_convergence():
     from scripts.ma_convergence import run_moving_average_convergence
     run_moving_average_convergence()
 
+def strategy_performance():
+    from strategy_performance import run_strategy_performance
+    run_strategy_performance()
+
 # Mapping page names to functions
 page_dict = {
     'Overview': overview,
@@ -143,7 +147,8 @@ page_dict = {
     '% Away Indicators': model_percentage_away,
     'Model Focus': specific_model_focus,
     'EDA Specific': advanced_eda_specific_model,
-    'Ranges Specific': win_ranges_specific_model
+    'Ranges Specific': win_ranges_specific_model,
+    'Strategy Performance': strategy_performance
 }
 
 def main():
@@ -307,7 +312,7 @@ def main():
 
         # Navigation bar
         pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'EDA Indicators',
-                 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific']
+                 'Win Ranges', '% Away Indicators', 'Model Focus', 'EDA Specific', 'Ranges Specific', 'Strategy Performance']
         styles = {
             "nav": {
                 "background-color": "royalblue",
