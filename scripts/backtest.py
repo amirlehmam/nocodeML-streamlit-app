@@ -3,6 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from tqdm import tqdm
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -10,12 +15,6 @@ def reverse_array(arr):
 
 def sum_of_values(arr):
     return np.sum(arr)
-
-def is_rising(arr):
-    return arr[-1] > arr[-2]
-
-def is_falling(arr):
-    return arr[-1] < arr[-2]
 
 def cross_above(series1, series2):
     return (series1.shift(1) < series2.shift(1)) & (series1 > series2)
@@ -31,142 +30,33 @@ def draw_triangle_down(data, index, color):
 
 # Strategy Class
 class Delta2Strategy:
-    def __init__(self, data):
+    def __init__(self, data, starting_capital=300000):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
+        self.starting_capital = starting_capital
         self.position = 0
         self.entry_price = 0.0
-        self.stop_loss = 0.0
-        self.take_profit = 0.0
+        self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
+        self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
         self._initialize_parameters()
         self._initialize_indicators()
         self._initialize_fibonacci()
 
     def _initialize_parameters(self):
-        self.description = "VERSION FIB weight MA entry Raw indicator print Real Time Logger"
-        self.name = "Δ_2"
-        self.calculate_on_bar_close = True
-        self.default_quantity = 1
-        self.entries_per_direction = 1
-        self.entry_handling = 'UniqueEntries'
-        self.exit_on_session_close = True
-        self.exit_on_session_close_seconds = 3600
-        self.include_commission = True
         self.bars_required_to_trade = 200
+        self.default_quantity = 1
 
-        self.enable_cci = True
-        self.enable_awesome = True
-        self.enable_rsi = True
-        self.enable_dynamic_momentum = True
-        self.enable_adx_filter = True
-        self.sunday = True
-        self.monday = True
-        self.tuesday = True
-        self.wednesday = True
-        self.thursday = True
-        self.friday = True
-        self.enable_time_filter1 = False
-        self.start_time1 = '06:30:00'
-        self.stop_time1 = '08:30:00'
-        self.enable_time_filter2 = False
-        self.start_time2 = '09:30:00'
-        self.stop_time2 = '11:55:00'
-        self.enable_time_filter3 = False
-        self.start_time3 = '14:00:00'
-        self.stop_time3 = '16:30:00'
-        self.enable_long = True
-        self.enable_short = True
-        self.stay_in_trade_flat_first = False
-        self.enable_limit_orders_overrides_market = False
-        self.enter_limit_outside_of_signal = False
-        self.ticks_away_from_signal = 30
-        self.chart_execution_mark = False
-
-        self.qty_entry1 = 1
-        self.entry2 = True
-        self.qty_entry2 = 1
-        self.entry3 = False
-        self.qty_entry3 = 1
-        self.entry4 = False
-        self.qty_entry4 = 1
-        self.entry5 = False
-        self.qty_entry5 = 1
-
-        self.all_entries_sl = 90.0
-        self.tp1 = True
-        self.target1 = 88.0
-        self.tp2 = True
-        self.target2 = 144.0
-        self.tp3 = True
-        self.target3 = 166.0
-        self.tp4 = True
-        self.target4 = 233.0
-        self.tp5 = True
-        self.target5 = 377.0
-        self.simulated_stop_fixed = True
-        self.simulated_stop_psar = True
-        self.psar_acceleration = 0.02
-        self.psar_max_acceleration = 0.2
-        self.psar_acceleration_step = 0.02
-        self.print_trade_log = False
-        self.print_indicator_values = False
-        self.print_to_csv = False
-        self.file_name = "Test"
-        self.enable_debug = False
         self.enable_fib_weight_ma_cross = True
-        self.show_fib_weight_mas = False
         self.fib_weight_ma_period = 10
         self.smoothing_simple_ma_period = 20
-        self.exit_on_fib_counter_cross = False
-        self.enable_macd_cross = False
-        self.show_macd = False
-        self.macd_fast_ema = 12
-        self.macd_slow_ema = 26
-        self.ema_signal_line = 9
-        self.enable_distance_from_vwap = False
-        self.enable_distance_from_bolli500_mid = False
-        self.show_cp_day = False
-        self.show_gann_lines = False
 
     def _initialize_indicators(self):
         self.zlema8 = self.calculate_zlema(8)
-        self.ma_envelopes14 = self.calculate_ma_envelopes(14)
-        self.sma1000 = self.calculate_sma(1000)
         self.zlema62 = self.calculate_zlema(62)
-        self.ema382 = self.calculate_ema(382)
-        self.ema236 = self.calculate_ema(236)
-        self.volume = self.data['volume']
-        self.aroon = self.calculate_aroon(14)
-        self.directional_movement = self.calculate_dm(14)
-        self.disparity_index = self.calculate_disparity_index(25)
-        self.atr_filter = self.calculate_atr(14)
-        self.macd = self.calculate_macd(self.macd_fast_ema, self.macd_slow_ema, self.ema_signal_line)
-        self.adx = self.calculate_adx(14)
-        self.vortex = self.calculate_vortex(14)
-        self.polarized_fractal_efficiency = self.calculate_pfe(14, 10)
-        self.williams_r = self.calculate_williams_r(14)
-        self.momentum = self.calculate_momentum(14)
-        self.cci = self.calculate_cci(14)
-        self.rsi = self.calculate_rsi(14, 3)
-        self.trix = self.calculate_trix(14, 3)
-        self.chaikin = self.calculate_chaikin(3, 10)
-        self.fisher_transform = self.calculate_fisher_transform(10)
-        self.zlema233 = self.calculate_zlema(233)
-        self.ema618 = self.calculate_ema(618)
-        self.sma144 = self.calculate_sma(144)
-        self.ma_envelopes3 = self.calculate_ma_envelopes(3)
-        self.obv = self.calculate_obv()
-        self.rind = self.calculate_rind(3, 10)
-        self.bolli500 = self.calculate_bolli(500)
-        self.zlema13 = self.calculate_zlema(13)
-        self.stoch_fast = self.calculate_stochastics_fast(3, 14)
-        self.cmo = self.calculate_cmo(14)
-        self.rss = self.calculate_rss(10, 40, 5)
-        self.apz = self.calculate_apz(20)
-        self.linreg = self.calculate_linreg(14)
-        self.dynamic_momentum = self.calculate_dynamic_momentum(3)
+        self.atr = self.calculate_atr(14)
+        self.psar = self.calculate_psar()
 
     def _initialize_fibonacci(self):
         self.fib_weightings = np.zeros(self.fib_weight_ma_period)
@@ -195,198 +85,116 @@ class Delta2Strategy:
     def calculate_zlema(self, period):
         return self.data['close'].ewm(span=period).mean()
 
-    def calculate_ema(self, period):
-        return self.data['close'].ewm(span=period).mean()
-
-    def calculate_sma(self, period):
-        return self.data['close'].rolling(window=period).mean()
-
-    def calculate_ma_envelopes(self, period):
-        return (self.data['close'].rolling(window=period).mean(),
-                self.data['close'].rolling(window=period).mean() * 1.05,
-                self.data['close'].rolling(window=period).mean() * 0.95)
-
-    def calculate_aroon(self, period):
-        aroon_up = pd.Series(self.data['high'].rolling(window=period).apply(lambda x: (x.argmax() + 1) / period))
-        aroon_down = pd.Series(self.data['low'].rolling(window=period).apply(lambda x: (x.argmin() + 1) / period))
-        return aroon_up, aroon_down
-
-    def calculate_dm(self, period):
-        dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
-        dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
-        return dm_plus.rolling(window=period).mean() / tr.rolling(window=period).mean(), dm_minus.rolling(window=period).mean() / tr.rolling(window=period).mean()
-
-    def calculate_disparity_index(self, period):
-        return (self.data['close'] - self.data['close'].rolling(window=period).mean()) / self.data['close'].rolling(window=period).mean()
-
     def calculate_atr(self, period):
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
+        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], 
+                                          (self.data['high'] - self.data['close'].shift()).abs(), 
+                                          (self.data['low'] - self.data['close'].shift()).abs()]))
         self.data['atr'] = tr.rolling(window=period).mean()
         return self.data['atr']
 
-    def calculate_macd(self, fast_period, slow_period, signal_period):
-        ema_fast = self.data['close'].ewm(span=fast_period).mean()
-        ema_slow = self.data['close'].ewm(span=slow_period).mean()
-        macd_line = ema_fast - ema_slow
-        signal_line = macd_line.ewm(span=signal_period).mean()
-        return macd_line, signal_line, macd_line - signal_line
+    def calculate_psar(self):
+        high = self.data['high']
+        low = self.data['low']
+        close = self.data['close']
 
-    def calculate_adx(self, period):
-        dm_plus = pd.Series(self.data['high'].diff().clip(lower=0))
-        dm_minus = pd.Series(self.data['low'].diff().clip(upper=0).abs())
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
-        dx = (abs(dm_plus - dm_minus) / (dm_plus + dm_minus)).rolling(window=period).mean()
-        self.data['adx'] = dx.ewm(span=period).mean()
-        return self.data['adx']
+        af = 0.02
+        max_af = 0.2
+        psar = np.zeros(len(close))
+        bull = True
+        ep = low[0]
+        hp = high[0]
+        lp = low[0]
 
-    def calculate_vortex(self, period):
-        vm_plus = pd.Series(self.data['high'] - self.data['low'].shift()).abs()
-        vm_minus = pd.Series(self.data['low'] - self.data['high'].shift()).abs()
-        tr = pd.Series(np.maximum.reduce([self.data['high'] - self.data['low'], (self.data['high'] - self.data['close'].shift()).abs(), (self.data['low'] - self.data['close'].shift()).abs()]))
-        return vm_plus.rolling(window=period).sum() / tr.rolling(window=period).sum(), vm_minus.rolling(window=period).sum() / tr.rolling(window=period).sum()
+        for i in range(1, len(close)):
+            psar[i] = psar[i - 1] + af * (hp if bull else lp - psar[i - 1])
+            reverse = False
 
-    def calculate_pfe(self, period, smoothing_period):
-        delta = self.data['close'].diff(period).abs()
-        price_change = (self.data['close'] - self.data['close'].shift(period)).abs()
-        smoothing = self.data['close'].rolling(window=smoothing_period).mean()
-        return price_change / delta
+            if bull:
+                if low[i] < psar[i]:
+                    bull = False
+                    psar[i] = hp
+                    lp = low[i]
+                    af = 0.02
+                    reverse = True
+            else:
+                if high[i] > psar[i]:
+                    bull = True
+                    psar[i] = lp
+                    hp = high[i]
+                    af = 0.02
+                    reverse = True
 
-    def calculate_williams_r(self, period):
-        high_max = self.data['high'].rolling(window=period).max()
-        low_min = self.data['low'].rolling(window=period).min()
-        return (high_max - self.data['close']) / (high_max - low_min) * -100
+            if not reverse:
+                if bull:
+                    if high[i] > hp:
+                        hp = high[i]
+                        af = min(af + 0.02, max_af)
+                    if i > 1 and low[i - 1] < psar[i]:
+                        psar[i] = low[i - 1]
+                    if i > 2 and low[i - 2] < psar[i]:
+                        psar[i] = low[i - 2]
+                else:
+                    if low[i] < lp:
+                        lp = low[i]
+                        af = min(af + 0.02, max_af)
+                    if i > 1 and high[i - 1] > psar[i]:
+                        psar[i] = high[i - 1]
+                    if i > 2 and high[i - 2] > psar[i]:
+                        psar[i] = high[i - 2]
 
-    def calculate_momentum(self, period):
-        return self.data['close'].diff(period)
+        self.data['PSAR'] = psar
+        return psar
 
-    def calculate_cci(self, period):
-        typical_price = (self.data['high'] + self.data['low'] + self.data['close']) / 3
-        return (typical_price - typical_price.rolling(window=period).mean()) / (0.015 * typical_price.rolling(window=period).std())
-
-    def calculate_rsi(self, period, smoothing_period):
-        delta = self.data['close'].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        rs = avg_gain / avg_loss
-        return 100 - (100 / (1 + rs))
-
-    def calculate_trix(self, period, signal_period):
-        trix = self.data['close'].ewm(span=period).mean()
-        trix_signal = trix.ewm(span=signal_period).mean()
-        return trix, trix_signal
-
-    def calculate_chaikin(self, fast_period, slow_period):
-        ad = (2 * self.data['close'] - self.data['low'] - self.data['high']) / (self.data['high'] - self.data['low']) * self.data['volume']
-        chaikin_osc = ad.ewm(span=fast_period).mean() - ad.ewm(span=slow_period).mean()
-        return chaikin_osc
-
-    def calculate_fisher_transform(self, period):
-        high = self.data['high'].rolling(window=period).max()
-        low = self.data['low'].rolling(window=period).min()
-        value = 0.33 * 2 * ((self.data['close'] - low) / (high - low) - 0.5) + 0.67 * self.data['close'].shift()
-        return value
-
-    def calculate_obv(self):
-        return (np.sign(self.data['close'].diff()) * self.data['volume']).cumsum()
-
-    def calculate_rind(self, short_period, long_period):
-        return (self.data['close'].ewm(span=short_period).mean() - self.data['close'].ewm(span=long_period).mean())
-
-    def calculate_bolli(self, period):
-        middle_band = self.data['close'].rolling(window=period).mean()
-        upper_band = middle_band + 2 * self.data['close'].rolling(window=period).std()
-        lower_band = middle_band - 2 * self.data['close'].rolling(window=period).std()
-        return upper_band, middle_band, lower_band
-
-    def calculate_stochastics_fast(self, period_k, period_d):
-        min_low = self.data['low'].rolling(window=period_k).min()
-        max_high = self.data['high'].rolling(window=period_k).max()
-        fast_k = 100 * (self.data['close'] - min_low) / (max_high - min_low)
-        fast_d = fast_k.rolling(window=period_d).mean()
-        return fast_k, fast_d
-
-    def calculate_cmo(self, period):
-        return self.data['close'].diff(period)
-
-    def calculate_rss(self, short_period, long_period, smooth_period):
-        rss = (self.data['close'].ewm(span=short_period).mean() - self.data['close'].ewm(span=long_period).mean()).rolling(window=smooth_period).mean()
-        return rss
-
-    def calculate_apz(self, period):
-        return self.data['close'].rolling(window=period).mean() + 2 * self.data['close'].rolling(window=period).std()
-
-    def calculate_linreg(self, period):
-        return self.data['close'].rolling(window=period).apply(lambda x: np.polyfit(np.arange(len(x)), x, 1)[0])
-
-    def calculate_dynamic_momentum(self, period):
-        return self.data['close'].diff(period)
-
-    def _bar_update(self):
-        if len(self.data) < self.bars_required_to_trade:
+    def _bar_update(self, i):
+        if i < self.bars_required_to_trade:
             return
 
         if self.enable_fib_weight_ma_cross:
             self._calculate_fib_weighted_ma()
 
-        self._generate_signals()
-        self._manage_positions()
-        self._log_trade()
+        self._generate_signals(i)
+        self._manage_positions(i)
 
-    def _generate_signals(self):
-        self.signals['buy_signal'] = self._buy_signal()
-        self.signals['sell_signal'] = self._sell_signal()
-
-    def _buy_signal(self):
-        buy_signal = np.zeros(len(self.data))
+    def _generate_signals(self, i):
         if self.enable_fib_weight_ma_cross:
-            buy_signal = cross_above(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])
-        return buy_signal
+            self.signals['buy_signal'][i] = cross_above(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])[i]
+            self.signals['sell_signal'][i] = cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])[i]
 
-    def _sell_signal(self):
-        sell_signal = np.zeros(len(self.data))
-        if self.enable_fib_weight_ma_cross:
-            sell_signal = cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])
-        return sell_signal
-
-    def _manage_positions(self):
-        for i in range(len(self.data)):
-            if self.position == 0:
-                if self.signals['buy_signal'][i]:
-                    self._enter_position(i, 'long')
-                elif self.signals['sell_signal'][i]:
-                    self._enter_position(i, 'short')
-            elif self.position > 0:
-                if self.signals['sell_signal'][i] or self.data['close'][i] <= self.stop_loss or self.data['close'][i] >= self.take_profit:
-                    self._exit_position(i)
-            elif self.position < 0:
-                if self.signals['buy_signal'][i] or self.data['close'][i] >= self.stop_loss or self.data['close'][i] <= self.take_profit:
-                    self._exit_position(i)
+    def _manage_positions(self, i):
+        if self.position == 0:
+            if self.signals['buy_signal'][i]:
+                self._enter_position(i, 'long')
+            elif self.signals['sell_signal'][i]:
+                self._enter_position(i, 'short')
+        elif self.position > 0:
+            if self.signals['sell_signal'][i] or self.data['close'][i] <= self.stop_loss[i] or self.data['close'][i] >= self.take_profit[i]:
+                self._exit_position(i)
+        elif self.position < 0:
+            if self.signals['buy_signal'][i] or self.data['close'][i] >= self.stop_loss[i] or self.data['close'][i] <= self.take_profit[i]:
+                self._exit_position(i)
 
     def _enter_position(self, index, direction):
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['close'][index]
-            self.stop_loss = self.data['PSAR'][index] if 'PSAR' in self.data.columns else 0.0
-            self.take_profit = self.entry_price + 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 1.02
+            self.stop_loss[index] = self.data['PSAR'][index]
+            self.take_profit[index] = self.entry_price + 2 * self.data['atr'][index]
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['close'][index]
-            self.stop_loss = self.data['PSAR'][index] if 'PSAR' in self.data.columns else 0.0
-            self.take_profit = self.entry_price - 2 * self.data['atr'][index] if 'atr' in self.data.columns else self.entry_price * 0.98
+            self.stop_loss[index] = self.data['PSAR'][index]
+            self.take_profit[index] = self.entry_price - 2 * self.data['atr'][index]
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
         if self.position > 0:
-            self.pnl += self.data['close'][index] - self.entry_price
+            self.pnl += (self.data['close'][index] - self.entry_price) * self.default_quantity
         elif self.position < 0:
-            self.pnl += self.entry_price - self.data['close'][index]
+            self.pnl += (self.entry_price - self.data['close'][index]) * self.default_quantity
         self.position = 0
         self.entry_price = 0.0
-        self.stop_loss = 0.0
-        self.take_profit = 0.0
+        self.stop_loss[index] = 0.0
+        self.take_profit[index] = 0.0
         self._log_exit(index)
 
     def _log_entry(self, index, direction):
@@ -412,16 +220,36 @@ class Delta2Strategy:
         }
         self.trade_log.append(log_exit)
 
-    def _log_trade(self):
-        if self.print_trade_log:
-            for log in self.trade_log:
-                print(log)
-
     def execute_strategy(self):
-        for i in tqdm(range(len(self.data)), desc="Executing Strategy", unit="bar"):
-            self._bar_update()
-            if i % 10000 == 0:
-                print(f"Processed {i} bars")
+        logger.info("Executing strategy")
+        if self.enable_fib_weight_ma_cross:
+            self._calculate_fib_weighted_ma()
+
+        self.signals['buy_signal'] = cross_above(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])
+        self.signals['sell_signal'] = cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'])
+
+        self._manage_positions_vectorized()
+
+    def _manage_positions_vectorized(self):
+        buy_indices = np.where(self.signals['buy_signal'])[0]
+        sell_indices = np.where(self.signals['sell_signal'])[0]
+
+        # Vectorized buy logic
+        for index in buy_indices:
+            self._enter_position(index, 'long')
+
+        # Vectorized sell logic
+        for index in sell_indices:
+            self._enter_position(index, 'short')
+
+        # Vectorized exit logic
+        for i in range(len(self.data)):
+            if self.position > 0:
+                if self.signals['sell_signal'][i] or self.data['close'][i] <= self.stop_loss[i] or self.data['close'][i] >= self.take_profit[i]:
+                    self._exit_position(i)
+            elif self.position < 0:
+                if self.signals['buy_signal'][i] or self.data['close'][i] >= self.stop_loss[i] or self.data['close'][i] <= self.take_profit[i]:
+                    self._exit_position(i)
 
     def plot_trades(self, renko_data, speed=0.1):
         fig, ax = plt.subplots(1, figsize=(10, 5))
@@ -447,17 +275,17 @@ class Delta2Strategy:
                 y = price
 
             ax.add_patch(patches.Rectangle((x + 1, y), height=renko_data['brick_size'], width=1, facecolor=facecolor))
-            
+
             # Annotate trade actions on the Renko chart
             for log in self.trade_log:
                 if log['timestamp'] == date:
                     if log['action'] == 'enter':
                         if log['direction'] == 'long':
-                            draw_triangle_up(self.data['close'], log['timestamp'], 'blue')
+                            draw_triangle_up(renko_data['price'], x + 1, 'blue')
                         elif log['direction'] == 'short':
-                            draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+                            draw_triangle_down(renko_data['price'], x + 1, 'blue')
                     elif log['action'] == 'exit':
-                        draw_triangle_down(self.data['close'], log['timestamp'], 'blue')
+                        draw_triangle_down(renko_data['price'], x + 1, 'blue')
 
             if x + 1 >= x_max:  # Extend x-axis limit dynamically
                 x_max += 50
@@ -478,29 +306,25 @@ class Delta2Strategy:
         x_labels = [renko_data['date'][int(tick)-1] if 0 <= int(tick)-1 < len(renko_data['date']) else '' for tick in x_ticks]
         ax.set_xticklabels(x_labels, rotation=45, ha='right')
 
-        plt.show(block=True)  # Ensure the plot window stays open
+        plt.show(block=True)
 
 class Renko:
     def __init__(self, df=None, filename=None, interval=None):
         if filename:
             try:
                 df = pd.read_csv(filename, delimiter=';', header=None, engine='python', on_bad_lines='skip')
-                print("Raw Data:")
-                print(df.head(10))
+                logger.info("Raw Data:")
+                logger.info(df.head(10))
 
-                # Define the base columns
                 base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
                 extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
                 df.columns = base_columns + extra_columns
 
-                # Parse timestamps
                 df['date'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
 
-                # Initialize a list to collect valid price values
                 price_values = []
                 timestamps = []
 
-                # Function to check and add valid prices to the list
                 def check_and_add_price(row):
                     for column in ['Operation', 'Price'] + extra_columns:
                         price_str = row[column]
@@ -514,15 +338,12 @@ class Renko:
                         except ValueError:
                             pass
 
-                # Iterate through the rows and apply the function
                 df.apply(check_and_add_price, axis=1)
 
-                # Create a DataFrame from the collected valid price values
                 df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
 
-                # Debugging statement
-                print("Filtered Data with Prices:")
-                print(df_filtered.head(10))
+                logger.info("Filtered Data with Prices:")
+                logger.info(df_filtered.head(10))
 
             except FileNotFoundError:
                 raise FileNotFoundError(f"{filename}\n\nDoes not exist.")
@@ -533,7 +354,6 @@ class Renko:
         self.close = df_filtered['Price'].values
 
     def set_brick_size(self, brick_size=30, brick_threshold=5):
-        """ Setting brick size """
         self.brick_size = brick_size
         self.brick_threshold = brick_threshold
         return self.brick_size
@@ -562,7 +382,6 @@ class Renko:
         return renko_price[-1], renko_direction[-1], renko_date[-1], renko_index[-1], num_bricks
 
     def build(self):
-        """ Create Renko data """
         if self.df.empty:
             raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
         
@@ -588,10 +407,9 @@ class Renko:
         dates = self.renko['date']
         brick_size = self.brick_size
 
-        # Debugging output
-        print(f"Prices: {prices}")
-        print(f"Directions: {directions}")
-        print(f"Brick size: {brick_size}")
+        logger.info(f"Prices: {prices}")
+        logger.info(f"Directions: {directions}")
+        logger.info(f"Brick size: {brick_size}")
 
         fig, ax = plt.subplots(1, figsize=(10, 5))
         fig.suptitle(f"Renko Chart (brick size = {round(brick_size, 2)})", fontsize=20)
@@ -600,7 +418,7 @@ class Renko:
         plt.rc('font', size=16)
 
         x_min = 0
-        x_max = 50  # Initial x-axis limit
+        x_max = 50
         y_min = min(prices) - 2 * brick_size
         y_max = max(prices) + 2 * brick_size
 
@@ -617,7 +435,7 @@ class Renko:
 
             ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
             
-            if x + 1 >= x_max:  # Extend x-axis limit dynamically
+            if x + 1 >= x_max:
                 x_max += 50
                 ax.set_xlim(x_min, x_max)
 
@@ -631,12 +449,11 @@ class Renko:
 
             plt.pause(speed)
 
-        # Convert x-ticks to dates
         x_ticks = ax.get_xticks()
         x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
         ax.set_xticklabels(x_labels, rotation=45, ha='right')
 
-        plt.show(block=True)  # Ensure the plot window stays open
+        plt.show(block=True)
 
 # Usage example
 if __name__ == "__main__":
@@ -645,26 +462,21 @@ if __name__ == "__main__":
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
 
-    # Initialize and run the strategy with renko data
     renko_df = pd.DataFrame({
         'close': renko_chart.df['Price'],
         'date': renko_chart.df['date'],
-        'high': renko_chart.df['Price'],  # Placeholder, replace with actual 'high' data if available
-        'low': renko_chart.df['Price'],   # Placeholder, replace with actual 'low' data if available
-        'open': renko_chart.df['Price'],  # Placeholder, replace with actual 'open' data if available
-        'volume': 1  # Placeholder volume data
+        'high': renko_chart.df['Price'],
+        'low': renko_chart.df['Price'],
+        'open': renko_chart.df['Price'],
+        'volume': 1
     })
-
 
     strategy = Delta2Strategy(renko_df)
     strategy.calculate_indicators()
     strategy.execute_strategy()
-
-    # Plot trades with Renko chart
     strategy.plot_trades(renko_data, speed=0.1)
 
-    # Print strategy performance
-    print("Final PnL:", strategy.pnl)
-    print("Trade Log:")
+    logger.info(f"Final PnL: {strategy.pnl}")
+    logger.info("Trade Log:")
     for log in strategy.trade_log:
-        print(log)
+        logger.info(log)
