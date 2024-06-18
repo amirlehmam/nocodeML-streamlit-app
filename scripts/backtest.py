@@ -3,8 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from tqdm import tqdm
-import numba
-from numba import jit
 
 # Custom Functions and Helper Methods
 def reverse_array(arr):
@@ -355,14 +353,17 @@ class Delta2Strategy:
 
     def _manage_positions(self):
         for i in range(len(self.data)):
-            if self.position == 0 and self.signals['buy_signal'][i]:
-                self._enter_position(i, 'long')
-            elif self.position > 0 and self.signals['sell_signal'][i]:
-                self._exit_position(i)
-            elif self.position < 0 and self.signals['buy_signal'][i]:
-                self._exit_position(i)
-            if self.position != 0:
-                self._apply_money_management(i)
+            if self.position == 0:
+                if self.signals['buy_signal'][i]:
+                    self._enter_position(i, 'long')
+                elif self.signals['sell_signal'][i]:
+                    self._enter_position(i, 'short')
+            elif self.position > 0:
+                if self.signals['sell_signal'][i] or self.data['close'][i] <= self.stop_loss or self.data['close'][i] >= self.take_profit:
+                    self._exit_position(i)
+            elif self.position < 0:
+                if self.signals['buy_signal'][i] or self.data['close'][i] >= self.stop_loss or self.data['close'][i] <= self.take_profit:
+                    self._exit_position(i)
 
     def _enter_position(self, index, direction):
         if direction == 'long':
@@ -387,14 +388,6 @@ class Delta2Strategy:
         self.stop_loss = 0.0
         self.take_profit = 0.0
         self._log_exit(index)
-
-    def _apply_money_management(self, index):
-        if self.position > 0:
-            if self.data['close'][index] <= self.stop_loss or self.data['close'][index] >= self.take_profit:
-                self._exit_position(index)
-        elif self.position < 0:
-            if self.data['close'][index] >= self.stop_loss or self.data['close'][index] <= self.take_profit:
-                self._exit_position(index)
 
     def _log_entry(self, index, direction):
         log_entry = {
@@ -427,6 +420,8 @@ class Delta2Strategy:
     def execute_strategy(self):
         for i in tqdm(range(len(self.data)), desc="Executing Strategy", unit="bar"):
             self._bar_update()
+            if i % 10000 == 0:
+                print(f"Processed {i} bars")
 
     def plot_trades(self, renko_data, speed=0.1):
         fig, ax = plt.subplots(1, figsize=(10, 5))
@@ -543,7 +538,6 @@ class Renko:
         self.brick_threshold = brick_threshold
         return self.brick_size
 
-    @jit(nopython=True)
     def _apply_renko(self, i, close, renko_price, renko_direction, renko_date, renko_index, brick_size, brick_threshold):
         num_bricks = 0
         gap = (close[i] - renko_price[-1]) // brick_size
@@ -581,7 +575,9 @@ class Renko:
         renko_index = [0]
 
         for i in tqdm(range(1, len(self.close)), desc="Building Renko data"):
-            _, renko_price, renko_direction, renko_date, renko_index = self._apply_renko(i, self.close, renko_price, renko_direction, renko_date, renko_index, self.brick_size, self.brick_threshold)
+            renko_price[-1], renko_direction[-1], renko_date[-1], renko_index[-1], _ = self._apply_renko(
+                i, self.close, renko_price, renko_direction, renko_date, renko_index, self.brick_size, self.brick_threshold
+            )
 
         self.renko = {'index': renko_index, 'date': renko_date, 'price': renko_price, 'direction': renko_direction, 'brick_size': self.brick_size}
         return self.renko

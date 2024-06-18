@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 import xgboost as xgb
 import lightgbm as lgb
 import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
 from PIL import Image
 from io import BytesIO
 from scipy.stats import gaussian_kde
