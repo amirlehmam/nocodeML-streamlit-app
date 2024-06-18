@@ -10,6 +10,7 @@ import lightgbm as lgb
 import tensorflow as tf
 import keras
 from keras import layers
+import shap
 from PIL import Image
 from io import BytesIO
 from scipy.stats import gaussian_kde
@@ -24,7 +25,7 @@ from sklearn.ensemble import (
     StackingClassifier, RandomForestRegressor, 
     GradientBoostingRegressor, StackingRegressor
 )
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear import LogisticRegression
 from scikeras.wrappers import KerasClassifier, KerasRegressor
 from tqdm import tqdm
 from tqdm.keras import TqdmCallback
@@ -38,8 +39,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-# Ensure TensorFlow 1.x compatibility mode
-tf.compat.v1.disable_eager_execution()
+# Enable eager execution for TensorFlow 2.x
+tf.config.experimental_run_functions_eagerly(True)
 
 # Utility function to save plots to PDF
 def save_plots_to_pdf(c, plots, descriptions):
@@ -166,7 +167,7 @@ def preprocess_data(data, selected_feature_types):
 
 # Function to create neural network model
 def create_nn_model(input_dim):
-    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
+    tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
     model.add(keras.layers.Dense(64, input_dim=input_dim, activation='relu'))
     model.add(keras.layers.Dense(32, activation='relu'))
@@ -177,7 +178,7 @@ def create_nn_model(input_dim):
 
 # Function to create RNN model
 def create_rnn_model(input_shape, rnn_type='LSTM'):
-    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
+    tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
     if rnn_type == 'LSTM':
         model.add(keras.layers.LSTM(64, input_shape=input_shape, return_sequences=True))
@@ -191,7 +192,7 @@ def create_rnn_model(input_shape, rnn_type='LSTM'):
 
 # Function to create CNN model
 def create_cnn_model(input_shape):
-    tf.compat.v1.reset_default_graph()  # Ensure graph is reset before creating a new model
+    tf.keras.backend.clear_session()  # Ensure graph is reset before creating a new model
     model = keras.Sequential()
     model.add(keras.layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
     model.add(keras.layers.MaxPooling1D(pool_size=2))
