@@ -257,7 +257,7 @@ def merge_with_indicators(trade_event_data, indicator_data):
 
     return merged_data
 
-def verify_trade_parsing(engine):
+def verify_trade_parsing(engine, data_dir):
     data = load_data(data_dir)
     trade_data = data['trade_data']
     event_data = preprocess_events(data['event_data'])
@@ -288,10 +288,10 @@ def run_data_ingestion_preparation():
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir, key="base_dir_input_1")
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir, key="base_dir_input")
     raw_data_dir = get_file_path(base_dir, "data/raw")
 
-    uploaded_file = st.file_uploader("Choose a data file", type=["csv"], key="data_file_uploader_1")
+    uploaded_file = st.file_uploader("Choose a data file", type=["csv"], key="data_file_uploader")
     if uploaded_file is not None:
         raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
         with open(raw_file_path, "wb") as f:
@@ -307,7 +307,7 @@ def run_data_ingestion_preparation():
 
         st.success("Data successfully parsed and saved to the database.")
 
-    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params_file_uploader_1", type=["csv", "txt"])
+    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params_file_uploader", type=["csv", "txt"])
     if uploaded_param_file is not None:
         param_file_path = os.path.join(raw_data_dir, "params", uploaded_param_file.name)
         with open(param_file_path, "wb") as f:
@@ -322,6 +322,6 @@ def run_data_ingestion_preparation():
     
     if st.button("Verify Trade Parsing", key="verify_trade_parsing_button"):
         engine = get_engine()
-        verify_trade_parsing(engine)
+        verify_trade_parsing(engine, raw_data_dir)
 
 run_data_ingestion_preparation()
