@@ -12,8 +12,6 @@ engine = create_engine(DATABASE_URL)
 # Function to load and preprocess data from the database
 def load_and_preprocess_data():
     st.write("Loading data from the database...")
-
-    # Load merged_trade_indicator_event data
     query = "SELECT * FROM merged_trade_indicator_event"
     data = pd.read_sql(query, engine)
     st.write(f"Data loaded with shape: {data.shape}")
@@ -39,9 +37,9 @@ def calculate_additional_metrics(data):
     metrics['Losing Trades'] = len(data[data['result'] == 0])
     metrics['Number of Exits'] = data['event'].str.contains('exit', case=False).sum()
     metrics['Times SL Hit'] = data['event'].str.contains('sl', case=False).sum()
-    metrics['Total Gross Profit ($)'] = data[data['result'] == 1]['amount'].sum()
-    metrics['Total Gross Loss ($)'] = data[data['result'] == 0]['amount'].sum()
-    metrics['Net Profit/Loss ($)'] = metrics['Total Gross Profit ($)'] + metrics['Total Gross Loss ($)']
+    metrics['Total Gross Profit'] = data[data['result'] == 1]['amount'].sum()
+    metrics['Total Gross Loss'] = data[data['result'] == 0]['amount'].sum()
+    metrics['Net Profit/Loss'] = metrics['Total Gross Profit'] + metrics['Total Gross Loss']
     return metrics
 
 # Function to calculate maximum drawdown in dollars
@@ -58,16 +56,18 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     data.set_index('time', inplace=True)
     data.sort_index(inplace=True)
 
+    # Assume 'price' represents the trade price and 'result' as win/loss
+    returns = data['price'].pct_change().dropna()
+
     # Calculate additional metrics
     additional_metrics = calculate_additional_metrics(data)
     max_drawdown_amount = calculate_max_drawdown(data)
-    net_profit_loss = additional_metrics['Net Profit/Loss ($)']
 
     # Debug: Check calculated metrics
-    st.write("Total Gross Profit ($):", additional_metrics['Total Gross Profit ($)'])
-    st.write("Total Gross Loss ($):", additional_metrics['Total Gross Loss ($)'])
-    st.write("Net Profit/Loss ($):", net_profit_loss)
-    st.write("Max Drawdown ($):", max_drawdown_amount)
+    st.write(f"Total Gross Profit ($): {additional_metrics['Total Gross Profit']}")
+    st.write(f"Total Gross Loss ($): {additional_metrics['Total Gross Loss']}")
+    st.write(f"Net Profit/Loss ($): {additional_metrics['Net Profit/Loss']}")
+    st.write(f"Max Drawdown ($): {max_drawdown_amount}")
 
     # Create a DataFrame to display the metrics
     metrics_df = pd.DataFrame({
@@ -82,9 +82,9 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
         "Value": [
             additional_metrics['Winning Trades'],
             additional_metrics['Losing Trades'],
-            f"${additional_metrics['Total Gross Profit ($)']:.2f}",
-            f"${additional_metrics['Total Gross Loss ($)']:.2f}",
-            f"${net_profit_loss:.2f}",
+            f"${additional_metrics['Total Gross Profit']:.2f}",
+            f"${additional_metrics['Total Gross Loss']:.2f}",
+            f"${additional_metrics['Net Profit/Loss']:.2f}",
             f"${max_drawdown_amount:.2f}"
         ]
     })
