@@ -14,32 +14,28 @@ def load_and_preprocess_data(data_dir):
     data = pd.read_csv(data_path)
     st.write(f"Data loaded with shape: {data.shape}")
 
-    # Keep only the first 7 columns
-    data = data.iloc[:, :7]
-
     # Convert 'time' to datetime
     data['time'] = pd.to_datetime(data['time'])
 
     # Ensure correct data types
     data['price'] = data['price'].astype(float)
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
-
-    # Check unique values in 'event_event'
-    st.write("Unique values in 'event_event' column:")
-    st.write(data['event_event'].unique())
-
-    # Process 'result' column based on 'event_event'
-    data['result'] = data['event_event'].apply(lambda x: 1 if x.lower() == 'profit' else 0)
-
-    # Sort data by time
-    data = data.sort_values(by='time')
-
-    # Ensure unique timestamps by keeping the first occurrence
-    data = data.drop_duplicates(subset=['time'], keep='first')
+    
+    # Correctly set the result based on event_event column
+    data['result'] = data['event_event'].apply(lambda x: 1 if x == 'Profit' else 0)
 
     # Debugging output
+    st.write("Unique values in 'event_event' column:")
+    st.dataframe(data['event_event'].value_counts())
+
     st.write("Data preview after preprocessing:")
-    st.dataframe(data.head())
+    st.dataframe(data[['time', 'event', 'qty', 'price', 'event_event', 'amount', 'result']].head())
+
+    # Keep only the necessary columns
+    data = data[['time', 'event', 'qty', 'price', 'event_event', 'amount', 'result']]
+    
+    # Remove duplicate timestamps to ensure unique timestamps
+    data = data.drop_duplicates(subset=['time'], keep='first').sort_values(by='time').reset_index(drop=True)
 
     return data
 
@@ -48,9 +44,9 @@ def calculate_performance_metrics(data):
     st.write("Calculating performance metrics...")
 
     # Calculate additional metrics
-    winning_trades = len(data[data['result'] > 0])
+    winning_trades = len(data[data['result'] == 1])
     losing_trades = len(data[data['result'] == 0])
-    total_gross_profit = data[data['result'] > 0]['amount'].sum()
+    total_gross_profit = data[data['result'] == 1]['amount'].sum()
     total_gross_loss = data[data['result'] == 0]['amount'].sum()
     net_profit_loss = total_gross_profit + total_gross_loss
 
