@@ -27,6 +27,10 @@ def load_and_preprocess_data():
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
+    # Debug: Check the data
+    st.write("Sample Data:")
+    st.write(data.head())
+
     return data
 
 # Function to calculate additional metrics
@@ -61,6 +65,11 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     total_gross_profit = data[data['result'] == 1]['amount'].sum()
     total_gross_loss = data[data['result'] == 0]['amount'].sum()
     net_profit_loss = total_gross_profit + total_gross_loss
+
+    # Debug: Check calculated metrics
+    st.write("Total Gross Profit ($):", total_gross_profit)
+    st.write("Total Gross Loss ($):", total_gross_loss)
+    st.write("Net Profit/Loss ($):", net_profit_loss)
 
     # Create a DataFrame to display the metrics
     metrics_df = pd.DataFrame({
