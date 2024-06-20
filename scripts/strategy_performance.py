@@ -14,16 +14,32 @@ def load_and_preprocess_data(data_dir):
     data = pd.read_csv(data_path)
     st.write(f"Data loaded with shape: {data.shape}")
 
+    # Keep only the first 7 columns
+    data = data.iloc[:, :7]
+
     # Convert 'time' to datetime
     data['time'] = pd.to_datetime(data['time'])
 
     # Ensure correct data types
     data['price'] = data['price'].astype(float)
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
-    data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
+
+    # Check unique values in 'event_event'
+    st.write("Unique values in 'event_event' column:")
+    st.write(data['event_event'].unique())
+
+    # Process 'result' column based on 'event_event'
+    data['result'] = data['event_event'].apply(lambda x: 1 if x.lower() == 'profit' else 0)
 
     # Sort data by time
-    data = data.sort_values(by=['time', 'event']).drop_duplicates(subset=['time'], keep='first')
+    data = data.sort_values(by='time')
+
+    # Ensure unique timestamps by keeping the first occurrence
+    data = data.drop_duplicates(subset=['time'], keep='first')
+
+    # Debugging output
+    st.write("Data preview after preprocessing:")
+    st.dataframe(data.head())
 
     return data
 
@@ -32,9 +48,9 @@ def calculate_performance_metrics(data):
     st.write("Calculating performance metrics...")
 
     # Calculate additional metrics
-    winning_trades = len(data[data['result'] == 1])
+    winning_trades = len(data[data['result'] > 0])
     losing_trades = len(data[data['result'] == 0])
-    total_gross_profit = data[data['result'] == 1]['amount'].sum()
+    total_gross_profit = data[data['result'] > 0]['amount'].sum()
     total_gross_loss = data[data['result'] == 0]['amount'].sum()
     net_profit_loss = total_gross_profit + total_gross_loss
 
@@ -43,6 +59,15 @@ def calculate_performance_metrics(data):
     data['cum_max'] = data['cum_return'].cummax()
     data['drawdown'] = data['cum_max'] - data['cum_return']
     max_drawdown = data['drawdown'].max()
+
+    # Debugging output
+    st.write("Intermediate calculations:")
+    st.write(f"Winning trades: {winning_trades}")
+    st.write(f"Losing trades: {losing_trades}")
+    st.write(f"Total gross profit: {total_gross_profit}")
+    st.write(f"Total gross loss: {total_gross_loss}")
+    st.write(f"Net profit/loss: {net_profit_loss}")
+    st.write(f"Max drawdown: {max_drawdown}")
 
     # Create a DataFrame to display the metrics
     metrics_df = pd.DataFrame({
@@ -84,16 +109,6 @@ def generate_quantstats_tearsheet(data, output_path="tearsheet.html"):
     # Read the generated HTML file and embed it in the Streamlit app
     with open(output_path, 'r') as f:
         html_content = f.read()
-    
-    # Get the absolute path of the custom CSS file
-    custom_css_path = os.path.join(os.path.dirname(__file__), 'custom_style.css')
-    
-    # Insert custom CSS into the HTML content
-    with open(custom_css_path, 'r') as css_file:
-        css_content = css_file.read()
-    
-    style_tag = f'<style>{css_content}</style>'
-    html_content = html_content.replace('<head>', f'<head>{style_tag}')
     
     st.components.v1.html(html_content, height=800, scrolling=True)
 
