@@ -1,11 +1,6 @@
 import pandas as pd
 import os
 import streamlit as st
-from sqlalchemy import create_engine, text
-
-# Database connection
-DATABASE_URL = "postgresql+psycopg2://doadmin:AVNS_hnzmIdBmiO7aj5nylWW@nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com:25060/defaultdb?sslmode=require"
-engine = create_engine(DATABASE_URL)
 
 def get_file_path(base_dir, relative_path):
     return os.path.join(base_dir, relative_path)
@@ -24,8 +19,6 @@ def clean_and_parse_data(file_path):
     indicator_data = []
     event_data = []
     signal_data = []
-    strategy_data = []
-    account_data = []
 
     for line in data_lines:
         parts = line.strip().split(';')
@@ -55,12 +48,6 @@ def clean_and_parse_data(file_path):
             signal_data.append(row)
         elif event_type in ('LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', "SE4", 'SE5', 'SX', 'Profit target', 'Parabolic stop'):
             trade_data.append([timestamp, event_type, parts[2], parts[3].replace(',', '.')])
-        elif event_type == 'Strategy':
-            amount = parts[-1].replace(',', '.')
-            strategy_data.append([timestamp, amount])
-        elif event_type == 'Account':
-            amount = parts[-1].replace(',', '.')
-            account_data.append([timestamp, amount])
         else:
             event = parts[1]
             amount = parts[-1].replace(',', '.')
@@ -77,17 +64,12 @@ def clean_and_parse_data(file_path):
     max_signal_length = max(len(row) for row in signal_data)
     signal_columns = ['time', 'event'] + [f'signal_name{i//2+1}' if i % 2 == 0 else 'value' for i in range(max_signal_length - 2)]
     signal_df = pd.DataFrame(signal_data, columns=signal_columns)
-    
-    strategy_df = pd.DataFrame(strategy_data, columns=['time', 'strategy_amount'])
-    account_df = pd.DataFrame(account_data, columns=['time', 'account_amount'])
 
     return {
         'trade_data': trade_df, 
         'indicator_data': indicator_df, 
         'event_data': event_df, 
-        'signal_data': signal_df,
-        'strategy_data': strategy_df,
-        'account_data': account_df
+        'signal_data': signal_df
     }
 
 def calculate_indicators(data):
@@ -110,26 +92,34 @@ def calculate_indicators(data):
     non_market_value_indicators.loc[:, 'binary_indicator'] = None
     non_market_value_indicators.loc[:, 'percent_away'] = None
 
+    merged_df = merged_df.dropna(axis=1, how='all')
+    non_market_value_indicators = non_market_value_indicators.dropna(axis=1, how='all')
+
     final_indicator_df = pd.concat([merged_df, non_market_value_indicators])
 
     final_indicator_df = final_indicator_df.sort_values(by='time').reset_index(drop=True)
 
     return final_indicator_df
 
-def save_dataframes_to_db(data):
-    tables = ['trade_data', 'indicator_data', 'event_data', 'signal_data', 'strategy_data', 'account_data']
-    with engine.connect() as conn:
-        for table in tables:
-            conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE;"))
+def save_dataframes(data, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-    data['trade_data'].to_sql('trade_data', engine, if_exists='replace', index=False)
-    data['indicator_data'].to_sql('indicator_data', engine, if_exists='replace', index=False)
-    data['event_data'].to_sql('event_data', engine, if_exists='replace', index=False)
-    data['signal_data'].to_sql('signal_data', engine, if_exists='replace', index=False)
-    data['strategy_data'].to_sql('strategy_data', engine, if_exists='replace', index=False)
-    data['account_data'].to_sql('account_data', engine, if_exists='replace', index=False)
+    trade_path = os.path.join(output_dir, "trade_data.csv")
+    data['trade_data'].to_csv(trade_path, index=False)
+    print(f"Saved trade data to {trade_path}")
 
-    print("Data saved to the database.")
+    indicator_path = os.path.join(output_dir, "indicator_data.csv")
+    data['indicator_data'].to_csv(indicator_path, index=False)
+    print(f"Saved indicator data to {indicator_path}")
+
+    event_path = os.path.join(output_dir, "event_data.csv")
+    data['event_data'].to_csv(event_path, index=False)
+    print(f"Saved event data to {event_path}")
+
+    signal_path = os.path.join(output_dir, "signal_data.csv")
+    data['signal_data'].to_csv(signal_path, index=False)
+    print(f"Saved signal data to {signal_path}")
 
 def parse_parameters(file_path):
     if not os.path.exists(file_path):
@@ -147,33 +137,20 @@ def parse_parameters(file_path):
     parameters_df = pd.DataFrame(parameters, columns=['Parameter', 'Value'])
     return parameters_df
 
-def save_parameters_to_db(parameters_df):
-    with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS parameters CASCADE;"))
+def save_parameters(parameters_df, output_path):
+    parameters_df.to_csv(output_path, index=False)
+    print(f"Saved parameters to {output_path}")
 
-    parameters_df.to_sql('parameters', engine, if_exists='replace', index=False)
-    print("Parameters saved to the database.")
-
-def load_data_from_db():
-    indicator_data = pd.read_sql('indicator_data', engine)
-    trade_data = pd.read_sql('trade_data', engine)
-    event_data = pd.read_sql('event_data', engine)
-    strategy_data = pd.read_sql('strategy_data', engine)
-    account_data = pd.read_sql('account_data', engine)
+def load_data(data_dir):
+    indicator_data = pd.read_csv(os.path.join(data_dir, "indicator_data.csv"))
+    trade_data = pd.read_csv(os.path.join(data_dir, "trade_data.csv"))
+    event_data = pd.read_csv(os.path.join(data_dir, "event_data.csv"))
 
     indicator_data['time'] = pd.to_datetime(indicator_data['time'])
     trade_data['time'] = pd.to_datetime(trade_data['time'])
     event_data['time'] = pd.to_datetime(event_data['time'])
-    strategy_data['time'] = pd.to_datetime(strategy_data['time'])
-    account_data['time'] = pd.to_datetime(account_data['time'])
 
-    return {
-        'indicator_data': indicator_data, 
-        'trade_data': trade_data, 
-        'event_data': event_data,
-        'strategy_data': strategy_data,
-        'account_data': account_data
-    }
+    return {'indicator_data': indicator_data, 'trade_data': trade_data, 'event_data': event_data}
 
 def preprocess_events(event_data):
     relevant_events = ['Profit', 'Loss']
@@ -181,7 +158,7 @@ def preprocess_events(event_data):
     return event_data
 
 def identify_trade_results(trade_data, event_data):
-    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2','SE3', 'SE4', 'SE5', 'SX']
+    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
     trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
     
     trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
@@ -225,41 +202,15 @@ def merge_with_indicators(trade_event_data, indicator_data):
 
     return merged_data
 
-def verify_trade_parsing():
-    data = load_data_from_db()
+def verify_trade_parsing(data_dir, output_dir):
+    data = load_data(data_dir)
     trade_data = data['trade_data']
     event_data = preprocess_events(data['event_data'])
     indicator_data = data['indicator_data']
-    strategy_data = data['strategy_data']
-    account_data = data['account_data']
-
-    # Debugging - Check loaded data
-    st.write("Loaded Trade Data:")
-    st.write(trade_data.head())
-    st.write("Loaded Event Data:")
-    st.write(event_data.head())
-    st.write("Loaded Indicator Data:")
-    st.write(indicator_data.head())
-    st.write("Loaded Strategy Data:")
-    st.write(strategy_data.head())
-    st.write("Loaded Account Data:")
-    st.write(account_data.head())
 
     trade_event_data = identify_trade_results(trade_data, event_data)
 
-    # Debugging - Check identified trade results
-    st.write("Identified Trade Results:")
-    st.write(trade_event_data.head())
-
     merged_data = merge_with_indicators(trade_event_data, indicator_data)
-
-    # Add strategy and account data to merged_data
-    merged_data = pd.merge_asof(merged_data.sort_values('time'), strategy_data.sort_values('time'), on='time', direction='nearest')
-    merged_data = pd.merge_asof(merged_data, account_data.sort_values('time'), on='time', direction='nearest')
-
-    # Debugging - Check merged data
-    st.write("Merged Data:")
-    st.write(merged_data.head())
 
     result_distribution = merged_data['result'].value_counts()
 
@@ -268,13 +219,14 @@ def verify_trade_parsing():
     sample_size = min(10, len(merged_data))  # Adjust sample size
     if sample_size > 0:
         sample_classified_trades = merged_data.sample(n=sample_size)
-        st.write(f"\nSample of classified trades (showing {sample_size}):")
-        st.write(sample_classified_trades)
+        print(f"\nSample of classified trades (showing {sample_size}):")
+        print(sample_classified_trades)
     else:
-        st.write("\nNo classified trades available for sampling.")
+        print("\nNo classified trades available for sampling.")
 
-    merged_data.to_sql('merged_trade_indicator_event', engine, if_exists='replace', index=False)
-    st.write("Merged data saved to the database.")
+    output_file = os.path.join(output_dir, "merged_trade_indicator_event.csv")
+    merged_data.to_csv(output_file, index=False)
+    st.write(f"Saved merged data to {output_file}")
 
 def run_data_ingestion_preparation():
     st.subheader("Data Ingestion and Preparation")
@@ -282,6 +234,7 @@ def run_data_ingestion_preparation():
         st.session_state.base_dir = "."
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    data_output_dir = get_file_path(base_dir, "data/processed")
     raw_data_dir = get_file_path(base_dir, "data/raw")
 
     uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
@@ -291,51 +244,33 @@ def run_data_ingestion_preparation():
             f.write(uploaded_file.getbuffer())
         st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
 
-        # Process the uploaded file directly
-        data = clean_and_parse_data(raw_file_path)
+    file_dropdown = st.selectbox("Select a raw data file", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
+    if file_dropdown:
+        file_path = get_file_path(raw_data_dir, file_dropdown)
+        data = clean_and_parse_data(file_path)
         st.write(data['trade_data'].head(15))
         st.write(data['indicator_data'].head(15))
         st.write(data['event_data'].head(15))
         st.write(data['signal_data'].head(15))
-        st.write(data['strategy_data'].head(15))
-        st.write(data['account_data'].head(15))
         
         data['indicator_data'] = calculate_indicators(data)
-        save_dataframes_to_db(data)
+        save_dataframes(data, data_output_dir)
         
-        st.success("Data successfully parsed and saved to the database.")
-        verify_trade_parsing()
+        st.success("Data successfully parsed and saved.")
 
-def run_data_ingestion_preparation():
-    st.subheader("Data Ingestion and Preparation")
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "."
+    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params", type=["csv", "txt"])
+    if uploaded_param_file is not None:
+        param_file_path = os.path.join(raw_data_dir, "params", uploaded_param_file.name)
+        with open(param_file_path, "wb") as f:
+            f.write(uploaded_param_file.getbuffer())
+        st.success(f"Parameter file {uploaded_param_file.name} uploaded successfully to {param_file_path}")
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
-    raw_data_dir = get_file_path(base_dir, "data/raw")
-
-    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
-    if uploaded_file is not None:
-        raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
-        with open(raw_file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
-
-        # Process the uploaded file directly
-        data = clean_and_parse_data(raw_file_path)
-        st.write(data['trade_data'].head(15))
-        st.write(data['indicator_data'].head(15))
-        st.write(data['event_data'].head(15))
-        st.write(data['signal_data'].head(15))
-        st.write(data['strategy_data'].head(15))
-        st.write(data['account_data'].head(15))
+        parameters_df = parse_parameters(param_file_path)
+        st.write(parameters_df)
         
-        data['indicator_data'] = calculate_indicators(data)
-        save_dataframes_to_db(data)
+        save_parameters(parameters_df, os.path.join(data_output_dir, "parameters.csv"))
         
-        st.success("Data successfully parsed and saved to the database.")
-        verify_trade_parsing()
-
-# Run the Streamlit app
-if __name__ == "__main__":
-    run_data_ingestion_preparation()
+        st.success("Parameters successfully parsed and saved.")
+    
+    if st.button("Verify Trade Parsing"):
+        verify_trade_parsing(data_output_dir, data_output_dir)
