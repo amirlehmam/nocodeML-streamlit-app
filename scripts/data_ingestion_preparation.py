@@ -1,9 +1,7 @@
 import pandas as pd
 import os
 import streamlit as st
-from sqlalchemy import create_engine
-from sqlalchemy import text
-
+from sqlalchemy import create_engine, text
 
 # Database connection
 DATABASE_URL = "postgresql+psycopg2://doadmin:AVNS_hnzmIdBmiO7aj5nylWW@nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com:25060/defaultdb?sslmode=require"
@@ -117,7 +115,7 @@ def save_dataframes_to_db(data):
     data['signal_data'].to_sql('signal_data', engine, if_exists='replace', index=False)
 
     print("Data saved to the database.")
-    
+
 def parse_parameters(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The file {file_path} does not exist.")
