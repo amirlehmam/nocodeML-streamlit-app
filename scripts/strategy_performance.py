@@ -22,8 +22,8 @@ def load_and_preprocess_data(data_dir):
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
-    # Keep only the first occurrence of each 'amount' value per 'time'
-    data = data.sort_values(by=['time', 'event']).drop_duplicates(subset=['time'], keep='first')
+    # Sort data by time and then remove duplicates, keeping only the first occurrence of each amount per time
+    data = data.sort_values(by=['time']).drop_duplicates(subset=['time', 'amount'], keep='first')
 
     return data
 
