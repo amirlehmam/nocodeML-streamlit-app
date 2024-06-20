@@ -1,80 +1,14 @@
-import os
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import create_engine, text
+import os
 import streamlit as st
+from sqlalchemy import create_engine
+from sqlalchemy import text
 
-# Database configuration
-DB_CONFIG = {
-    'username': 'doadmin',
-    'password': 'AVNS_hnzmIdBmiO7aj5nylWW',
-    'host': 'nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com',
-    'port': 25060,
-    'database': 'defaultdb',
-    'sslmode': 'require'
-}
 
 # Database connection
-def get_engine():
-    db_url = f"postgresql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?sslmode={DB_CONFIG['sslmode']}"
-    return create_engine(db_url)
+DATABASE_URL = "postgresql+psycopg2://doadmin:AVNS_hnzmIdBmiO7aj5nylWW@nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com:25060/defaultdb?sslmode=require"
+engine = create_engine(DATABASE_URL)
 
-def create_tables(engine):
-    with engine.connect() as connection:
-        create_table_queries = [
-            """
-            CREATE TABLE IF NOT EXISTS indicator (
-                time TIMESTAMP,
-                indicator_name VARCHAR(255),
-                indicator_value FLOAT
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS trade (
-                time TIMESTAMP,
-                event VARCHAR(255),
-                qty FLOAT,
-                price FLOAT
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS signal (
-                time TIMESTAMP,
-                event VARCHAR(255),
-                signal_name1 VARCHAR(255),
-                value1 FLOAT
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS event (
-                time TIMESTAMP,
-                event VARCHAR(255),
-                amount FLOAT
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS merged_trade_indicator_event (
-                time TIMESTAMP,
-                event VARCHAR(255),
-                qty FLOAT,
-                price FLOAT,
-                indicator_name VARCHAR(255),
-                indicator_value FLOAT,
-                binary_indicator INTEGER,
-                percent_away FLOAT
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS parameters (
-                parameter VARCHAR(255),
-                value FLOAT
-            )
-            """
-        ]
-        for query in create_table_queries:
-            connection.execute(text(query))
-
-# Data ingestion functions
 def get_file_path(base_dir, relative_path):
     return os.path.join(base_dir, relative_path)
 
@@ -108,7 +42,7 @@ def clean_and_parse_data(file_path):
                 if i + 1 < len(indicators):
                     indicator_name = indicators[i]
                     indicator_value = indicators[i + 1].replace(',', '.')
-                    if indicator_name and indicator_value:
+                    if indicator_name and indicator_value:  # Ensure both name and value are not empty
                         indicator_data.append([timestamp, indicator_name, float(indicator_value)])
         elif event_type == 'Signal':
             signals = parts[8:]
@@ -171,15 +105,19 @@ def calculate_indicators(data):
 
     return final_indicator_df
 
-def save_to_db(engine, data):
-    data['trade_data'].to_sql('trade', engine, if_exists='replace', index=False)
-    data['indicator_data'].to_sql('indicator', engine, if_exists='replace', index=False)
-    data['event_data'].to_sql('event', engine, if_exists='replace', index=False)
-    data['signal_data'].to_sql('signal', engine, if_exists='replace', index=False)
+def save_dataframes_to_db(data):
+    tables = ['trade_data', 'indicator_data', 'event_data', 'signal_data']
+    with engine.connect() as conn:
+        for table in tables:
+            conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE;"))
 
-def save_parameters_to_db(engine, parameters_df):
-    parameters_df.to_sql('parameters', engine, if_exists='replace', index=False)
+    data['trade_data'].to_sql('trade_data', engine, if_exists='replace', index=False)
+    data['indicator_data'].to_sql('indicator_data', engine, if_exists='replace', index=False)
+    data['event_data'].to_sql('event_data', engine, if_exists='replace', index=False)
+    data['signal_data'].to_sql('signal_data', engine, if_exists='replace', index=False)
 
+    print("Data saved to the database.")
+    
 def parse_parameters(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The file {file_path} does not exist.")
@@ -193,13 +131,20 @@ def parse_parameters(file_path):
             key, value = line.split(': ', 1)
             parameters.append([key, value.replace(',', '.')])
 
-    parameters_df = pd.DataFrame(parameters, columns=['parameter', 'value'])
+    parameters_df = pd.DataFrame(parameters, columns=['Parameter', 'Value'])
     return parameters_df
 
-def load_data(data_dir):
-    indicator_data = pd.read_csv(os.path.join(data_dir, "indicator_data.csv"))
-    trade_data = pd.read_csv(os.path.join(data_dir, "trade_data.csv"))
-    event_data = pd.read_csv(os.path.join(data_dir, "event_data.csv"))
+def save_parameters_to_db(parameters_df):
+    with engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS parameters CASCADE;"))
+
+    parameters_df.to_sql('parameters', engine, if_exists='replace', index=False)
+    print("Parameters saved to the database.")
+
+def load_data_from_db():
+    indicator_data = pd.read_sql('indicator_data', engine)
+    trade_data = pd.read_sql('trade_data', engine)
+    event_data = pd.read_sql('event_data', engine)
 
     indicator_data['time'] = pd.to_datetime(indicator_data['time'])
     trade_data['time'] = pd.to_datetime(trade_data['time'])
@@ -257,8 +202,8 @@ def merge_with_indicators(trade_event_data, indicator_data):
 
     return merged_data
 
-def verify_trade_parsing(engine, data_dir):
-    data = load_data(data_dir)
+def verify_trade_parsing():
+    data = load_data_from_db()
     trade_data = data['trade_data']
     event_data = preprocess_events(data['event_data'])
     indicator_data = data['indicator_data']
@@ -268,9 +213,10 @@ def verify_trade_parsing(engine, data_dir):
     merged_data = merge_with_indicators(trade_event_data, indicator_data)
 
     result_distribution = merged_data['result'].value_counts()
+
     st.write(f"\nDistribution of trade results:\n{result_distribution}")
 
-    sample_size = min(10, len(merged_data))
+    sample_size = min(10, len(merged_data))  # Adjust sample size
     if sample_size > 0:
         sample_classified_trades = merged_data.sample(n=sample_size)
         st.write(f"\nSample of classified trades (showing {sample_size}):")
@@ -278,36 +224,39 @@ def verify_trade_parsing(engine, data_dir):
     else:
         st.write("\nNo classified trades available for sampling.")
 
-    with engine.connect() as connection:
-        merged_data.to_sql('merged_trade_indicator_event', connection, if_exists='replace', index=False)
-
-    st.write("Saved merged data to the database.")
+    merged_data.to_sql('merged_trade_indicator_event', engine, if_exists='replace', index=False)
+    st.write("Merged data saved to the database.")
 
 def run_data_ingestion_preparation():
     st.subheader("Data Ingestion and Preparation")
     if "base_dir" not in st.session_state:
         st.session_state.base_dir = "."
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir, key="base_dir_input")
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
     raw_data_dir = get_file_path(base_dir, "data/raw")
 
-    uploaded_file = st.file_uploader("Choose a data file", type=["csv"], key="data_file_uploader")
+    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
     if uploaded_file is not None:
         raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
         with open(raw_file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
 
-        data = clean_and_parse_data(raw_file_path)
-        data['indicator_data'] = calculate_indicators(data)
+    file_dropdown = st.selectbox("Select a raw data file", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
+    if file_dropdown:
+        file_path = get_file_path(raw_data_dir, file_dropdown)
+        data = clean_and_parse_data(file_path)
+        st.write(data['trade_data'].head(15))
+        st.write(data['indicator_data'].head(15))
+        st.write(data['event_data'].head(15))
+        st.write(data['signal_data'].head(15))
         
-        engine = get_engine()
-        create_tables(engine)
-        save_to_db(engine, data)
-
+        data['indicator_data'] = calculate_indicators(data)
+        save_dataframes_to_db(data)
+        
         st.success("Data successfully parsed and saved to the database.")
 
-    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params_file_uploader", type=["csv", "txt"])
+    uploaded_param_file = st.file_uploader("Choose a parameter file", key="params", type=["csv", "txt"])
     if uploaded_param_file is not None:
         param_file_path = os.path.join(raw_data_dir, "params", uploaded_param_file.name)
         with open(param_file_path, "wb") as f:
@@ -315,13 +264,15 @@ def run_data_ingestion_preparation():
         st.success(f"Parameter file {uploaded_param_file.name} uploaded successfully to {param_file_path}")
 
         parameters_df = parse_parameters(param_file_path)
-        engine = get_engine()
-        save_parameters_to_db(engine, parameters_df)
+        st.write(parameters_df)
+        
+        save_parameters_to_db(parameters_df)
         
         st.success("Parameters successfully parsed and saved to the database.")
     
-    if st.button("Verify Trade Parsing", key="verify_trade_parsing_button"):
-        engine = get_engine()
-        verify_trade_parsing(engine, raw_data_dir)
+    if st.button("Verify Trade Parsing"):
+        verify_trade_parsing()
 
-run_data_ingestion_preparation()
+# Run the Streamlit app
+if __name__ == "__main__":
+    run_data_ingestion_preparation()
