@@ -24,6 +24,8 @@ def clean_and_parse_data(file_path):
     indicator_data = []
     event_data = []
     signal_data = []
+    strategy_data = []
+    account_data = []
 
     for line in data_lines:
         parts = line.strip().split(';')
@@ -53,6 +55,12 @@ def clean_and_parse_data(file_path):
             signal_data.append(row)
         elif event_type in ('LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', "SE4", 'SE5', 'SX', 'Profit target', 'Parabolic stop'):
             trade_data.append([timestamp, event_type, parts[2], parts[3].replace(',', '.')])
+        elif event_type == 'Strategy':
+            amount = parts[-1].replace(',', '.')
+            strategy_data.append([timestamp, amount])
+        elif event_type == 'Account':
+            amount = parts[-1].replace(',', '.')
+            account_data.append([timestamp, amount])
         else:
             event = parts[1]
             amount = parts[-1].replace(',', '.')
@@ -69,12 +77,17 @@ def clean_and_parse_data(file_path):
     max_signal_length = max(len(row) for row in signal_data)
     signal_columns = ['time', 'event'] + [f'signal_name{i//2+1}' if i % 2 == 0 else 'value' for i in range(max_signal_length - 2)]
     signal_df = pd.DataFrame(signal_data, columns=signal_columns)
+    
+    strategy_df = pd.DataFrame(strategy_data, columns=['time', 'strategy_amount'])
+    account_df = pd.DataFrame(account_data, columns=['time', 'account_amount'])
 
     return {
         'trade_data': trade_df, 
         'indicator_data': indicator_df, 
         'event_data': event_df, 
-        'signal_data': signal_df
+        'signal_data': signal_df,
+        'strategy_data': strategy_df,
+        'account_data': account_df
     }
 
 def calculate_indicators(data):
@@ -104,7 +117,7 @@ def calculate_indicators(data):
     return final_indicator_df
 
 def save_dataframes_to_db(data):
-    tables = ['trade_data', 'indicator_data', 'event_data', 'signal_data']
+    tables = ['trade_data', 'indicator_data', 'event_data', 'signal_data', 'strategy_data', 'account_data']
     with engine.connect() as conn:
         for table in tables:
             conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE;"))
@@ -113,6 +126,8 @@ def save_dataframes_to_db(data):
     data['indicator_data'].to_sql('indicator_data', engine, if_exists='replace', index=False)
     data['event_data'].to_sql('event_data', engine, if_exists='replace', index=False)
     data['signal_data'].to_sql('signal_data', engine, if_exists='replace', index=False)
+    data['strategy_data'].to_sql('strategy_data', engine, if_exists='replace', index=False)
+    data['account_data'].to_sql('account_data', engine, if_exists='replace', index=False)
 
     print("Data saved to the database.")
 
@@ -143,12 +158,22 @@ def load_data_from_db():
     indicator_data = pd.read_sql('indicator_data', engine)
     trade_data = pd.read_sql('trade_data', engine)
     event_data = pd.read_sql('event_data', engine)
+    strategy_data = pd.read_sql('strategy_data', engine)
+    account_data = pd.read_sql('account_data', engine)
 
     indicator_data['time'] = pd.to_datetime(indicator_data['time'])
     trade_data['time'] = pd.to_datetime(trade_data['time'])
     event_data['time'] = pd.to_datetime(event_data['time'])
+    strategy_data['time'] = pd.to_datetime(strategy_data['time'])
+    account_data['time'] = pd.to_datetime(account_data['time'])
 
-    return {'indicator_data': indicator_data, 'trade_data': trade_data, 'event_data': event_data}
+    return {
+        'indicator_data': indicator_data, 
+        'trade_data': trade_data, 
+        'event_data': event_data,
+        'strategy_data': strategy_data,
+        'account_data': account_data
+    }
 
 def preprocess_events(event_data):
     relevant_events = ['Profit', 'Loss']
@@ -156,7 +181,7 @@ def preprocess_events(event_data):
     return event_data
 
 def identify_trade_results(trade_data, event_data):
-    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
+    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2','SE3', 'SE4', 'SE5', 'SX']
     trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
     
     trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
@@ -205,10 +230,36 @@ def verify_trade_parsing():
     trade_data = data['trade_data']
     event_data = preprocess_events(data['event_data'])
     indicator_data = data['indicator_data']
+    strategy_data = data['strategy_data']
+    account_data = data['account_data']
+
+    # Debugging - Check loaded data
+    st.write("Loaded Trade Data:")
+    st.write(trade_data.head())
+    st.write("Loaded Event Data:")
+    st.write(event_data.head())
+    st.write("Loaded Indicator Data:")
+    st.write(indicator_data.head())
+    st.write("Loaded Strategy Data:")
+    st.write(strategy_data.head())
+    st.write("Loaded Account Data:")
+    st.write(account_data.head())
 
     trade_event_data = identify_trade_results(trade_data, event_data)
 
+    # Debugging - Check identified trade results
+    st.write("Identified Trade Results:")
+    st.write(trade_event_data.head())
+
     merged_data = merge_with_indicators(trade_event_data, indicator_data)
+
+    # Add strategy and account data to merged_data
+    merged_data = pd.merge_asof(merged_data.sort_values('time'), strategy_data.sort_values('time'), on='time', direction='nearest')
+    merged_data = pd.merge_asof(merged_data, account_data.sort_values('time'), on='time', direction='nearest')
+
+    # Debugging - Check merged data
+    st.write("Merged Data:")
+    st.write(merged_data.head())
 
     result_distribution = merged_data['result'].value_counts()
 
@@ -240,17 +291,20 @@ def run_data_ingestion_preparation():
             f.write(uploaded_file.getbuffer())
         st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
 
-    file_dropdown = st.selectbox("Select a raw data file", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
-    if file_dropdown:
-        file_path = get_file_path(raw_data_dir, file_dropdown)
-        data = clean_and_parse_data(file_path)
+        # Process the uploaded file directly
+        data = clean_and_parse_data(raw_file_path)
         st.write(data['trade_data'].head(15))
         st.write(data['indicator_data'].head(15))
         st.write(data['event_data'].head(15))
         st.write(data['signal_data'].head(15))
+        st.write(data['strategy_data'].head(15))
+        st.write(data['account_data'].head(15))
         
         data['indicator_data'] = calculate_indicators(data)
         save_dataframes_to_db(data)
+
+        # Verify trade parsing automatically
+        verify_trade_parsing()
         
         st.success("Data successfully parsed and saved to the database.")
 
@@ -267,9 +321,6 @@ def run_data_ingestion_preparation():
         save_parameters_to_db(parameters_df)
         
         st.success("Parameters successfully parsed and saved to the database.")
-    
-    if st.button("Verify Trade Parsing"):
-        verify_trade_parsing()
 
 # Run the Streamlit app
 if __name__ == "__main__":
