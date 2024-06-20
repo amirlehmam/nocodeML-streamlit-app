@@ -22,8 +22,8 @@ def load_and_preprocess_data(data_dir):
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
-    # Sort data by time and then remove duplicates, keeping only the first occurrence of each amount per time
-    data = data.sort_values(by=['time']).drop_duplicates(subset=['time', 'amount'], keep='first')
+    # Sort data by time
+    data = data.sort_values(by=['time', 'event']).drop_duplicates(subset=['time'], keep='first')
 
     return data
 
@@ -69,14 +69,15 @@ def calculate_performance_metrics(data):
 
     # Display cumulative return over time
     st.write("### Cumulative Return Over Time")
-    st.line_chart(data['cum_return'])
+    st.line_chart(data.set_index('time')['cum_return'])
     
     return data, metrics_df
 
 # Function to generate quantstats tearsheet
 def generate_quantstats_tearsheet(data, output_path="tearsheet.html"):
-    returns = data.set_index('time')['price'].pct_change().dropna()
-    
+    data.set_index('time', inplace=True)
+    returns = data['amount'].pct_change().dropna()
+
     # Generate the full report
     qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
     
