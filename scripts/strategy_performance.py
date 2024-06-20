@@ -22,7 +22,7 @@ def load_and_preprocess_data(data_dir):
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
-    # Filter out only the first occurrence of each trade event for each timestamp
+    # Keep only the first occurrence of each 'amount' value per 'time'
     data = data.sort_values(by=['time', 'event']).drop_duplicates(subset=['time'], keep='first')
 
     return data
