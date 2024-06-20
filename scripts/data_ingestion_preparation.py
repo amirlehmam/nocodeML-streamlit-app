@@ -225,36 +225,6 @@ def merge_with_indicators(trade_event_data, indicator_data):
 
     return merged_data
 
-def run_data_ingestion_preparation():
-    st.subheader("Data Ingestion and Preparation")
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "."
-
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
-    raw_data_dir = get_file_path(base_dir, "data/raw")
-
-    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
-    if uploaded_file is not None:
-        raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
-        with open(raw_file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
-
-        # Process the uploaded file directly
-        data = clean_and_parse_data(raw_file_path)
-        st.write(data['trade_data'].head(15))
-        st.write(data['indicator_data'].head(15))
-        st.write(data['event_data'].head(15))
-        st.write(data['signal_data'].head(15))
-        st.write(data['strategy_data'].head(15))
-        st.write(data['account_data'].head(15))
-        
-        data['indicator_data'] = calculate_indicators(data)
-        save_dataframes_to_db(data)
-        
-        st.success("Data successfully parsed and saved to the database.")
-        verify_trade_parsing()
-
 def verify_trade_parsing():
     data = load_data_from_db()
     trade_data = data['trade_data']
@@ -305,6 +275,66 @@ def verify_trade_parsing():
 
     merged_data.to_sql('merged_trade_indicator_event', engine, if_exists='replace', index=False)
     st.write("Merged data saved to the database.")
+
+def run_data_ingestion_preparation():
+    st.subheader("Data Ingestion and Preparation")
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
+
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    raw_data_dir = get_file_path(base_dir, "data/raw")
+
+    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
+    if uploaded_file is not None:
+        raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
+        with open(raw_file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
+
+        # Process the uploaded file directly
+        data = clean_and_parse_data(raw_file_path)
+        st.write(data['trade_data'].head(15))
+        st.write(data['indicator_data'].head(15))
+        st.write(data['event_data'].head(15))
+        st.write(data['signal_data'].head(15))
+        st.write(data['strategy_data'].head(15))
+        st.write(data['account_data'].head(15))
+        
+        data['indicator_data'] = calculate_indicators(data)
+        save_dataframes_to_db(data)
+        
+        st.success("Data successfully parsed and saved to the database.")
+        verify_trade_parsing()
+
+def run_data_ingestion_preparation():
+    st.subheader("Data Ingestion and Preparation")
+    if "base_dir" not in st.session_state:
+        st.session_state.base_dir = "."
+
+    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    raw_data_dir = get_file_path(base_dir, "data/raw")
+
+    uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
+    if uploaded_file is not None:
+        raw_file_path = os.path.join(raw_data_dir, uploaded_file.name)
+        with open(raw_file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
+
+        # Process the uploaded file directly
+        data = clean_and_parse_data(raw_file_path)
+        st.write(data['trade_data'].head(15))
+        st.write(data['indicator_data'].head(15))
+        st.write(data['event_data'].head(15))
+        st.write(data['signal_data'].head(15))
+        st.write(data['strategy_data'].head(15))
+        st.write(data['account_data'].head(15))
+        
+        data['indicator_data'] = calculate_indicators(data)
+        save_dataframes_to_db(data)
+        
+        st.success("Data successfully parsed and saved to the database.")
+        verify_trade_parsing()
 
 # Run the Streamlit app
 if __name__ == "__main__":

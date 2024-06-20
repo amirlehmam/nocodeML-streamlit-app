@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import streamlit as st
 import quantstats as qs
-import numpy as np
 from sqlalchemy import create_engine
 
 # Database connection
@@ -12,6 +11,8 @@ engine = create_engine(DATABASE_URL)
 # Function to load and preprocess data from the database
 def load_and_preprocess_data():
     st.write("Loading data from the database...")
+    
+    # Load data from merged_trade_indicator_event
     query = "SELECT * FROM merged_trade_indicator_event"
     data = pd.read_sql(query, engine)
     st.write(f"Data loaded with shape: {data.shape}")
@@ -22,11 +23,19 @@ def load_and_preprocess_data():
     # Ensure correct data types
     data['price'] = data['price'].astype(float)
     data['amount'] = data['amount'].replace(r'[\$,]', '', regex=True).astype(float)
+
+    # Filter out rows with missing results
+    data = data.dropna(subset=['result'])
+
+    # Map result to numeric values
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
+
+    # Remove duplicate 'time' entries
+    data = data.drop_duplicates(subset=['time'])
 
     # Debug: Check the data
     st.write("Sample Data:")
-    st.write(data.head())
+    st.write(data.head(50))
 
     return data
 
@@ -35,11 +44,6 @@ def calculate_additional_metrics(data):
     metrics = {}
     metrics['Winning Trades'] = len(data[data['result'] == 1])
     metrics['Losing Trades'] = len(data[data['result'] == 0])
-    metrics['Number of Exits'] = data['event'].str.contains('exit', case=False).sum()
-    metrics['Times SL Hit'] = data['event'].str.contains('sl', case=False).sum()
-    metrics['Total Gross Profit'] = data[data['result'] == 1]['amount'].sum()
-    metrics['Total Gross Loss'] = data[data['result'] == 0]['amount'].sum()
-    metrics['Net Profit/Loss'] = metrics['Total Gross Profit'] + metrics['Total Gross Loss']
     return metrics
 
 # Function to calculate maximum drawdown in dollars
@@ -56,18 +60,21 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     data.set_index('time', inplace=True)
     data.sort_index(inplace=True)
 
-    # Assume 'price' represents the trade price and 'result' as win/loss
-    returns = data['price'].pct_change().dropna()
+    # Calculate returns
+    data['returns'] = data['price'].pct_change().dropna()
 
     # Calculate additional metrics
     additional_metrics = calculate_additional_metrics(data)
     max_drawdown_amount = calculate_max_drawdown(data)
+    total_gross_profit = data[data['result'] == 1]['amount'].sum()
+    total_gross_loss = data[data['result'] == 0]['amount'].sum()
+    net_profit_loss = total_gross_profit + total_gross_loss  # Adjusted calculation
 
     # Debug: Check calculated metrics
-    st.write(f"Total Gross Profit ($): {additional_metrics['Total Gross Profit']}")
-    st.write(f"Total Gross Loss ($): {additional_metrics['Total Gross Loss']}")
-    st.write(f"Net Profit/Loss ($): {additional_metrics['Net Profit/Loss']}")
-    st.write(f"Max Drawdown ($): {max_drawdown_amount}")
+    st.write("Total Gross Profit ($):", total_gross_profit)
+    st.write("Total Gross Loss ($):", total_gross_loss)
+    st.write("Net Profit/Loss ($):", net_profit_loss)
+    st.write("Max Drawdown ($):", max_drawdown_amount)
 
     # Create a DataFrame to display the metrics
     metrics_df = pd.DataFrame({
@@ -82,9 +89,9 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
         "Value": [
             additional_metrics['Winning Trades'],
             additional_metrics['Losing Trades'],
-            f"${additional_metrics['Total Gross Profit']:.2f}",
-            f"${additional_metrics['Total Gross Loss']:.2f}",
-            f"${additional_metrics['Net Profit/Loss']:.2f}",
+            f"${total_gross_profit:.2f}",
+            f"${total_gross_loss:.2f}",
+            f"${net_profit_loss:.2f}",
             f"${max_drawdown_amount:.2f}"
         ]
     })
@@ -92,9 +99,9 @@ def calculate_performance_metrics(data, output_path="tearsheet.html"):
     st.write("### Key Performance Metrics")
     st.dataframe(metrics_df)
 
-    # Plotting with QuantStats
+    # Generate the full report with QuantStats
     st.write("### Performance Report")
-    returns = data['price'].pct_change().dropna()
+    returns = data['returns'].dropna()
     qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
 
     # Read the generated HTML file and embed it in the Streamlit app
