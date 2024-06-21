@@ -6,50 +6,57 @@ import quantstats as qs
 # Function to load event_data from the processed directory
 def load_event_data(base_dir):
     try:
-        data_path = os.path.join(base_dir, "event_data.csv")
-        data = pd.read_csv(data_path)
-        st.write("Loaded data columns:", data.columns.tolist())  # Print column names for inspection
-        return data
+        event_data_path = os.path.join(base_dir, "event_data.csv")
+        merged_data_path = os.path.join(base_dir, "merged_trade_indicator_event.csv")
+        
+        event_data = pd.read_csv(event_data_path)
+        merged_data = pd.read_csv(merged_data_path)
+        
+        st.write("Loaded event_data columns:", event_data.columns.tolist())
+        st.write("Loaded merged_trade_indicator_event columns:", merged_data.columns.tolist())
+        
+        return event_data, merged_data
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        return None
+        return None, None
 
 # Function to process initial data
-def process_initial_data(initial_data):
-    st.write("Initial data columns:", initial_data.columns.tolist())
+def process_initial_data(event_data, merged_data):
+    st.write("Initial event_data columns:", event_data.columns.tolist())
+    st.write("Initial merged_data columns:", merged_data.columns.tolist())
 
     # Use the actual timestamp column name
     timestamp_col = 'time'
-    initial_data[timestamp_col] = pd.to_datetime(initial_data[timestamp_col], errors='coerce')
-
-    # Print the first few rows to understand the structure
-    st.write("Initial data preview:")
-    st.write(initial_data.head())
+    event_data[timestamp_col] = pd.to_datetime(event_data[timestamp_col], errors='coerce')
+    merged_data[timestamp_col] = pd.to_datetime(merged_data[timestamp_col], errors='coerce')
 
     # Replace commas with periods and convert to float for relevant columns
-    if 'amount' in initial_data.columns:
-        initial_data['amount'] = initial_data['amount'].str.replace(r'[\$,]', '', regex=True).astype(float)
+    if 'amount' in event_data.columns:
+        event_data['amount'] = event_data['amount'].str.replace(r'[\$,]', '', regex=True).astype(float)
     
     # Drop rows where the timestamp conversion failed
-    initial_data = initial_data.dropna(subset=[timestamp_col])
+    event_data = event_data.dropna(subset=[timestamp_col])
+    merged_data = merged_data.dropna(subset=[timestamp_col])
     
-    return initial_data, timestamp_col
+    return event_data, merged_data, timestamp_col
 
 # Function to calculate performance metrics
-def calculate_performance_metrics(data, timestamp_col):
+def calculate_performance_metrics(event_data, merged_data, timestamp_col):
     st.write("Calculating performance metrics...")
 
     # Ensure correct types
-    data['amount'] = pd.to_numeric(data['amount'], errors='coerce')
+    event_data['amount'] = pd.to_numeric(event_data['amount'], errors='coerce')
 
     # Separate trades and strategy/account events
-    trades = data[data['event'].str.contains('Profit|Loss', case=False)]
-    strategy_account_events = data[data['event'].str.contains('Strategy|Account', case=False)]
+    trades = event_data[event_data['event'].str.contains('Profit|Loss', case=False)]
+    strategy_account_events = event_data[event_data['event'].str.contains('Strategy|Account', case=False)]
 
     # Calculate metrics
-    total_trades = len(trades)
-    winning_trades = trades[trades['event'].str.contains('Profit', case=False)].shape[0]
-    losing_trades = trades[trades['event'].str.contains('Loss', case=False)].shape[0]
+    winning_trades = len(merged_data[merged_data['result'] == 'win'])
+    losing_trades = len(merged_data[merged_data['result'] == 'loss'])
+    total_trades = (winning_trades + losing_trades) * 5
+    winning_trades *= 5
+    losing_trades *= 5
     total_gross_profit = trades[trades['event'].str.contains('Profit', case=False)]['amount'].sum()
     total_gross_loss = trades[trades['event'].str.contains('Loss', case=False)]['amount'].sum()
     net_profit_loss = total_gross_profit + total_gross_loss
@@ -61,10 +68,10 @@ def calculate_performance_metrics(data, timestamp_col):
     max_drawdown = trades['drawdown'].max()
 
     # Calculate other metrics based on NinjaTrader definitions
-    percent_profitable = (winning_trades / total_trades) * 100 if total_trades > 0 else 0
+    percent_profitable = (winning_trades / (winning_trades + losing_trades)) * 100 if (winning_trades + losing_trades) > 0 else 0
     avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
-    avg_winning_trade = total_gross_profit / winning_trades if winning_trades > 0 else 0
-    avg_losing_trade = total_gross_loss / losing_trades if losing_trades > 0 else 0
+    avg_winning_trade = total_gross_profit / winning_trades  if winning_trades > 0 else 0
+    avg_losing_trade = total_gross_loss / losing_trades  if losing_trades > 0 else 0
     ratio_avg_win_avg_loss = avg_winning_trade / abs(avg_losing_trade) if avg_losing_trade != 0 else 0
 
     metrics_df = pd.DataFrame({
@@ -129,12 +136,12 @@ def run_strategy_performance():
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
     if st.button("Load and Analyze Data"):
-        initial_data = load_event_data(base_dir)
-        if initial_data is not None:
-            data, timestamp_col = process_initial_data(initial_data)
+        event_data, merged_data = load_event_data(base_dir)
+        if event_data is not None and merged_data is not None:
+            event_data, merged_data, timestamp_col = process_initial_data(event_data, merged_data)
 
-            if data is not None:
-                data, metrics_df = calculate_performance_metrics(data, timestamp_col)
+            if event_data is not None:
+                data, metrics_df = calculate_performance_metrics(event_data, merged_data, timestamp_col)
                 st.write("Performance analysis completed.")
                 generate_quantstats_tearsheet(data, timestamp_col)
 
