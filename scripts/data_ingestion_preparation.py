@@ -274,3 +274,25 @@ def run_data_ingestion_preparation():
     
     if st.button("Verify Trade Parsing"):
         verify_trade_parsing(data_output_dir, data_output_dir)
+
+def identify_trade_results(trade_data, event_data):
+    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
+    trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
+
+    trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
+
+    def classify_trade(row):
+        if pd.notna(row['event_event']):
+            if 'Profit' in row['event_event']:
+                return 'win'
+            elif 'Loss' in row['event_event']:
+                return 'loss'
+        return 'unknown'
+    
+    # Remove duplicated trades by grouping on time and taking the first unique entry
+    trade_event_data = trade_event_data.groupby('time').first().reset_index()
+    
+    trade_event_data['result'] = trade_event_data.apply(classify_trade, axis=1)
+    
+    trade_event_data = trade_event_data[trade_event_data['result'] != 'unknown']
+    return trade_event_data
