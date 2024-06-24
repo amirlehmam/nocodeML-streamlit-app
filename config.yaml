@@ -12,6 +12,12 @@ credentials:
       logged_in: False # Will be managed automatically
       name: The one and only "SiiX"
       password: R4PBKrvsDdMe-.RDr6jFgajXBNd9e # Will be hashed automatically
+    Guest:
+      email: Guest@gmail.com
+      failed_login_attempts: 0 # Will be managed automatically
+      logged_in: False # Will be managed automatically
+      name: Guest
+      password: Guestazerty_12398 # Will be hashed automatically
 cookie:
   expiry_days: 30
   key: some_signature_key # Must be string
