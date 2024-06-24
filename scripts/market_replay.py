@@ -1,63 +1,115 @@
+import pandas as pd
+import h5py
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
-import pandas as pd
-import os
-from numba import jit
-import time
+from tqdm import tqdm
 
+# Step 1: Read the CSV file and identify the price column dynamically
+csv_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv'
+
+# Load the CSV file
+df_csv = pd.read_csv(csv_filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
+
+# Define the base columns
+base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
+extra_columns = [f'Extra{i}' for i in range(len(df_csv.columns) - len(base_columns))]
+df_csv.columns = base_columns + extra_columns
+
+# Parse timestamps
+df_csv['Timestamp'] = pd.to_datetime(df_csv['Timestamp'], format='%Y%m%d%H%M%S')
+
+# Identify and filter valid price data
+valid_prices = pd.DataFrame()
+
+# Debugging: Print the first few rows of the DataFrame to inspect its structure
+print("Initial DataFrame structure:")
+print(df_csv.head(10))
+print(df_csv.columns)
+
+# Define a function to clean and convert potential price columns
+def clean_and_convert(column):
+    df_csv[column] = df_csv[column].astype(str).str.replace(',', '.')
+    return pd.to_numeric(df_csv[column], errors='coerce')
+
+# Iterate over all columns to find potential price data columns
+for column in df_csv.columns:
+    if column not in base_columns:
+        price_data = clean_and_convert(column)
+        valid_price_indices = (price_data >= 17000) & (price_data <= 19000)
+        if valid_price_indices.any():
+            temp_df = df_csv[valid_price_indices].copy()
+            temp_df['Price'] = price_data[valid_price_indices]
+            valid_prices = pd.concat([valid_prices, temp_df])
+
+# Check if 'Operation' column contains price data for 'L1' records
+operation_as_price = clean_and_convert('Operation')
+valid_operation_indices = (operation_as_price >= 17000) & (operation_as_price <= 19000) & (df_csv['Type'] == 'L1')
+
+if valid_operation_indices.any():
+    temp_df = df_csv[valid_operation_indices].copy()
+    temp_df['Price'] = operation_as_price[valid_operation_indices]
+    valid_prices = pd.concat([valid_prices, temp_df])
+
+# Ensure 'Timestamp' column is retained in valid_prices
+if not valid_prices.empty:
+    valid_prices['Timestamp'] = df_csv.loc[valid_prices.index, 'Timestamp']
+
+# Debugging statements to show the structure of valid_prices DataFrame
+print("valid_prices DataFrame structure:")
+print(valid_prices.head(10))
+print(valid_prices.columns)
+
+# Step 2: Convert the CSV data to HDF5 format
+hdf5_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301_fixed.h5'
+with h5py.File(hdf5_filepath, 'w') as f:
+    if 'Price' in valid_prices:
+        f.create_dataset('L1/timestamp', data=valid_prices['Timestamp'].astype('int64').values)
+        f.create_dataset('L1/price', data=valid_prices['Price'].values)
+        if 'Volume' in valid_prices:
+            f.create_dataset('L1/volume', data=valid_prices['Volume'].fillna(0).values)  # Handle missing volume data
+    else:
+        print("Error: 'Price' column not found in valid_prices DataFrame.")
+
+# Debugging statement
+print("Data saved to HDF5.")
+
+# Step 3: Read and filter the HDF5 data, and Step 4: Generate the Renko chart
 class Renko:
-    def __init__(self, df=None, filename=None, interval=None):
-        if filename:
-            try:
-                df = pd.read_csv(filename, delimiter=';', header=None, engine='python', on_bad_lines='skip')
-                print("Raw Data:")
-                print(df.head(10))
+    def __init__(self, hdf5_filepath):
+        try:
+            with h5py.File(hdf5_filepath, 'r') as f:
+                timestamps = f['L1/timestamp'][:]
+                prices = f['L1/price'][:]
+                volumes = f['L1/volume'][:]
 
-                # Define the base columns
-                base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
-                extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
-                df.columns = base_columns + extra_columns
+                # Convert timestamps to datetime
+                dates = pd.to_datetime(timestamps, unit='ns', errors='coerce')
 
-                # Parse timestamps
-                df['date'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
+                # Filter out invalid timestamps
+                valid_indices = ~dates.isna()
+                dates = dates[valid_indices]
+                prices = prices[valid_indices]
+                volumes = volumes[valid_indices]
 
-                # Initialize a list to collect valid price values
-                price_values = []
-                timestamps = []
+                # Filter prices within a realistic range (17k to 19k in this case)
+                valid_price_indices = (prices >= 17000) & (prices <= 19000)
+                prices = prices[valid_price_indices]
+                dates = dates[valid_price_indices]
 
-                # Function to check and add valid prices to the list
-                def check_and_add_price(row):
-                    for column in ['Operation', 'Price'] + extra_columns:
-                        price_str = row[column]
-                        if isinstance(price_str, str):
-                            price_str = price_str.replace(',', '.')
-                        try:
-                            price = float(price_str)
-                            if 16000 <= price <= 20000:
-                                price_values.append(price)
-                                timestamps.append(row['date'])
-                        except ValueError:
-                            pass
-
-                # Iterate through the rows and apply the function
-                df.apply(check_and_add_price, axis=1)
-
-                # Create a DataFrame from the collected valid price values
-                df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
+                # Create a DataFrame and drop any rows with NaT (Not a Time) in the date column
+                df = pd.DataFrame({'Price': prices, 'date': dates}).dropna()
 
                 # Debugging statement
                 print("Filtered Data with Prices:")
-                print(df_filtered.head(10))
+                print(df.head(10))
 
-            except FileNotFoundError:
-                raise FileNotFoundError(f"{filename}\n\nDoes not exist.")
-        elif df is None:
-            raise ValueError("DataFrame or filename must be provided.")
+                self.df = df
+                self.close = df['Price'].values
 
-        self.df = df_filtered
-        self.close = df_filtered['Price'].values
-
+        except FileNotFoundError:
+            raise FileNotFoundError(f"{hdf5_filepath}\n\nDoes not exist.")
+        
     def set_brick_size(self, brick_size=30, brick_threshold=5):
         """ Setting brick size """
         self.brick_size = brick_size
@@ -157,11 +209,10 @@ class Renko:
 
         plt.show(block=True)  # Ensure the plot window stays open
 
-
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240305.csv"
-    renko_chart = Renko(filename=filename)
+    hdf5_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301_fixed.h5'
+    renko_chart = Renko(hdf5_filepath)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
     renko_chart.plot(speed=0.1)
