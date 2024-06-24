@@ -135,6 +135,11 @@ def strategy_performance():
     from scripts.strategy_performance import run_strategy_performance
     run_strategy_performance()
 
+def trading_hours():
+    from scripts.trading_hours_analyzer import main
+    base_dir = "./data/processed/"  # Make sure this matches your directory structure
+    main(base_dir)
+
 # Mapping page names to functions
 page_dict = {
     'Overview': overview,
@@ -148,7 +153,8 @@ page_dict = {
  #   'Model Focus': specific_model_focus,
  #   'EDA Specific': advanced_eda_specific_model,
  #   'Ranges Specific': win_ranges_specific_model,
-    'Strategy Performance': strategy_performance
+    'Strategy Performance': strategy_performance,
+    'Trading Hours': trading_hours
 }
 
 def main():
@@ -311,7 +317,7 @@ def main():
         )
 
         # Navigation bar
-        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'Strategy Performance']
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'MA Convergence', 'Strategy Performance', 'Trading Hours']
         styles = {
             "nav": {
                 "background-color": "royalblue",
