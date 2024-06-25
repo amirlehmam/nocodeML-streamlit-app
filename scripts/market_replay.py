@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation
 
+# Load and preprocess CSV file
 def load_and_preprocess_csv(filepath):
     df = pd.read_csv(filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
     
@@ -12,15 +13,11 @@ def load_and_preprocess_csv(filepath):
     df_L2 = df[df[0] == 'L2'].copy()
 
     # Define column names for L1 and L2 based on the provided format
-    L1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
+    L1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', 'Extra1', 'Extra2', 'Extra3']
     L2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
     
-    # Assign column names and remove extra columns
-    df_L1.columns = L1_columns + ['Extra'] * (len(df_L1.columns) - len(L1_columns))
-    df_L2.columns = L2_columns + ['Extra'] * (len(df_L2.columns) - len(L2_columns))
-    
-    df_L1 = df_L1[L1_columns]  # Keep only the necessary columns
-    df_L2 = df_L2[L2_columns]  # Keep only the necessary columns
+    df_L1.columns = L1_columns
+    df_L2.columns = L2_columns
 
     # Parse timestamps for L1 and L2
     df_L1['Timestamp'] = pd.to_datetime(df_L1['Timestamp'], format='%Y%m%d%H%M%S')
@@ -34,17 +31,21 @@ def load_and_preprocess_csv(filepath):
 
     return df_L1, df_L2
 
+# Filter valid prices
 def filter_valid_prices(df):
     valid_prices = df[(df['Price'] >= 18250) & (df['Price'] <= 18650)].copy()
     return valid_prices
 
+# Save to parquet
 def save_to_parquet(df, filepath):
     df.to_parquet(filepath, index=False)
 
+# Read parquet file
 def read_parquet_file(filepath):
     df = pd.read_parquet(filepath)
     return df
 
+# Renko class for generating and plotting Renko chart
 class Renko:
     def __init__(self, parquet_filepath):
         try:
@@ -152,8 +153,8 @@ class Renko:
         plt.show()
 
 if __name__ == "__main__":
-    csv_filepath = '/mnt/data/20240301.csv'
-    parquet_filepath = '/mnt/data/20240301_fixed.parquet'
+    csv_filepath = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/data/market replay/20240304.csv'
+    parquet_filepath = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/data/market replay/20240304_fixed.parquet'
 
     df_L1, df_L2 = load_and_preprocess_csv(csv_filepath)
     valid_prices_L1 = filter_valid_prices(df_L1)
