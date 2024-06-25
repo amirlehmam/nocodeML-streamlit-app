@@ -74,9 +74,12 @@ class Renko:
 
         print(f"Timestamp: {self.df['date'].iat[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
 
-        num_bricks = int(gap // self.brick_size)
-        for _ in range(abs(num_bricks)):
+        while abs(gap) >= self.brick_size:
+            num_bricks = int(gap // self.brick_size)
             self._update_renko(i, direction)
+            last_price = self.renko['price'][-1]
+            gap = current_price - last_price
+            direction = np.sign(gap)
 
     def _update_renko(self, i, direction):
         """ Append price and new block to renko dict """
