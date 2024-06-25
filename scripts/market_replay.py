@@ -1,8 +1,8 @@
 import pandas as pd
 import h5py
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import numpy as np
 
 # Function to load and preprocess the CSV file
 def load_and_preprocess_csv(filepath):
@@ -37,6 +37,14 @@ def filter_valid_prices(df):
                 valid_prices = pd.concat([valid_prices, temp_df], ignore_index=True)
 
     return valid_prices
+
+# Function to save data to HDF5 format
+def save_to_hdf5(df, filepath):
+    with h5py.File(filepath, 'w') as f:
+        f.create_dataset('L1/timestamp', data=df['Timestamp'].astype('int64').values)
+        f.create_dataset('L1/price', data=df['Price'].values)
+        if 'Volume' in df:
+            f.create_dataset('L1/volume', data=df['Volume'].fillna(0).values)
 
 # Function to read and display the contents of the HDF5 file
 def read_hdf5_file(filepath):
