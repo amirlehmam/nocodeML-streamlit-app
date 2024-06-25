@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import pyarrow.parquet as pq
 from matplotlib.animation import FuncAnimation
 
 def load_and_preprocess_csv(filepath):
@@ -153,8 +152,8 @@ class Renko:
         plt.show()
 
 if __name__ == "__main__":
-    csv_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv'
-    parquet_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301_fixed.parquet'
+    csv_filepath = '/mnt/data/20240301.csv'
+    parquet_filepath = '/mnt/data/20240301_fixed.parquet'
 
     df_L1, df_L2 = load_and_preprocess_csv(csv_filepath)
     valid_prices_L1 = filter_valid_prices(df_L1)
