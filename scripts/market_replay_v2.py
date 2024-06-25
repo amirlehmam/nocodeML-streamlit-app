@@ -49,6 +49,7 @@ class Renko:
                 # Debugging statement
                 print("Filtered Data with Prices:")
                 print(df_filtered.head(10))
+                print(f"Number of valid price entries: {len(df_filtered)}")
 
             except FileNotFoundError:
                 raise FileNotFoundError(f"{filename}\n\nDoes not exist.")
@@ -69,6 +70,7 @@ class Renko:
         num_bricks = 0
         gap = (self.close[i] - self.renko['price'][-1]) // self.brick_size
         direction = np.sign(gap)
+        print(f"Price: {self.close[i]}, Last Renko Price: {self.renko['price'][-1]}, Gap: {gap}, Direction: {direction}")
         if direction == 0:
             return
         if (gap > 0 and self.renko['direction'][-1] >= 0) or (gap < 0 and self.renko['direction'][-1] <= 0):
@@ -83,6 +85,7 @@ class Renko:
     def _update_renko(self, i, direction, brick_multiplier=1):
         """ Append price and new block to renko dict """
         renko_price = self.renko['price'][-1] + (direction * brick_multiplier * self.brick_size)
+        print(f"Updating Renko: New Price: {renko_price}, Direction: {direction}, Date: {self.df['date'].iat[i]}")
         self.renko['index'].append(i)
         self.renko['price'].append(renko_price)
         self.renko['direction'].append(direction)
@@ -95,10 +98,13 @@ class Renko:
         
         units = self.df['Price'].iat[0] // self.brick_size
         start_price = units * self.brick_size
+        print(f"Starting Price: {start_price}")
 
         self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'price': [start_price], 'direction': [0]}
         for i in range(1, len(self.close)):
             self._apply_renko(i)
+        print("Final Renko Data:")
+        print(self.renko)
         return self.renko
 
     def plot(self, speed=0.1):
