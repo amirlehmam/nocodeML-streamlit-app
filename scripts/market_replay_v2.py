@@ -73,13 +73,8 @@ class Renko:
         print(f"Timestamp: {self.df['date'].iat[i]}, Price: {self.close[i]}, Last Renko Price: {self.renko['price'][-1]}, Gap: {gap}, Direction: {direction}")
         if direction == 0:
             return
-        if (gap > 0 and self.renko['direction'][-1] >= 0) or (gap < 0 and self.renko['direction'][-1] <= 0):
-            num_bricks = gap
-        elif np.abs(gap) >= self.brick_threshold:
-            num_bricks = gap - self.brick_threshold * direction
-            self._update_renko(i, direction, self.brick_threshold)
-
-        for brick in range(abs(int(num_bricks))):
+        num_bricks = int(gap)
+        for brick in range(abs(num_bricks)):
             self._update_renko(i, direction)
 
     def _update_renko(self, i, direction, brick_multiplier=1):
