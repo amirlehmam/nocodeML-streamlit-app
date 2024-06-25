@@ -70,7 +70,7 @@ class Renko:
         num_bricks = 0
         gap = (self.close[i] - self.renko['price'][-1]) // self.brick_size
         direction = np.sign(gap)
-        print(f"Price: {self.close[i]}, Last Renko Price: {self.renko['price'][-1]}, Gap: {gap}, Direction: {direction}")
+        print(f"Timestamp: {self.df['date'].iat[i]}, Price: {self.close[i]}, Last Renko Price: {self.renko['price'][-1]}, Gap: {gap}, Direction: {direction}")
         if direction == 0:
             return
         if (gap > 0 and self.renko['direction'][-1] >= 0) or (gap < 0 and self.renko['direction'][-1] <= 0):
@@ -85,7 +85,7 @@ class Renko:
     def _update_renko(self, i, direction, brick_multiplier=1):
         """ Append price and new block to renko dict """
         renko_price = self.renko['price'][-1] + (direction * brick_multiplier * self.brick_size)
-        print(f"Updating Renko: New Price: {renko_price}, Direction: {direction}, Date: {self.df['date'].iat[i]}")
+        print(f"Timestamp: {self.df['date'].iat[i]}, Updating Renko: New Price: {renko_price}, Direction: {direction}")
         self.renko['index'].append(i)
         self.renko['price'].append(renko_price)
         self.renko['direction'].append(direction)
@@ -166,7 +166,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "/mnt/data/20240305.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
