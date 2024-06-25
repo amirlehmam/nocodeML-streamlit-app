@@ -3,7 +3,6 @@ import h5py
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
-from tqdm import tqdm
 
 # Function to load and preprocess the CSV file
 def load_and_preprocess_csv(filepath):
@@ -28,7 +27,7 @@ def filter_valid_prices(df):
     for column in df.columns:
         if column not in ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Volume']:
             df[column] = pd.to_numeric(df[column], errors='coerce')
-            valid_price_indices = (df[column] >= 18280) & (df[column] <= 18620)  # Adjusted price range based on actual data
+            valid_price_indices = (df[column] >= 18250) & (df[column] <= 18650)  # Adjusted price range based on actual data
             if valid_price_indices.any():
                 temp_df = df[valid_price_indices].copy()
                 temp_df['Price'] = df[column][valid_price_indices]
@@ -73,7 +72,7 @@ class Renko:
                 prices = prices[valid_indices]
                 volumes = volumes[valid_indices]
 
-                valid_price_indices = (prices >= 18280) & (prices <= 18620)
+                valid_price_indices = (prices >= 18250) & (prices <= 18650)
                 prices = prices[valid_price_indices]
                 dates = dates[valid_price_indices]
 
