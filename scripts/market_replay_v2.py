@@ -67,22 +67,26 @@ class Renko:
 
     def _apply_renko(self, i):
         """ Determine if there are any new bricks to paint with current price """
-        num_bricks = 0
-        gap = (self.close[i] - self.renko['price'][-1]) // self.brick_size
-        direction = np.sign(gap)
-        print(f"Timestamp: {self.df['date'].iat[i]}, Price: {self.close[i]}, Last Renko Price: {self.renko['price'][-1]}, Gap: {gap}, Direction: {direction}")
-        if direction == 0:
-            return
-        num_bricks = int(gap)
-        for brick in range(abs(num_bricks)):
-            self._update_renko(i, direction)
+        current_price = self.close[i]
+        last_price = self.renko['price'][-1]
+        direction = np.sign(current_price - last_price)
+        gap = (current_price - last_price) // self.brick_size
 
-    def _update_renko(self, i, direction, brick_multiplier=1):
+        print(f"Timestamp: {self.df['date'].iat[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
+
+        if gap != 0:
+            num_bricks = int(abs(gap))
+            for _ in range(num_bricks):
+                self._update_renko(i, direction)
+
+    def _update_renko(self, i, direction):
         """ Append price and new block to renko dict """
-        renko_price = self.renko['price'][-1] + (direction * brick_multiplier * self.brick_size)
-        print(f"Timestamp: {self.df['date'].iat[i]}, Updating Renko: New Price: {renko_price}, Direction: {direction}")
+        last_price = self.renko['price'][-1]
+        new_price = last_price + (direction * self.brick_size)
+        print(f"Timestamp: {self.df['date'].iat[i]}, Updating Renko: New Price: {new_price}, Direction: {direction}")
+        
         self.renko['index'].append(i)
-        self.renko['price'].append(renko_price)
+        self.renko['price'].append(new_price)
         self.renko['direction'].append(direction)
         self.renko['date'].append(self.df['date'].iat[i])
 
@@ -91,8 +95,7 @@ class Renko:
         if self.df.empty:
             raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
         
-        units = self.df['Price'].iat[0] // self.brick_size
-        start_price = units * self.brick_size
+        start_price = self.df['Price'].iat[0]
         print(f"Starting Price: {start_price}")
 
         self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'price': [start_price], 'direction': [0]}
@@ -161,7 +164,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv" # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
