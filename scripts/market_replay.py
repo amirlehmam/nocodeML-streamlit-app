@@ -4,41 +4,33 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-# Function to load and preprocess the CSV file
 def load_and_preprocess_csv(filepath):
     df = pd.read_csv(filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
+    
+    # Separate L1 and L2 records
+    df_L1 = df[df[0] == 'L1'].copy()
+    df_L2 = df[df[0] == 'L2'].copy()
 
-    # Define column names based on the provided format
-    base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
-    extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
-    df.columns = base_columns + extra_columns
+    # Define column names for L1 and L2 based on the provided format
+    L1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
+    L2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
+    
+    df_L1.columns = L1_columns + ['Extra'] * (len(df_L1.columns) - len(L1_columns))
+    df_L2.columns = L2_columns + ['Extra'] * (len(df_L2.columns) - len(L2_columns))
 
-    # Parse timestamps
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
+    # Parse timestamps for L1
+    df_L1['Timestamp'] = pd.to_datetime(df_L1['Timestamp'], format='%Y%m%d%H%M%S')
 
-    # Convert price columns to float
-    for column in df.columns:
-        if column not in base_columns:
-            df[column] = df[column].astype(str).str.replace(',', '.').astype(float, errors='coerce')
+    # Convert price and volume columns to float
+    df_L1['Price'] = pd.to_numeric(df_L1['Price'].astype(str).str.replace(',', '.'), errors='coerce')
+    df_L1['Volume'] = pd.to_numeric(df_L1['Volume'].astype(str).str.replace(',', '.'), errors='coerce')
 
-    return df
+    return df_L1, df_L2
 
-# Function to filter valid price data
 def filter_valid_prices(df):
-    valid_prices = pd.DataFrame()
-
-    for column in df.columns:
-        if column not in ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Volume']:
-            df[column] = pd.to_numeric(df[column], errors='coerce')
-            valid_price_indices = (df[column] >= 18250) & (df[column] <= 18650)  # Adjusted price range based on actual data
-            if valid_price_indices.any():
-                temp_df = df[valid_price_indices].copy()
-                temp_df['Price'] = df[column][valid_price_indices]
-                valid_prices = pd.concat([valid_prices, temp_df], ignore_index=True)
-
+    valid_prices = df[(df['Price'] >= 18250) & (df['Price'] <= 18650)].copy()
     return valid_prices
 
-# Function to save data to HDF5 format
 def save_to_hdf5(df, filepath):
     with h5py.File(filepath, 'w') as f:
         f.create_dataset('L1/timestamp', data=df['Timestamp'].astype('int64').values)
@@ -46,13 +38,8 @@ def save_to_hdf5(df, filepath):
         if 'Volume' in df:
             f.create_dataset('L1/volume', data=df['Volume'].fillna(0).values)
 
-# Function to read and display the contents of the HDF5 file
 def read_hdf5_file(filepath):
     with h5py.File(filepath, 'r') as f:
-        print("Datasets in the HDF5 file:")
-        for name in f:
-            print(name)
-
         timestamps = f['L1/timestamp'][:]
         prices = f['L1/price'][:]
         volumes = f['L1/volume'][:]
@@ -67,7 +54,6 @@ def read_hdf5_file(filepath):
 
         return df_hdf5
 
-# Renko chart class
 class Renko:
     def __init__(self, hdf5_filepath):
         try:
@@ -191,21 +177,14 @@ class Renko:
 
         plt.show(block=True)
 
-# Main code
 if __name__ == "__main__":
     csv_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv'
     hdf5_filepath = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301_fixed.h5'
 
-    df_csv = load_and_preprocess_csv(csv_filepath)
-    valid_prices = filter_valid_prices(df_csv)
+    df_L1, df_L2 = load_and_preprocess_csv(csv_filepath)
+    valid_prices_L1 = filter_valid_prices(df_L1)
 
-    with h5py.File(hdf5_filepath, 'w') as f:
-        f.create_dataset('L1/timestamp', data=valid_prices['Timestamp'].astype('int64').values)
-        f.create_dataset('L1/price', data=valid_prices['Price'].values)
-        if 'Volume' in valid_prices:
-            f.create_dataset('L1/volume', data=valid_prices['Volume'].fillna(0).values)
-
-    print("Data saved to HDF5.")
+    save_to_hdf5(valid_prices_L1, hdf5_filepath)
     df_hdf5 = read_hdf5_file(hdf5_filepath)
     print(df_hdf5.head(10))
 
