@@ -69,15 +69,14 @@ class Renko:
         """ Determine if there are any new bricks to paint with current price """
         current_price = self.close[i]
         last_price = self.renko['price'][-1]
-        direction = np.sign(current_price - last_price)
-        gap = (current_price - last_price) // self.brick_size
+        gap = current_price - last_price
+        direction = np.sign(gap)
 
         print(f"Timestamp: {self.df['date'].iat[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
 
-        if gap != 0:
-            num_bricks = int(abs(gap))
-            for _ in range(num_bricks):
-                self._update_renko(i, direction)
+        num_bricks = int(gap // self.brick_size)
+        for _ in range(abs(num_bricks)):
+            self._update_renko(i, direction)
 
     def _update_renko(self, i, direction):
         """ Append price and new block to renko dict """
@@ -164,7 +163,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv" # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
