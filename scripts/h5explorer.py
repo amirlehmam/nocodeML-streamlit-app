@@ -1,85 +1,42 @@
-import pandas as pd
-import numpy as np
-import h5py
+from diagrams import Diagram, Cluster, Edge
+from diagrams.aws.storage import S3
+from diagrams.onprem.compute import Server
+from diagrams.onprem.client import Users
+from diagrams.onprem.database import Postgresql
+from diagrams.onprem.mlops import Mlflow
+from diagrams.programming.framework import Flask
+from diagrams.programming.language import Python
 
-# Function to load and preprocess the CSV file
-def load_and_preprocess_csv(filepath):
-    # Load the CSV file
-    df = pd.read_csv(filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
+with Diagram("NoCodeML Workflow V2", show=False):
 
-    # Define the base columns
-    base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
-    extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
-    df.columns = base_columns + extra_columns
+    market_replay_data = S3("Market Replay Data (NQ)")
 
-    # Parse timestamps
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
+    with Cluster("Data Processing"):
+        csv_conversion = Server("Convert to CSV")
+        hdf5_conversion = Server("Transform to HDF5")
+        renko_calc = Server("Renko Bars Calculation")
+        dynamic_plot = Python("Matplotlib Dynamic Chart")
 
-    # Clean and convert price columns
-    for column in df.columns:
-        if column not in base_columns:
-            df[column] = df[column].astype(str).str.replace(',', '.').astype(float, errors='coerce')
-    
-    return df
+        market_replay_data >> csv_conversion >> hdf5_conversion >> renko_calc >> dynamic_plot
 
-# Function to filter valid price data
-def filter_valid_prices(df):
-    valid_prices = pd.DataFrame()
+    with Cluster("Backtesting and Analysis"):
+        manual_backtest = Server("Manual Choices")
+        backtest_algo = Server("Backtest Algorithm")
+        ml_feedback = Mlflow("ML Feedback Loop")
+        strategy_output = S3("Strategy Output (CSV)")
 
-    for column in df.columns:
-        if column not in ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Volume']:
-            # Ensure the column is converted to numeric values
-            df[column] = pd.to_numeric(df[column], errors='coerce')
-            valid_price_indices = (df[column] >= 17000) & (df[column] <= 19000)
-            if valid_price_indices.any():
-                temp_df = df[valid_price_indices].copy()
-                temp_df['Price'] = df[column][valid_price_indices]
-                valid_prices = pd.concat([valid_prices, temp_df], ignore_index=True)
-    
-    return valid_prices
+        dynamic_plot >> manual_backtest >> backtest_algo >> ml_feedback >> strategy_output
 
-# Function to read and display the contents of the HDF5 file
-def read_hdf5_file(filepath):
-    with h5py.File(filepath, 'r') as f:
-        print("Datasets in the HDF5 file:")
-        for name in f:
-            print(name)
+    with Cluster("Web Application"):
+        web_app = Flask("NoCode-ML.com")
+        ml_analysis = Mlflow("ML/Stats Analysis")
+        insights = Server("Trading Insights")
 
-        timestamps = f['L1/timestamp'][:]
-        prices = f['L1/price'][:]
-        volumes = f['L1/volume'][:]
+        strategy_output >> web_app >> ml_analysis >> insights
 
-        # Convert timestamps to datetime for better readability
-        dates = pd.to_datetime(timestamps, unit='ns')
+    data_storage = S3("Data Storage")
 
-        # Create a DataFrame for easy inspection
-        df_hdf5 = pd.DataFrame({
-            'Timestamp': dates,
-            'Price': prices,
-            'Volume': volumes
-        })
+    strategy_output >> data_storage
+    insights >> data_storage
 
-        return df_hdf5
-
-# Paths to the files
-csv_filepath = 'C:/Users/Administrator/Desktop/sample.csv'
-hdf5_filepath = 'C:/Users/Administrator/Desktop/sample_fixed.h5'
-
-# Load and preprocess the CSV file
-df_csv = load_and_preprocess_csv(csv_filepath)
-
-# Filter valid price data
-valid_prices = filter_valid_prices(df_csv)
-
-# Save to HDF5
-with h5py.File(hdf5_filepath, 'w') as f:
-    f.create_dataset('L1/timestamp', data=valid_prices['Timestamp'].astype('int64').values)
-    f.create_dataset('L1/price', data=valid_prices['Price'].values)
-    if 'Volume' in valid_prices:
-        f.create_dataset('L1/volume', data=valid_prices['Volume'].fillna(0).values)
-
-print("Data saved to HDF5.")
-
-# Read and display the HDF5 file contents
-df_hdf5 = read_hdf5_file(hdf5_filepath)
-print(df_hdf5.head(90))
+    Postgresql("Database") - Edge(style="dotted") - web_app
