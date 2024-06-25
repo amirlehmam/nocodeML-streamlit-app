@@ -8,16 +8,19 @@ import numpy as np
 def load_and_preprocess_csv(filepath):
     df = pd.read_csv(filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
 
+    # Define column names based on the provided format
     base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
     extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
     df.columns = base_columns + extra_columns
 
+    # Parse timestamps
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
 
+    # Convert price columns to float
     for column in df.columns:
         if column not in base_columns:
             df[column] = df[column].astype(str).str.replace(',', '.').astype(float, errors='coerce')
-    
+
     return df
 
 # Function to filter valid price data
@@ -32,7 +35,7 @@ def filter_valid_prices(df):
                 temp_df = df[valid_price_indices].copy()
                 temp_df['Price'] = df[column][valid_price_indices]
                 valid_prices = pd.concat([valid_prices, temp_df], ignore_index=True)
-    
+
     return valid_prices
 
 # Function to read and display the contents of the HDF5 file
