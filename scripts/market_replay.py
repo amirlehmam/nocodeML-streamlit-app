@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 
 def load_and_preprocess_csv(filepath):
     df = pd.read_csv(filepath, delimiter=';', header=None, engine='python', on_bad_lines='skip')
-    
+
     # Separate L1 and L2 records
     df_L1 = df[df[0] == 'L1'].copy()
     df_L2 = df[df[0] == 'L2'].copy()
