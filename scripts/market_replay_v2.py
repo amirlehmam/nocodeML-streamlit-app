@@ -11,49 +11,39 @@ class Renko:
                 print("Raw Data:")
                 print(df.head(10))
 
-                # Define the base columns for L1 and L2
                 l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', 'NA1', 'NA2', 'NA3']
                 l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
 
-                # Separate L1 and L2 records
                 l1_records = df[df[0] == 'L1'].copy()
                 l2_records = df[df[0] == 'L2'].copy()
 
-                # Assign column names and parse timestamps
                 l1_records.columns = l1_columns
                 l2_records.columns = l2_columns
                 l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
                 l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
 
-                # Ensure unique indices before combining
                 l1_records = l1_records.reset_index(drop=True)
                 l2_records = l2_records.reset_index(drop=True)
 
-                # Combine L1 and L2 records into a single DataFrame
                 df_combined = pd.concat([l1_records, l2_records]).reset_index(drop=True)
 
-                # Initialize lists to collect valid price values
                 price_values = []
                 timestamps = []
 
-                # Function to check and add valid prices to the list
                 def check_and_add_price(row):
                     price_str = str(row['Price']).replace(',', '.')
                     try:
                         price = float(price_str)
-                        if 16000 <= price <= 20000:  # Adjust the range as necessary
+                        if 16000 <= price <= 20000:
                             price_values.append(price)
                             timestamps.append(row['date'])
                     except ValueError:
                         pass
 
-                # Iterate through the rows and apply the function
                 df_combined.apply(check_and_add_price, axis=1)
 
-                # Create a DataFrame from the collected valid price values
                 df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
 
-                # Debugging statement
                 print("Filtered Data with Prices:")
                 print(df_filtered.head(10))
                 print(f"Number of valid price entries: {len(df_filtered)}")
@@ -68,13 +58,11 @@ class Renko:
         self.timestamps = df_filtered['date'].values
 
     def set_brick_size(self, brick_size=30, brick_threshold=5):
-        """ Setting brick size and threshold """
         self.brick_size = brick_size
         self.brick_threshold = brick_threshold
         return self.brick_size, self.brick_threshold
 
     def build_renko(self):
-        """ Create Renko data """
         if self.df.empty:
             raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
         
@@ -87,6 +75,7 @@ class Renko:
         self.renko['direction'].append(0)
 
         last_price = initial_price
+        last_direction = 0
 
         for i in range(1, len(self.close)):
             current_price = self.close[i]
@@ -94,12 +83,18 @@ class Renko:
             direction = np.sign(gap)
 
             while abs(gap) >= self.brick_size:
-                last_price += self.brick_size * direction
+                if direction != last_direction:
+                    last_price += self.brick_size * direction
+                    last_direction = direction
+                else:
+                    last_price += self.brick_size * direction
+                
                 self.renko['index'].append(i)
                 self.renko['date'].append(self.timestamps[i])
                 self.renko['price'].append(last_price)
                 self.renko['direction'].append(direction)
                 gap = current_price - last_price
+                
                 print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
 
         print("Final Renko Data:")
@@ -112,7 +107,6 @@ class Renko:
         dates = self.renko['date']
         brick_size = self.brick_size
 
-        # Debugging output
         print(f"Prices: {prices}")
         print(f"Directions: {directions}")
         print(f"Brick size: {brick_size}")
@@ -124,7 +118,7 @@ class Renko:
         plt.rc('font', size=16)
 
         x_min = 0
-        x_max = 50  # Initial x-axis limit
+        x_max = 50
         y_min = min(prices) - 2 * brick_size
         y_max = max(prices) + 2 * brick_size
 
@@ -143,7 +137,7 @@ class Renko:
             ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
             
             x += 1
-            if x >= x_max:  # Extend x-axis limit dynamically
+            if x >= x_max:
                 x_max += 50
                 ax.set_xlim(x_min, x_max)
 
@@ -157,17 +151,14 @@ class Renko:
 
             plt.pause(speed)
 
-            # Add dynamic timestamp labels
             x_ticks = ax.get_xticks()
             x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
             ax.set_xticklabels(x_labels, rotation=45, ha='right')
 
-        plt.show(block=True)  # Ensure the plot window stays open
+        plt.show(block=True)
 
-
-# Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
