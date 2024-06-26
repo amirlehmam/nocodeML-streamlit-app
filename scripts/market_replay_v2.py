@@ -3,11 +3,9 @@ import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
 import os
-from numba import jit
-import time
 
 class Renko:
-    def __init__(self, df=None, filename=None, interval=None):
+    def __init__(self, df=None, filename=None):
         if filename:
             try:
                 df = pd.read_csv(filename, delimiter=';', header=None, engine='python', on_bad_lines='skip')
@@ -22,23 +20,27 @@ class Renko:
                 # Parse timestamps
                 df['date'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
 
-                # Initialize a list to collect valid price values
+                # Initialize lists to collect valid price values
                 price_values = []
                 timestamps = []
 
                 # Function to check and add valid prices to the list
                 def check_and_add_price(row):
-                    for column in ['Operation', 'Price'] + extra_columns:
-                        price_str = row[column]
-                        if isinstance(price_str, str):
-                            price_str = price_str.replace(',', '.')
-                        try:
-                            price = float(price_str)
-                            if 16000 <= price <= 20000:
-                                price_values.append(price)
-                                timestamps.append(row['date'])
-                        except ValueError:
-                            pass
+                    if row['Type'] == 'L1':
+                        price_str = row['Price']
+                    elif row['Type'] == 'L2':
+                        price_str = row['Price']
+                    else:
+                        return
+
+                    price_str = str(price_str).replace(',', '.')
+                    try:
+                        price = float(price_str)
+                        if 16000 <= price <= 20000:  # Adjust the range as necessary
+                            price_values.append(price)
+                            timestamps.append(row['date'])
+                    except ValueError:
+                        pass
 
                 # Iterate through the rows and apply the function
                 df.apply(check_and_add_price, axis=1)
@@ -58,51 +60,42 @@ class Renko:
 
         self.df = df_filtered
         self.close = df_filtered['Price'].values
+        self.timestamps = df_filtered['date'].values
 
-    def set_brick_size(self, brick_size=30, brick_threshold=5):
+    def set_brick_size(self, brick_size=30):
         """ Setting brick size """
         self.brick_size = brick_size
-        self.brick_threshold = brick_threshold
         return self.brick_size
 
-    def _apply_renko(self, i):
-        """ Determine if there are any new bricks to paint with current price """
-        current_price = self.close[i]
-        last_price = self.renko['price'][-1]
-        gap = current_price - last_price
-        direction = np.sign(gap)
-
-        print(f"Timestamp: {self.df['date'].iat[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
-
-        while abs(gap) >= self.brick_size:
-            num_bricks = int(gap // self.brick_size)
-            self._update_renko(i, direction)
-            last_price = self.renko['price'][-1]
-            gap = current_price - last_price
-            direction = np.sign(gap)
-
-    def _update_renko(self, i, direction):
-        """ Append price and new block to renko dict """
-        last_price = self.renko['price'][-1]
-        new_price = last_price + (direction * self.brick_size)
-        print(f"Timestamp: {self.df['date'].iat[i]}, Updating Renko: New Price: {new_price}, Direction: {direction}")
-        
-        self.renko['index'].append(i)
-        self.renko['price'].append(new_price)
-        self.renko['direction'].append(direction)
-        self.renko['date'].append(self.df['date'].iat[i])
-
-    def build(self):
+    def build_renko(self):
         """ Create Renko data """
         if self.df.empty:
             raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
         
-        start_price = self.df['Price'].iat[0]
-        print(f"Starting Price: {start_price}")
+        self.renko = {'index': [], 'date': [], 'price': [], 'direction': []}
+        
+        initial_price = self.close[0]
+        self.renko['index'].append(0)
+        self.renko['date'].append(self.timestamps[0])
+        self.renko['price'].append(initial_price)
+        self.renko['direction'].append(0)
 
-        self.renko = {'index': [0], 'date': [self.df['date'].iat[0]], 'price': [start_price], 'direction': [0]}
+        last_price = initial_price
         for i in range(1, len(self.close)):
-            self._apply_renko(i)
+            current_price = self.close[i]
+            direction = np.sign(current_price - last_price)
+            gap = abs(current_price - last_price)
+
+            if gap >= self.brick_size:
+                num_bricks = int(gap // self.brick_size)
+                for _ in range(num_bricks):
+                    last_price += direction * self.brick_size
+                    self.renko['index'].append(i)
+                    self.renko['date'].append(self.timestamps[i])
+                    self.renko['price'].append(last_price)
+                    self.renko['direction'].append(direction)
+                    print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
+
         print("Final Renko Data:")
         print(self.renko)
         return self.renko
@@ -170,6 +163,6 @@ class Renko:
 if __name__ == "__main__":
     filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv" # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
-    renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
-    renko_data = renko_chart.build()
+    renko_chart.set_brick_size(brick_size=30)
+    renko_data = renko_chart.build_renko()
     renko_chart.plot(speed=0.1)
