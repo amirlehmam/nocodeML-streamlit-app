@@ -25,9 +25,6 @@ class Renko:
                 l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
                 l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
 
-                # Combine L1 and L2 records into a single DataFrame
-                df_combined = pd.concat([l1_records, l2_records])
-
                 # Initialize lists to collect valid price values
                 price_values = []
                 timestamps = []
@@ -44,7 +41,8 @@ class Renko:
                         pass
 
                 # Iterate through the rows and apply the function
-                df_combined.apply(check_and_add_price, axis=1)
+                l1_records.apply(check_and_add_price, axis=1)
+                l2_records.apply(check_and_add_price, axis=1)
 
                 # Create a DataFrame from the collected valid price values
                 df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
@@ -173,7 +171,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
+    filename = "/mnt/data/20240305.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
