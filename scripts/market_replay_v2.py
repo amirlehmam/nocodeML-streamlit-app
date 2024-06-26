@@ -132,7 +132,8 @@ class Renko:
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-        for x, (price, direction, date) in enumerate(zip(prices, directions, dates)):
+        x = 0
+        for i, (price, direction, date) in enumerate(zip(prices, directions, dates)):
             if direction == 1:
                 facecolor = 'g'
                 y = price - brick_size
@@ -142,7 +143,8 @@ class Renko:
 
             ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
             
-            if x + 1 >= x_max:  # Extend x-axis limit dynamically
+            x += 1
+            if x >= x_max:  # Extend x-axis limit dynamically
                 x_max += 50
                 ax.set_xlim(x_min, x_max)
 
@@ -156,17 +158,17 @@ class Renko:
 
             plt.pause(speed)
 
-        # Convert x-ticks to dates
-        x_ticks = ax.get_xticks()
-        x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
-        ax.set_xticklabels(x_labels, rotation=45, ha='right')
+            # Add dynamic timestamp labels
+            x_ticks = ax.get_xticks()
+            x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
+            ax.set_xticklabels(x_labels, rotation=45, ha='right')
 
         plt.show(block=True)  # Ensure the plot window stays open
 
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv" # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build()
