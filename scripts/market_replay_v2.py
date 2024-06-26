@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
-import os
 
 class Renko:
     def __init__(self, df=None, filename=None):
@@ -12,13 +11,22 @@ class Renko:
                 print("Raw Data:")
                 print(df.head(10))
 
-                # Define the base columns
-                base_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
-                extra_columns = [f'Extra{i}' for i in range(len(df.columns) - len(base_columns))]
-                df.columns = base_columns + extra_columns
+                # Define the base columns for L1 and L2
+                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
+                l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
 
-                # Parse timestamps
-                df['date'] = pd.to_datetime(df['Timestamp'], format='%Y%m%d%H%M%S')
+                # Separate L1 and L2 records
+                l1_records = df[df[0] == 'L1']
+                l2_records = df[df[0] == 'L2']
+
+                # Assign column names and parse timestamps
+                l1_records.columns = l1_columns
+                l2_records.columns = l2_columns
+                l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
+                l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
+
+                # Combine L1 and L2 records into a single DataFrame
+                df_combined = pd.concat([l1_records, l2_records])
 
                 # Initialize lists to collect valid price values
                 price_values = []
@@ -26,14 +34,7 @@ class Renko:
 
                 # Function to check and add valid prices to the list
                 def check_and_add_price(row):
-                    if row['Type'] == 'L1':
-                        price_str = row['Price']
-                    elif row['Type'] == 'L2':
-                        price_str = row['Price']
-                    else:
-                        return
-
-                    price_str = str(price_str).replace(',', '.')
+                    price_str = str(row['Price']).replace(',', '.')
                     try:
                         price = float(price_str)
                         if 16000 <= price <= 20000:  # Adjust the range as necessary
@@ -43,7 +44,7 @@ class Renko:
                         pass
 
                 # Iterate through the rows and apply the function
-                df.apply(check_and_add_price, axis=1)
+                df_combined.apply(check_and_add_price, axis=1)
 
                 # Create a DataFrame from the collected valid price values
                 df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
@@ -62,10 +63,11 @@ class Renko:
         self.close = df_filtered['Price'].values
         self.timestamps = df_filtered['date'].values
 
-    def set_brick_size(self, brick_size=30):
-        """ Setting brick size """
+    def set_brick_size(self, brick_size=30, brick_threshold=5):
+        """ Setting brick size and threshold """
         self.brick_size = brick_size
-        return self.brick_size
+        self.brick_threshold = brick_threshold
+        return self.brick_size, self.brick_threshold
 
     def build_renko(self):
         """ Create Renko data """
@@ -81,20 +83,30 @@ class Renko:
         self.renko['direction'].append(0)
 
         last_price = initial_price
+        direction_count = 0  # To track the number of bricks in the same direction
+
         for i in range(1, len(self.close)):
             current_price = self.close[i]
             direction = np.sign(current_price - last_price)
             gap = abs(current_price - last_price)
 
-            if gap >= self.brick_size:
-                num_bricks = int(gap // self.brick_size)
-                for _ in range(num_bricks):
-                    last_price += direction * self.brick_size
-                    self.renko['index'].append(i)
-                    self.renko['date'].append(self.timestamps[i])
-                    self.renko['price'].append(last_price)
-                    self.renko['direction'].append(direction)
-                    print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
+            if direction != 0:
+                if direction == self.renko['direction'][-1]:
+                    direction_count += int(gap // self.brick_size)
+                else:
+                    direction_count = int(gap // self.brick_size)
+
+                if direction_count >= self.brick_threshold:
+                    last_price += direction * self.brick_size * direction_count
+                    direction_count = 0  # Reset direction count after a change
+                else:
+                    last_price += direction * self.brick_size * (int(gap // self.brick_size))
+
+                self.renko['index'].append(i)
+                self.renko['date'].append(self.timestamps[i])
+                self.renko['price'].append(last_price)
+                self.renko['direction'].append(direction)
+                print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
 
         print("Final Renko Data:")
         print(self.renko)
@@ -161,8 +173,8 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240301.csv" # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
-    renko_chart.set_brick_size(brick_size=30)
+    renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
     renko_chart.plot(speed=0.1)
