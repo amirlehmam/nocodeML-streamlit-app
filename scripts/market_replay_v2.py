@@ -12,7 +12,7 @@ class Renko:
                 print(df.head(10))
 
                 # Define the base columns for L1 and L2
-                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
+                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', None, None, None]
                 l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
 
                 # Separate L1 and L2 records
@@ -24,6 +24,9 @@ class Renko:
                 l2_records.columns = l2_columns
                 l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
                 l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
+
+                # Combine L1 and L2 records into a single DataFrame
+                df_combined = pd.concat([l1_records, l2_records])
 
                 # Initialize lists to collect valid price values
                 price_values = []
@@ -41,8 +44,7 @@ class Renko:
                         pass
 
                 # Iterate through the rows and apply the function
-                l1_records.apply(check_and_add_price, axis=1)
-                l2_records.apply(check_and_add_price, axis=1)
+                df_combined.apply(check_and_add_price, axis=1)
 
                 # Create a DataFrame from the collected valid price values
                 df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
