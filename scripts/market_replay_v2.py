@@ -1,165 +1,112 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 class Renko:
-    def __init__(self, df=None, filename=None):
-        if filename:
-            try:
-                df = pd.read_csv(filename, delimiter=';', header=None, engine='python', on_bad_lines='skip')
-                print("Raw Data:")
-                print(df.head(10))
-
-                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', 'NA1', 'NA2', 'NA3']
-                l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
-
-                l1_records = df[df[0] == 'L1'].copy()
-                l2_records = df[df[0] == 'L2'].copy()
-
-                l1_records.columns = l1_columns
-                l2_records.columns = l2_columns
-                l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
-                l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
-
-                l1_records = l1_records.reset_index(drop=True)
-                l2_records = l2_records.reset_index(drop=True)
-
-                df_combined = pd.concat([l1_records, l2_records]).reset_index(drop=True)
-
-                price_values = []
-                timestamps = []
-
-                def check_and_add_price(row):
-                    price_str = str(row['Price']).replace(',', '.')
-                    try:
-                        price = float(price_str)
-                        if 16000 <= price <= 20000:
-                            price_values.append(price)
-                            timestamps.append(row['date'])
-                    except ValueError:
-                        pass
-
-                df_combined.apply(check_and_add_price, axis=1)
-
-                df_filtered = pd.DataFrame({'Price': price_values, 'date': timestamps})
-
-                print("Filtered Data with Prices:")
-                print(df_filtered.head(10))
-                print(f"Number of valid price entries: {len(df_filtered)}")
-
-            except FileNotFoundError:
-                raise FileNotFoundError(f"{filename}\n\nDoes not exist.")
-        elif df is None:
-            raise ValueError("DataFrame or filename must be provided.")
-
-        self.df = df_filtered
-        self.close = df_filtered['Price'].values
-        self.timestamps = df_filtered['date'].values
-
-    def set_brick_size(self, brick_size=30, brick_threshold=5):
+    def __init__(self, filename, brick_size=30):
+        self.filename = filename
         self.brick_size = brick_size
-        self.brick_threshold = brick_threshold
-        return self.brick_size, self.brick_threshold
+        self.df = pd.read_csv(filename, header=None)
+        self.df.columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
+        self.df = self.preprocess_data(self.df)
+        self.renko_data = self.build_renko(self.df, self.brick_size)
 
-    def build_renko(self):
-        if self.df.empty:
-            raise ValueError("DataFrame is empty after filtering. Check the filtering conditions.")
-        
-        self.renko = {'index': [], 'date': [], 'price': [], 'direction': []}
-        
-        initial_price = self.close[0]
-        self.renko['index'].append(0)
-        self.renko['date'].append(self.timestamps[0])
-        self.renko['price'].append(initial_price)
-        self.renko['direction'].append(0)
+    def preprocess_data(self, df):
+        l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume']
+        l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
+        l1_records = df[df['Type'] == 'L1'].copy()
+        l2_records = df[df['Type'] == 'L2'].copy()
 
-        last_price = initial_price
-        last_direction = 0
+        l1_records.columns = l2_columns  # Use the l2_columns to make sure the columns match
 
-        for i in range(1, len(self.close)):
-            current_price = self.close[i]
-            gap = current_price - last_price
-            direction = np.sign(gap)
+        l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
+        l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
 
-            while abs(gap) >= self.brick_size:
-                if direction != last_direction:
-                    last_price += self.brick_size * direction
-                    last_direction = direction
-                else:
-                    last_price += self.brick_size * direction
-                
-                self.renko['index'].append(i)
-                self.renko['date'].append(self.timestamps[i])
-                self.renko['price'].append(last_price)
-                self.renko['direction'].append(direction)
-                gap = current_price - last_price
-                
-                print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
+        df_combined = pd.concat([l1_records, l2_records]).reset_index(drop=True)
+        df_combined = df_combined.sort_values(by=['date', 'Offset']).reset_index(drop=True)
+        df_combined['Price'] = df_combined['Price'].str.replace(',', '').astype(float)
+        return df_combined[['date', 'Price']]
 
-        print("Final Renko Data:")
-        print(self.renko)
-        return self.renko
+    def build_renko(self, df, brick_size):
+        df['diff'] = df['Price'].diff()
+        df = df.dropna().reset_index(drop=True)
 
-    def plot(self, speed=0.1):
-        prices = self.renko['price']
-        directions = self.renko['direction']
-        dates = self.renko['date']
-        brick_size = self.brick_size
+        renko_data = {
+            'index': [],
+            'date': [],
+            'price': [],
+            'direction': []
+        }
 
-        print(f"Prices: {prices}")
-        print(f"Directions: {directions}")
-        print(f"Brick size: {brick_size}")
+        last_price = df['Price'][0]
+        last_brick_price = last_price
+        direction = 0  # 1 for up, -1 for down
+        brick_threshold = self.brick_size
 
-        fig, ax = plt.subplots(1, figsize=(10, 5))
-        fig.suptitle(f"Renko Chart (brick size = {round(brick_size, 2)})", fontsize=20)
-        ax.set_ylabel("Price ($)")
-        plt.rc('axes', labelsize=20)
-        plt.rc('font', size=16)
+        for i in range(1, len(df)):
+            price = df['Price'][i]
+            diff = price - last_brick_price
 
-        x_min = 0
-        x_max = 50
-        y_min = min(prices) - 2 * brick_size
-        y_max = max(prices) + 2 * brick_size
+            if direction == 0:
+                if abs(diff) >= brick_threshold:
+                    direction = np.sign(diff)
+                    last_brick_price += direction * brick_threshold
+                    renko_data['index'].append(i)
+                    renko_data['date'].append(df['date'][i])
+                    renko_data['price'].append(last_brick_price)
+                    renko_data['direction'].append(direction)
+            elif direction == 1:
+                if diff >= brick_threshold:
+                    last_brick_price += brick_threshold
+                    renko_data['index'].append(i)
+                    renko_data['date'].append(df['date'][i])
+                    renko_data['price'].append(last_brick_price)
+                    renko_data['direction'].append(direction)
+                elif diff <= -brick_threshold:
+                    last_brick_price -= brick_threshold
+                    direction = -1
+                    renko_data['index'].append(i)
+                    renko_data['date'].append(df['date'][i])
+                    renko_data['price'].append(last_brick_price)
+                    renko_data['direction'].append(direction)
+            elif direction == -1:
+                if diff <= -brick_threshold:
+                    last_brick_price -= brick_threshold
+                    renko_data['index'].append(i)
+                    renko_data['date'].append(df['date'][i])
+                    renko_data['price'].append(last_brick_price)
+                    renko_data['direction'].append(direction)
+                elif diff >= brick_threshold:
+                    last_brick_price += brick_threshold
+                    direction = 1
+                    renko_data['index'].append(i)
+                    renko_data['date'].append(df['date'][i])
+                    renko_data['price'].append(last_brick_price)
+                    renko_data['direction'].append(direction)
 
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
+        return renko_data
 
-        x = 0
-        for i, (price, direction, date) in enumerate(zip(prices, directions, dates)):
-            if direction == 1:
-                facecolor = 'g'
-                y = price - brick_size
+    def plot_renko(self):
+        plt.figure(figsize=(10, 5))
+        prices = self.renko_data['price']
+        dates = self.renko_data['date']
+        directions = self.renko_data['direction']
+
+        for i in range(1, len(prices)):
+            if directions[i] == 1:
+                plt.plot([dates[i-1], dates[i]], [prices[i-1], prices[i]], color='green', linewidth=2)
             else:
-                facecolor = 'r'
-                y = price
+                plt.plot([dates[i-1], dates[i]], [prices[i-1], prices[i]], color='red', linewidth=2)
 
-            ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
-            
-            x += 1
-            if x >= x_max:
-                x_max += 50
-                ax.set_xlim(x_min, x_max)
-
-            if price < y_min + 2 * brick_size:
-                y_min = price - 2 * brick_size
-                ax.set_ylim(y_min, y_max)
-            
-            if price > y_max - 2 * brick_size:
-                y_max = price + 2 * brick_size
-                ax.set_ylim(y_min, y_max)
-
-            plt.pause(speed)
-
-            x_ticks = ax.get_xticks()
-            x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
-            ax.set_xticklabels(x_labels, rotation=45, ha='right')
-
-        plt.show(block=True)
+        plt.title(f'Renko Chart (brick size = {self.brick_size})')
+        plt.xlabel('Date')
+        plt.ylabel('Price ($)')
+        plt.show()
 
 if __name__ == "__main__":
     filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"
-    renko_chart = Renko(filename=filename)
-    renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
-    renko_data = renko_chart.build_renko()
-    renko_chart.plot(speed=0.1)
+    renko_chart = Renko(filename=filename, brick_size=30)
+    print(f"Number of valid price entries: {len(renko_chart.df)}")
+    for i in range(len(renko_chart.renko_data['date'])):
+        print(f"Timestamp: {renko_chart.renko_data['date'][i]}, Price: {renko_chart.renko_data['price'][i]}, Direction: {renko_chart.renko_data['direction'][i]}")
+    renko_chart.plot_renko()
