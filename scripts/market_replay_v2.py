@@ -87,29 +87,19 @@ class Renko:
         self.renko['direction'].append(0)
 
         last_price = initial_price
-        direction_count = 0  # To track the number of bricks in the same direction
 
         for i in range(1, len(self.close)):
             current_price = self.close[i]
-            direction = np.sign(current_price - last_price)
-            gap = abs(current_price - last_price)
+            gap = current_price - last_price
+            direction = np.sign(gap)
 
-            if direction != 0:
-                if direction == self.renko['direction'][-1]:
-                    direction_count += int(gap // self.brick_size)
-                else:
-                    direction_count = int(gap // self.brick_size)
-
-                if direction_count >= self.brick_threshold:
-                    last_price += direction * self.brick_size * direction_count
-                    direction_count = 0  # Reset direction count after a change
-                else:
-                    last_price += direction * self.brick_size * (int(gap // self.brick_size))
-
+            while abs(gap) >= self.brick_size:
+                last_price += self.brick_size * direction
                 self.renko['index'].append(i)
                 self.renko['date'].append(self.timestamps[i])
                 self.renko['price'].append(last_price)
                 self.renko['direction'].append(direction)
+                gap = current_price - last_price
                 print(f"Timestamp: {self.timestamps[i]}, Price: {current_price}, Last Renko Price: {last_price}, Gap: {gap}, Direction: {direction}")
 
         print("Final Renko Data:")
@@ -177,7 +167,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv" # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
