@@ -16,17 +16,17 @@ class Renko:
                 l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
 
                 # Separate L1 and L2 records
-                l1_records = df[df[0] == 'L1']
-                l2_records = df[df[0] == 'L2']
+                l1_records = df[df[0] == 'L1'].copy()
+                l2_records = df[df[0] == 'L2'].copy()
 
                 # Assign column names and parse timestamps
                 l1_records.columns = l1_columns
                 l2_records.columns = l2_columns
-                l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
-                l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
+                l1_records.loc[:, 'date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
+                l2_records.loc[:, 'date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
 
                 # Combine L1 and L2 records into a single DataFrame
-                df_combined = pd.concat([l1_records, l2_records])
+                df_combined = pd.concat([l1_records, l2_records]).reset_index(drop=True)
 
                 # Initialize lists to collect valid price values
                 price_values = []
@@ -173,7 +173,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "/mnt/data/20240305.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
