@@ -12,7 +12,7 @@ class Renko:
                 print(df.head(10))
 
                 # Define the base columns for L1 and L2
-                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', None, None, None]
+                l1_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 'Volume', 'NA1', 'NA2', 'NA3']
                 l2_columns = ['Type', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 'OrderBookPosition', 'MarketMaker', 'Price', 'Volume']
 
                 # Separate L1 and L2 records
@@ -22,8 +22,12 @@ class Renko:
                 # Assign column names and parse timestamps
                 l1_records.columns = l1_columns
                 l2_records.columns = l2_columns
-                l1_records.loc[:, 'date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
-                l2_records.loc[:, 'date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
+                l1_records['date'] = pd.to_datetime(l1_records['Timestamp'], format='%Y%m%d%H%M%S')
+                l2_records['date'] = pd.to_datetime(l2_records['Timestamp'], format='%Y%m%d%H%M%S')
+
+                # Ensure unique indices before combining
+                l1_records = l1_records.reset_index(drop=True)
+                l2_records = l2_records.reset_index(drop=True)
 
                 # Combine L1 and L2 records into a single DataFrame
                 df_combined = pd.concat([l1_records, l2_records]).reset_index(drop=True)
@@ -173,7 +177,7 @@ class Renko:
 
 # Usage example
 if __name__ == "__main__":
-    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv"  # Update with the correct path to your CSV file
+    filename = "C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv" # Update with the correct path to your CSV file
     renko_chart = Renko(filename=filename)
     renko_chart.set_brick_size(brick_size=30, brick_threshold=5)
     renko_data = renko_chart.build_renko()
