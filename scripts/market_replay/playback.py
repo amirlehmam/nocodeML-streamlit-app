@@ -67,7 +67,8 @@ df_l2 = pd.DataFrame({
 })
 
 # Debug: Print first few rows of the DataFrame
-print(df_l2.head())
+print("Initial DataFrame:")
+print(df_l2.head(20))
 
 # Remove rows with NaN values in 'Price'
 df_l2 = df_l2.dropna(subset=['Price'])
@@ -76,7 +77,8 @@ df_l2 = df_l2.dropna(subset=['Price'])
 df_l2 = df_l2.groupby('Timestamp').agg({'Price': 'mean'}).reset_index()
 
 # Debug: Print first few rows after aggregation
-print(df_l2.head())
+print("After aggregation:")
+print(df_l2.head(20))
 
 # Generate Renko bars
 brick_size = 30  # Define the brick size for Renko bars
@@ -84,7 +86,8 @@ brick_threshold = 5  # Define the brick threshold for Renko bars
 renko_df = generate_renko(df_l2, brick_size, brick_threshold)
 
 # Debug: Print first few rows of the Renko DataFrame
-print(renko_df.head())
+print("Renko DataFrame:")
+print(renko_df.head(20))
 
 # Save Renko data to HDF5
 with h5py.File(hdf5_file, 'a') as f:
@@ -130,7 +133,8 @@ renko_df = pd.DataFrame({
 })
 
 # Debug: Print first few rows of the Renko DataFrame for playback
-print(renko_df.head())
+print("Renko DataFrame for Playback:")
+print(renko_df.head(20))
 
 # Run the playback
 playback_renko(renko_df)
