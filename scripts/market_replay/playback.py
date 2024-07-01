@@ -1,12 +1,54 @@
-import gc
-import numpy as np
 import pandas as pd
 import h5py
+import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import matplotlib.patches as patches
 from tqdm import tqdm
 
 _MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'fake-r-wicks', 'fake-r-nongap']
+
+def add_brick_loop(rsd, df, i, renko_multiply, current_direction, current_n_bricks, wick_min_i, wick_max_i, volume_i, custom_columns, brick_size):
+    last_price = rsd["price"][-1]
+    renko_price = last_price + (current_direction * renko_multiply * brick_size)
+    wick = wick_min_i if current_n_bricks > 0 else wick_max_i
+
+    to_add = [i, df["datetime"].iat[i], renko_price, current_direction, wick, volume_i]
+    for name, add in zip(list(rsd.keys()), to_add):
+        rsd[name].append(add)
+    if custom_columns is not None:
+        for name in custom_columns:
+            rsd[name].append(df[name].iat[i])
+
+    volume_i = 1
+    wick_min_i = renko_price if current_n_bricks > 0 else wick_min_i
+    wick_max_i = renko_price if current_n_bricks < 0 else wick_max_i
+
+    return rsd, wick_min_i, wick_max_i, volume_i
+
+def add_prices(rsd, df, i, brick_size, custom_columns):
+    df_close = df["close"].iat[i]
+    wick_min_i = df_close if df_close < rsd["wick"][-1] else rsd["wick"][-1]
+    wick_max_i = df_close if df_close > rsd["wick"][-1] else rsd["wick"][-1]
+    volume_i = rsd["volume"][-1] + 1
+
+    last_price = rsd["price"][-1]
+    current_n_bricks = (df_close - last_price) / brick_size
+    current_direction = np.sign(current_n_bricks)
+    if current_direction == 0:
+        return rsd, wick_min_i, wick_max_i, volume_i
+    last_direction = rsd["direction"][-1]
+    is_same_direction = ((current_direction > 0 and last_direction >= 0)
+                         or (current_direction < 0 and last_direction <= 0))
+
+    total_same_bricks = current_n_bricks if is_same_direction else 0
+    if not is_same_direction and abs(current_n_bricks) >= 2:
+        rsd, wick_min_i, wick_max_i, volume_i = add_brick_loop(rsd, df, i, 2, current_direction, current_n_bricks, wick_min_i, wick_max_i, volume_i, custom_columns, brick_size)
+        total_same_bricks = current_n_bricks - 2 * current_direction
+
+    for not_in_use in range(abs(int(total_same_bricks))):
+        rsd, wick_min_i, wick_max_i, volume_i = add_brick_loop(rsd, df, i, 1, current_direction, current_n_bricks, wick_min_i, wick_max_i, volume_i, custom_columns, brick_size)
+
+    return rsd, wick_min_i, wick_max_i, volume_i
 
 class Renko:
     def __init__(self, df: pd.DataFrame, brick_size: float, add_columns: list = None, show_progress: bool = False):
@@ -46,45 +88,7 @@ class Renko:
         self._volume_i = 1
 
         for i in tqdm(range(1, self._df_len), desc="Calculating Renko Bars"):
-            self._add_prices(i, df)
-
-    def _add_prices(self, i, df):
-        df_close = df["close"].iat[i]
-        self._wick_min_i = df_close if df_close < self._wick_min_i else self._wick_min_i
-        self._wick_max_i = df_close if df_close > self._wick_max_i else self._wick_max_i
-        self._volume_i += 1
-
-        last_price = self._rsd["price"][-1]
-        current_n_bricks = (df_close - last_price) / self._brick_size
-        current_direction = np.sign(current_n_bricks)
-        if current_direction == 0:
-            return
-        last_direction = self._rsd["direction"][-1]
-        is_same_direction = ((current_direction > 0 and last_direction >= 0) or (current_direction < 0 and last_direction <= 0))
-
-        total_same_bricks = current_n_bricks if is_same_direction else 0
-        if not is_same_direction and abs(current_n_bricks) >= 2:
-            self._add_brick_loop(df, i, 2, current_direction, current_n_bricks)
-            total_same_bricks = current_n_bricks - 2 * current_direction
-
-        for _ in range(abs(int(total_same_bricks))):
-            self._add_brick_loop(df, i, 1, current_direction, current_n_bricks)
-
-    def _add_brick_loop(self, df, i, renko_multiply, current_direction, current_n_bricks):
-        last_price = self._rsd["price"][-1]
-        renko_price = last_price + (current_direction * renko_multiply * self._brick_size)
-        wick = self._wick_min_i if current_n_bricks > 0 else self._wick_max_i
-
-        to_add = [i, df["datetime"].iat[i], renko_price, current_direction, wick, self._volume_i]
-        for name, add in zip(list(self._rsd.keys()), to_add):
-            self._rsd[name].append(add)
-        if self._custom_columns is not None:
-            for name in self._custom_columns:
-                self._rsd[name].append(df[name].iat[i])
-
-        self._volume_i = 1
-        self._wick_min_i = renko_price if current_n_bricks > 0 else self._wick_min_i
-        self._wick_max_i = renko_price if current_n_bricks < 0 else self._wick_max_i
+            self._rsd, self._wick_min_i, self._wick_max_i, self._volume_i = add_prices(self._rsd, df, i, brick_size, self._custom_columns)
 
     def renko_df(self, mode: str = "wicks"):
         if mode not in _MODE_dict:
@@ -193,61 +197,78 @@ class Renko:
 
         return df
 
-def process_l2_data(hdf5_file, brick_size):
-    with h5py.File(hdf5_file, 'r') as f:
-        l2_price = f['L2/Price'][:]
-        l2_timestamp = f['L2/Timestamp'][:]
+    def plot(self, speed=0.1):
+        prices = self._rsd['price']
+        directions = self._rsd['direction']
+        dates = self._rsd['date']
+        brick_size = self._brick_size
 
-    df_l2 = pd.DataFrame({
-        'Timestamp': pd.to_datetime(l2_timestamp.astype(str)),
-        'close': pd.to_numeric(l2_price, errors='coerce')
-    })
-    df_l2 = df_l2.dropna(subset=['close'])
-    df_l2 = df_l2.groupby('Timestamp').agg({'close': 'mean'}).reset_index()
+        fig, ax = plt.subplots(1, figsize=(10, 5))
+        fig.suptitle(f"Renko Chart (brick size = {round(brick_size, 2)})", fontsize=20)
+        ax.set_ylabel("Price ($)")
+        plt.rc('axes', labelsize=20)
+        plt.rc('font', size=16)
+
+        x_min = 0
+        x_max = 50
+        y_min = min(prices) - 2 * brick_size
+        y_max = max(prices) + 2 * brick_size
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        for x, (price, direction, date) in enumerate(zip(prices, directions, dates)):
+            if direction == 1:
+                facecolor = 'g'
+                y = price - brick_size
+            else:
+                facecolor = 'r'
+                y = price
+
+            ax.add_patch(patches.Rectangle((x + 1, y), height=brick_size, width=1, facecolor=facecolor))
+            
+            if x + 1 >= x_max:
+                x_max += 50
+                ax.set_xlim(x_min, x_max)
+
+            if price < y_min + 2 * brick_size:
+                y_min = price - 2 * brick_size
+                ax.set_ylim(y_min, y_max)
+            
+            if price > y_max - 2 * brick_size:
+                y_max = price + 2 * brick_size
+                ax.set_ylim(y_min, y_max)
+
+            plt.pause(speed)
+
+        x_ticks = ax.get_xticks()
+        x_labels = [dates[int(tick)-1] if 0 <= int(tick)-1 < len(dates) else '' for tick in x_ticks]
+        ax.set_xticklabels(x_labels, rotation=45, ha='right')
+
+        plt.show(block=True)
+
+def process_l2_data(file_path, brick_size):
+    with h5py.File(file_path, "r") as f:
+        def print_attrs(name, obj):
+            print(name)
+        f.visititems(print_attrs)
+
+    dataset_names = ["L2/MarketDataType", "L2/MarketMaker", "L2/Offset", "L2/Operation", "L2/Position", "L2/Price", "L2/RecordType", "L2/Timestamp", "L2/Volume"]
+
+    with h5py.File(file_path, "r") as f:
+        l2_data = {name.split('/')[-1]: f[name][:] for name in dataset_names}
+
+    df_l2 = pd.DataFrame(l2_data)
+    df_l2["datetime"] = pd.to_datetime(df_l2["Timestamp"].astype(str))
+    df_l2["close"] = df_l2["Price"].astype(float)
 
     renko_chart = Renko(df_l2, brick_size)
     renko_df = renko_chart.renko_df()
+    print(f"Renko DataFrame for Playback:\n{renko_df.head()}")
 
-    with h5py.File(hdf5_file, 'a') as f:
-        if 'Renko' in f:
-            del f['Renko']
-        renko_group = f.create_group('Renko')
-        renko_group.create_dataset('Timestamp', data=renko_df.index.astype(str).values.astype('S'))
-        renko_group.create_dataset('Renko_Close', data=renko_df['close'].values)
-
-    print("Renko bars generated and saved to HDF5")
-
-def playback_renko(renko_df, speed=1):
-    fig, ax = plt.subplots()
-    timestamps = renko_df.index
-    renko_closes = renko_df['close']
-
-    def update(num):
-        ax.clear()
-        ax.plot(timestamps[:num], renko_closes[:num])
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-
-    ani = FuncAnimation(fig, update, frames=len(timestamps), repeat=False)
-    plt.show()
+    renko_chart.plot()
 
 if __name__ == "__main__":
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
-    brick_size = 0.0003
+    brick_size = 0.03
     process_l2_data(hdf5_file, brick_size)
-
-    with h5py.File(hdf5_file, 'r') as f:
-        renko_timestamp = f['Renko/Timestamp'][:]
-        renko_close = f['Renko/Renko_Close'][:]
-
-    renko_df = pd.DataFrame({
-        'Timestamp': pd.to_datetime(renko_timestamp.astype(str)),
-        'close': renko_close
-    })
-
-    renko_df.set_index('Timestamp', inplace=True)
-
-    print("Renko DataFrame for Playback:")
-    print(renko_df.head(20))
-
-    playback_renko(renko_df)
