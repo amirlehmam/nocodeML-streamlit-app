@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import h5py
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 
 _MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'fake-r-wicks', 'fake-r-nongap']
 
@@ -204,7 +203,6 @@ def process_l2_data(hdf5_file, brick_size):
         'Timestamp': pd.to_datetime(l2_timestamp.astype(str)),
         'close': pd.to_numeric(l2_price, errors='coerce')
     })
-
     df_l2 = df_l2.dropna(subset=['close'])
     df_l2 = df_l2.groupby('Timestamp').agg({'close': 'mean'}).reset_index()
 
@@ -222,29 +220,21 @@ def process_l2_data(hdf5_file, brick_size):
 
 def playback_renko(renko_df, speed=1):
     fig, ax = plt.subplots()
-    plt.subplots_adjust(bottom=0.25)
-
     timestamps = renko_df.index
     renko_closes = renko_df['close']
 
-    l, = plt.plot(timestamps[:1], renko_closes[:1], '-')
+    def update(num):
+        ax.clear()
+        ax.plot(timestamps[:num], renko_closes[:num])
+        plt.xticks(rotation=45)
+        plt.tight_layout()
 
-    ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
-    slider = Slider(ax_slider, 'Time', 0, len(timestamps) - 1, valinit=0, valstep=1)
-
-    def update(val):
-        idx = int(slider.val)
-        l.set_data(timestamps[:idx+1], renko_closes[:idx+1])
-        ax.relim()
-        ax.autoscale_view()
-        fig.canvas.draw_idle()
-
-    slider.on_changed(update)
+    ani = plt.FuncAnimation(fig, update, frames=len(timestamps), repeat=False)
     plt.show()
 
 if __name__ == "__main__":
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
-    brick_size = 30
+    brick_size = 0.0003
     process_l2_data(hdf5_file, brick_size)
 
     with h5py.File(hdf5_file, 'r') as f:
