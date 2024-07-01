@@ -62,12 +62,21 @@ with h5py.File(hdf5_file, 'r') as f:
 
 # Convert to DataFrame
 df_l2 = pd.DataFrame({
-    'Timestamp': pd.to_datetime(l2_timestamp.astype(str).astype(str)),
-    'Price': l2_price.astype(float)
+    'Timestamp': pd.to_datetime(l2_timestamp.astype(str)),
+    'Price': pd.to_numeric(l2_price, errors='coerce')
 })
 
 # Debug: Print first few rows of the DataFrame
-print(df_l2.head(20))
+print(df_l2.head())
+
+# Remove rows with NaN values in 'Price'
+df_l2 = df_l2.dropna(subset=['Price'])
+
+# Aggregate prices by timestamp (mean price for simplicity)
+df_l2 = df_l2.groupby('Timestamp').agg({'Price': 'mean'}).reset_index()
+
+# Debug: Print first few rows after aggregation
+print(df_l2.head())
 
 # Generate Renko bars
 brick_size = 30  # Define the brick size for Renko bars
@@ -75,7 +84,7 @@ brick_threshold = 5  # Define the brick threshold for Renko bars
 renko_df = generate_renko(df_l2, brick_size, brick_threshold)
 
 # Debug: Print first few rows of the Renko DataFrame
-print(renko_df.head(20))
+print(renko_df.head())
 
 # Save Renko data to HDF5
 with h5py.File(hdf5_file, 'a') as f:
@@ -121,7 +130,7 @@ renko_df = pd.DataFrame({
 })
 
 # Debug: Print first few rows of the Renko DataFrame for playback
-print(renko_df.head(20))
+print(renko_df.head())
 
 # Run the playback
 playback_renko(renko_df)
