@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import h5py
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from tqdm import tqdm
 
 _MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'fake-r-wicks', 'fake-r-nongap']
 
@@ -43,13 +45,13 @@ class Renko:
         self._wick_max_i = initial_price
         self._volume_i = 1
 
-        for i in range(1, self._df_len):
+        for i in tqdm(range(1, self._df_len), desc="Calculating Renko Bars"):
             self._add_prices(i, df)
 
     def _add_prices(self, i, df):
         df_close = df["close"].iat[i]
-        self._wick_min_i = min(df_close, self._wick_min_i)
-        self._wick_max_i = max(df_close, self._wick_max_i)
+        self._wick_min_i = df_close if df_close < self._wick_min_i else self._wick_min_i
+        self._wick_max_i = df_close if df_close > self._wick_max_i else self._wick_max_i
         self._volume_i += 1
 
         last_price = self._rsd["price"][-1]
@@ -67,9 +69,6 @@ class Renko:
 
         for _ in range(abs(int(total_same_bricks))):
             self._add_brick_loop(df, i, 1, current_direction, current_n_bricks)
-
-        if self._show_progress:
-            print(f"\r {round(float((i + 1) / self._df_len * 100), 2)}%", end='')
 
     def _add_brick_loop(self, df, i, renko_multiply, current_direction, current_n_bricks):
         last_price = self._rsd["price"][-1]
@@ -229,7 +228,7 @@ def playback_renko(renko_df, speed=1):
         plt.xticks(rotation=45)
         plt.tight_layout()
 
-    ani = plt.FuncAnimation(fig, update, frames=len(timestamps), repeat=False)
+    ani = FuncAnimation(fig, update, frames=len(timestamps), repeat=False)
     plt.show()
 
 if __name__ == "__main__":
