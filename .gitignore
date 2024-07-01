@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 requirements.txt
 scripts/market_replay/data/market_replay_data.h5
+scripts/market_replay/market_replay_data.h5
