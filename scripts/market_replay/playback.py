@@ -226,9 +226,8 @@ def process_l2_data(hdf5_file, brick_size, brick_threshold):
     }
     df_l2 = pd.DataFrame(data)
 
-    # Filter data to include only 6 AM to 10:30 PM GMT+1
-    df_l2 = df_l2[(df_l2['datetime'].dt.time >= pd.Timestamp('06:00:00').time()) & 
-                  (df_l2['datetime'].dt.time <= pd.Timestamp('22:30:00').time())]
+    # Filter data for the specified time range (6 AM to 10:30 PM GMT+1)
+    df_l2 = df_l2[(df_l2['datetime'].dt.time >= pd.to_datetime('06:00').time()) & (df_l2['datetime'].dt.time <= pd.to_datetime('22:30').time())]
 
     renko_chart = Renko(df_l2, brick_size, brick_threshold, show_progress=True)
     renko_df = renko_chart.renko_df()
@@ -265,7 +264,7 @@ def animate(ival, renko_chart, df_ticks, ax1, ax2):
 
 def main():
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
-    brick_size = 30  # Adjust based on NinjaTrader settings
+    brick_size = 3  # Adjust based on NinjaTrader settings
     brick_threshold = 5  # Adjust based on NinjaTrader settings
     renko_chart = process_l2_data(hdf5_file, brick_size, brick_threshold)
 
