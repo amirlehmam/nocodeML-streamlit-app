@@ -226,6 +226,10 @@ def process_l2_data(hdf5_file, brick_size, brick_threshold):
     }
     df_l2 = pd.DataFrame(data)
 
+    # Filter data to include only 6 AM to 10:30 PM GMT+1
+    df_l2 = df_l2[(df_l2['datetime'].dt.time >= pd.Timestamp('06:00:00').time()) & 
+                  (df_l2['datetime'].dt.time <= pd.Timestamp('22:30:00').time())]
+
     renko_chart = Renko(df_l2, brick_size, brick_threshold, show_progress=True)
     renko_df = renko_chart.renko_df()
 
@@ -239,20 +243,17 @@ def process_l2_data(hdf5_file, brick_size, brick_threshold):
     print("Renko bars generated and saved to HDF5")
     return renko_chart
 
-def animate(ival, renko_chart, df_ticks, ax1, ax2):
-    if ival >= len(df_ticks):
+def animate(ival, renko_chart, ax1, ax2):
+    if ival >= len(renko_chart._rsd['price']):
         print('No more data to plot')
         return
 
-    timestamp = df_ticks['datetime'].iat[ival]
-    price = df_ticks['close'].iat[ival]
-
-    renko_chart._rsd, renko_chart._wick_min_i, renko_chart._wick_max_i, renko_chart._volume_i = add_brick_loop(
-        renko_chart._rsd, df_ticks, ival, 1, np.sign(price - renko_chart._rsd["price"][-1]), (price - renko_chart._rsd["price"][-1]) / renko_chart._brick_size,
-        renko_chart._wick_min_i, renko_chart._wick_max_i, renko_chart._volume_i, renko_chart._custom_columns, renko_chart._brick_size, renko_chart._brick_threshold
-    )
-
-    df_wicks = renko_chart.renko_animate('wicks', max_len=100, keep=50)
+    current_data = {
+        'datetime': renko_chart._rsd['date'][:ival],
+        'close': renko_chart._rsd['price'][:ival],
+        'volume': renko_chart._rsd['volume'][:ival]
+    }
+    df_wicks = pd.DataFrame(current_data)
 
     ax1.clear()
     ax2.clear()
@@ -261,20 +262,17 @@ def animate(ival, renko_chart, df_ticks, ax1, ax2):
 
 def main():
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
-    brick_size = 5
-    brick_threshold = 5
+    brick_size = 3  # Adjust based on NinjaTrader settings
+    brick_threshold = 5  # Adjust based on NinjaTrader settings
     renko_chart = process_l2_data(hdf5_file, brick_size, brick_threshold)
 
-    # Load tick data for animation
-    df_ticks = renko_chart._rsd['date']
-
     fig, axes = mpf.plot(renko_chart.renko_df(), returnfig=True, volume=True,
-                         figsize=(11, 8), panel_ratios=(2, 1),
+                         figsize=(16, 10), panel_ratios=(2, 1),
                          title='\nRenko Animation', type='candle', style='charles')
     ax1 = axes[0]
     ax2 = axes[2]
 
-    ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, df_ticks, ax1, ax2), interval=80)
+    ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2), interval=80, save_count=len(renko_chart._rsd['price']))
     mpf.show()
 
 if __name__ == "__main__":
