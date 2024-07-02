@@ -254,6 +254,8 @@ def animate(ival, renko_chart, ax1, ax2):
         'volume': renko_chart._rsd['volume'][:ival]
     }
     df_wicks = pd.DataFrame(current_data)
+    df_wicks.index = pd.DatetimeIndex(df_wicks["datetime"])
+    df_wicks.drop(columns=['datetime'], inplace=True)
 
     ax1.clear()
     ax2.clear()
