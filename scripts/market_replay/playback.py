@@ -261,7 +261,7 @@ def animate(ival, renko_chart, df_ticks, ax1, ax2):
 
 def main():
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
-    brick_size = 3
+    brick_size = 5
     brick_threshold = 5
     renko_chart = process_l2_data(hdf5_file, brick_size, brick_threshold)
 
