@@ -1,99 +1,136 @@
 import pandas as pd
 import h5py
 import os
+import psycopg2
+from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
 
-# Read CSV file
-file_path = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/20240509.csv'
-df = pd.read_csv(file_path, delimiter=';', header=None)
+# PostgreSQL database credentials
+db_credentials = {
+    "dbname": "defaultdb",
+    "user": "doadmin",
+    "password": "AVNS_hnzmIdBmiO7aj5nylWW",
+    "host": "nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com",
+    "port": 25060,
+    "sslmode": "require"
+}
 
-# Debug: Print first few rows of the CSV data
-print("Initial CSV data:")
-print(df.head(20))
+def connect_db():
+    conn = psycopg2.connect(**db_credentials)
+    return conn
 
-# Separate L1 and L2 records
-df_l1 = df[df[0] == 'L1'].copy()
-df_l2 = df[df[0] == 'L2'].copy()
+def store_h5_in_db(file_path):
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    with open(file_path, 'rb') as file:
+        binary_data = file.read()
 
-# Debug: Print first few rows of L1 and L2 records
-print("L1 records:")
-print(df_l1.head(20))
-print("L2 records:")
-print(df_l2.head(20))
+    filename = os.path.basename(file_path)
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS h5_files (
+        filename TEXT PRIMARY KEY,
+        data BYTEA
+    );
+    ''')
 
-# Define column names for L1 and L2
-l1_columns = [
-    'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 
-    'Volume', 'Empty1', 'Empty2', 'Empty3'
-]
-l2_columns = [
-    'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 
-    'Position', 'MarketMaker', 'Price', 'Volume'
-]
+    cursor.execute('''
+    INSERT INTO h5_files (filename, data) VALUES (%s, %s)
+    ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data;
+    ''', (filename, binary_data))
 
-# Assign column names
-df_l1.columns = l1_columns
-df_l2.columns = l2_columns
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-# Replace commas with dots in Price and Volume columns
-df_l1['Price'] = df_l1['Price'].astype(str).str.replace(',', '.')
-df_l1['Volume'] = df_l1['Volume'].astype(str).str.replace(',', '.')
-df_l2['Price'] = df_l2['Price'].astype(str).str.replace(',', '.')
-df_l2['Volume'] = df_l2['Volume'].astype(str).str.replace(',', '.')
+def process_file(file_path, output_directory):
+    df = pd.read_csv(file_path, delimiter=';', header=None)
 
-# Convert columns to appropriate data types using .loc to avoid SettingWithCopyWarning
-df_l1.loc[:, 'Timestamp'] = pd.to_datetime(df_l1['Timestamp'], format='%Y%m%d%H%M%S%f')
-df_l1.loc[:, 'Offset'] = df_l1['Offset'].astype(int)
-df_l1.loc[:, 'Price'] = pd.to_numeric(df_l1['Price'], errors='coerce')
-df_l1.loc[:, 'Volume'] = pd.to_numeric(df_l1['Volume'], errors='coerce')
+    # Separate L1 and L2 records
+    df_l1 = df[df[0] == 'L1'].copy()
+    df_l2 = df[df[0] == 'L2'].copy()
 
-df_l2.loc[:, 'Timestamp'] = pd.to_datetime(df_l2['Timestamp'], format='%Y%m%d%H%M%S%f')
-df_l2.loc[:, 'Offset'] = df_l2['Offset'].astype(int)
-df_l2.loc[:, 'Operation'] = df_l2['Operation'].astype(int)
-df_l2.loc[:, 'Position'] = df_l2['Position'].astype(int)
-df_l2.loc[:, 'MarketMaker'] = pd.to_numeric(df_l2['MarketMaker'], errors='coerce').fillna(0).astype(int)
-df_l2.loc[:, 'Price'] = pd.to_numeric(df_l2['Price'], errors='coerce')
-df_l2.loc[:, 'Volume'] = pd.to_numeric(df_l2['Volume'], errors='coerce')
+    # Define column names for L1 and L2
+    l1_columns = [
+        'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 
+        'Volume', 'Empty1', 'Empty2', 'Empty3'
+    ]
+    l2_columns = [
+        'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 
+        'Position', 'MarketMaker', 'Price', 'Volume'
+    ]
 
-# Debug: Print first few rows after data type conversion
-print("L1 records after conversion:")
-print(df_l1.head(20))
-print("L2 records after conversion:")
-print(df_l2.head(20))
+    # Assign column names
+    df_l1.columns = l1_columns
+    df_l2.columns = l2_columns
 
-# Convert Timestamp to string for HDF5 storage
-df_l1.loc[:, 'Timestamp'] = df_l1['Timestamp'].astype(str)
-df_l2.loc[:, 'Timestamp'] = df_l2['Timestamp'].astype(str)
+    # Replace commas with dots in Price and Volume columns
+    df_l1['Price'] = df_l1['Price'].astype(str).str.replace(',', '.')
+    df_l1['Volume'] = df_l1['Volume'].astype(str).str.replace(',', '.')
+    df_l2['Price'] = df_l2['Price'].astype(str).str.replace(',', '.')
+    df_l2['Volume'] = df_l2['Volume'].astype(str).str.replace(',', '.')
 
-# Debug: Print first few rows after timestamp conversion
-print("L1 records after timestamp conversion:")
-print(df_l1.head(20))
-print("L2 records after timestamp conversion:")
-print(df_l2.head(20))
+    # Convert columns to appropriate data types using .loc to avoid SettingWithCopyWarning
+    df_l1['Timestamp'] = pd.to_datetime(df_l1['Timestamp'], format='%Y%m%d%H%M%S%f', errors='coerce')
+    df_l1['Offset'] = df_l1['Offset'].astype(int)
+    df_l1['Price'] = pd.to_numeric(df_l1['Price'], errors='coerce')
+    df_l1['Volume'] = pd.to_numeric(df_l1['Volume'], errors='coerce')
 
-# Create HDF5 file and store data
-hdf5_file = 'market_replay_data.h5'
-if os.path.exists(hdf5_file):
+    df_l2['Timestamp'] = pd.to_datetime(df_l2['Timestamp'], format='%Y%m%d%H%M%S%f', errors='coerce')
+    df_l2['Offset'] = df_l2['Offset'].astype(int)
+    df_l2['Operation'] = df_l2['Operation'].astype(int)
+    df_l2['Position'] = df_l2['Position'].astype(int)
+    df_l2['MarketMaker'] = pd.to_numeric(df_l2['MarketMaker'], errors='coerce').fillna(0).astype(int)
+    df_l2['Price'] = pd.to_numeric(df_l2['Price'], errors='coerce')
+    df_l2['Volume'] = pd.to_numeric(df_l2['Volume'], errors='coerce')
+
+    # Convert Timestamp to string for HDF5 storage
+    df_l1['Timestamp'] = df_l1['Timestamp'].astype(str)
+    df_l2['Timestamp'] = df_l2['Timestamp'].astype(str)
+
+    # Create HDF5 file named after the CSV file
+    filename = os.path.basename(file_path)
+    hdf5_file = os.path.join(output_directory, f"{filename.split('.')[0]}.h5")
+    if os.path.exists(hdf5_file):
+        os.remove(hdf5_file)
+
+    with h5py.File(hdf5_file, 'w') as f:
+        # Store L1 data
+        grp_l1 = f.create_group('L1')
+        for col in df_l1.columns:
+            grp_l1.create_dataset(col, data=df_l1[col].values.astype('S'), compression="gzip", compression_opts=9)  # Store as bytes with compression
+
+        # Store L2 data
+        grp_l2 = f.create_group('L2')
+        for col in df_l2.columns:
+            grp_l2.create_dataset(col, data=df_l2[col].values.astype('S'), compression="gzip", compression_opts=9)  # Store as bytes with compression
+
+    # Store the .h5 file in the database
+    store_h5_in_db(hdf5_file)
+
+    # Remove the local .h5 file after storing it in the database
     os.remove(hdf5_file)
 
-with h5py.File(hdf5_file, 'w') as f:
-    # Store L1 data
-    grp_l1 = f.create_group('L1')
-    for col in df_l1.columns:
-        grp_l1.create_dataset(col, data=df_l1[col].values.astype('S'))  # Store as bytes
+    return f"{filename} processed"
 
-    # Store L2 data
-    grp_l2 = f.create_group('L2')
-    for col in df_l2.columns:
-        grp_l2.create_dataset(col, data=df_l2[col].values.astype('S'))  # Store as bytes
+def main():
+    # Directory containing the CSV files
+    input_directory = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/test/'
 
-print(f"Data stored in {hdf5_file}")
+    # Output directory for temporary HDF5 files
+    output_directory = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/temp/'
 
-# Debug: Verify the stored data
-with h5py.File(hdf5_file, 'r') as f:
-    print("L1 data from HDF5:")
-    for col in df_l1.columns:
-        print(f"{col}: {f['L1'][col][:20]}")
-    
-    print("L2 data from HDF5:")
-    for col in df_l2.columns:
-        print(f"{col}: {f['L2'][col][:20]}")
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    # Get list of CSV files
+    csv_files = [os.path.join(input_directory, filename) for filename in os.listdir(input_directory) if filename.endswith('.csv')]
+
+    # Process files in parallel
+    with ProcessPoolExecutor() as executor:
+        for result in tqdm(executor.map(process_file, csv_files, [output_directory]*len(csv_files)), total=len(csv_files), desc="Processing files"):
+            print(result)
+
+if __name__ == "__main__":
+    main()
