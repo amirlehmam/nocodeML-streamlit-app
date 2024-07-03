@@ -47,12 +47,12 @@ def animate(ival, df_ticks, renko_chart, ax1, ax2, step):
         price = df_ticks['close'].iat[i]
         renko_chart.add_prices(timestamp.value // 10**6, price)  # Convert to milliseconds
 
-    df_wicks = renko_chart.renko_animate('normal', max_len=10000, keep=5000)
+    df_wicks = renko_chart.renko_animate('wicks', max_len=10000, keep=5000)
 
     ax1.clear()
     ax2.clear()
 
-    mpf.plot(df_wicks, type='candle', ax=ax1, volume=ax2, axtitle='renko: wicks')
+    mpf.plot(df_wicks, type='candle', ax=ax1, volume=ax2, axtitle='NQ: 2025/05/09 - German Open to NY Close')
 
 def main():
     hdf5_file = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/data/market_replay_data.h5'
