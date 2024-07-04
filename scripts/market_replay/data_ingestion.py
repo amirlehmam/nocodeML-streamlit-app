@@ -2,8 +2,10 @@ import pandas as pd
 import h5py
 import os
 import psycopg2
-from concurrent.futures import ProcessPoolExecutor
+import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
+import multiprocessing
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -20,6 +22,8 @@ def connect_db():
     return conn
 
 def store_h5_in_db(file_path):
+    start_time = time.time()
+    
     conn = connect_db()
     cursor = conn.cursor()
     
@@ -44,7 +48,10 @@ def store_h5_in_db(file_path):
     cursor.close()
     conn.close()
 
+    print(f"Storing {file_path} in DB took {time.time() - start_time:.2f} seconds")
+
 def process_file(file_path, output_directory):
+    start_time = time.time()
     df = pd.read_csv(file_path, delimiter=';', header=None)
 
     # Separate L1 and L2 records
@@ -61,15 +68,26 @@ def process_file(file_path, output_directory):
         'Position', 'MarketMaker', 'Price', 'Volume'
     ]
 
+    # Log the shape of the DataFrames before assigning columns
+    print(f"Processing {file_path}: df_l1 shape = {df_l1.shape}, df_l2 shape = {df_l2.shape}")
+
+    # Check if the number of columns matches the expected number
+    if df_l1.shape[1] != len(l1_columns):
+        print(f"Error: {file_path} has {df_l1.shape[1]} columns in L1, expected {len(l1_columns)}. Skipping this file.")
+        return f"Error processing {file_path}"
+    if df_l2.shape[1] != len(l2_columns):
+        print(f"Error: {file_path} has {df_l2.shape[1]} columns in L2, expected {len(l2_columns)}. Skipping this file.")
+        return f"Error processing {file_path}"
+
     # Assign column names
     df_l1.columns = l1_columns
     df_l2.columns = l2_columns
 
     # Replace commas with dots in Price and Volume columns
-    df_l1['Price'] = df_l1['Price'].astype(str).str.replace(',', '.')
-    df_l1['Volume'] = df_l1['Volume'].astype(str).str.replace(',', '.')
-    df_l2['Price'] = df_l2['Price'].astype(str).str.replace(',', '.')
-    df_l2['Volume'] = df_l2['Volume'].astype(str).str.replace(',', '.')
+    df_l1['Price'] = df_l1['Price'].str.replace(',', '.').astype(float)
+    df_l1['Volume'] = df_l1['Volume'].str.replace(',', '.').astype(float)
+    df_l2['Price'] = df_l2['Price'].str.replace(',', '.').astype(float)
+    df_l2['Volume'] = df_l2['Volume'].str.replace(',', '.').astype(float)
 
     # Convert columns to appropriate data types using .loc to avoid SettingWithCopyWarning
     df_l1['Timestamp'] = pd.to_datetime(df_l1['Timestamp'], format='%Y%m%d%H%M%S%f', errors='coerce')
@@ -112,11 +130,13 @@ def process_file(file_path, output_directory):
     # Remove the local .h5 file after storing it in the database
     os.remove(hdf5_file)
 
-    return f"{filename} processed"
+    process_time = time.time() - start_time
+    print(f"{filename} processed in {process_time:.2f} seconds")
+    return f"{filename} processed in {process_time:.2f} seconds"
 
 def main():
     # Directory containing the CSV files
-    input_directory = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/test/'
+    input_directory = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/'
 
     # Output directory for temporary HDF5 files
     output_directory = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/temp/'
@@ -127,10 +147,14 @@ def main():
     # Get list of CSV files
     csv_files = [os.path.join(input_directory, filename) for filename in os.listdir(input_directory) if filename.endswith('.csv')]
 
+    # Determine the number of workers
+    num_workers = min(multiprocessing.cpu_count(), len(csv_files))
+
     # Process files in parallel
-    with ProcessPoolExecutor() as executor:
-        for result in tqdm(executor.map(process_file, csv_files, [output_directory]*len(csv_files)), total=len(csv_files), desc="Processing files"):
-            print(result)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(process_file, file, output_directory): file for file in csv_files}
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing files"):
+            print(future.result())
 
 if __name__ == "__main__":
     main()
