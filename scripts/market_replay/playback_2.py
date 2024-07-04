@@ -1,11 +1,14 @@
 import pandas as pd
+import numpy as np
+import mplfinance as mpf
+from matplotlib import animation
 import h5py
-import os
 import psycopg2
-import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import tempfile
 from tqdm import tqdm
-import multiprocessing
+
+# Assuming renkodf.py is in the same directory
+from renkodf import RenkoWS
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -21,156 +24,142 @@ def connect_db():
     conn = psycopg2.connect(**db_credentials)
     return conn
 
-def store_h5_in_db(file_path):
-    start_time = time.time()
+def fetch_available_dates():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT filename FROM h5_files;')
+    rows = cursor.fetchall()
+    conn.close()
     
+    dates = [row[0].replace('.h5', '') for row in rows]
+    return sorted(dates)
+
+def load_h5_from_db(filename):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT data FROM h5_files WHERE filename = %s;', (filename,))
+    binary_data = cursor.fetchone()[0]
+    conn.close()
+    
+    temp_dir = tempfile.gettempdir()
+    file_path = f"{temp_dir}/{filename}.h5"
+    
+    with open(file_path, "wb") as f:
+        f.write(binary_data)
+    
+    return file_path
+
+def load_data_from_db(start_date, end_date):
     conn = connect_db()
     cursor = conn.cursor()
     
-    with open(file_path, 'rb') as file:
-        binary_data = file.read()
-
-    filename = os.path.basename(file_path)
-    
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS h5_files (
-        filename TEXT PRIMARY KEY,
-        data BYTEA
-    );
-    ''')
-
-    cursor.execute('''
-    INSERT INTO h5_files (filename, data) VALUES (%s, %s)
-    ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data;
-    ''', (filename, binary_data))
-
-    conn.commit()
-    cursor.close()
+    query = '''
+    SELECT filename, data FROM h5_files WHERE filename >= %s AND filename <= %s;
+    '''
+    cursor.execute(query, (start_date, end_date))
+    rows = cursor.fetchall()
     conn.close()
+    
+    data_frames = []
+    
+    for filename, binary_data in tqdm(rows, desc="Loading data from DB"):
+        temp_dir = tempfile.gettempdir()
+        file_path = f"{temp_dir}/{filename}"
+        
+        with open(file_path, "wb") as f:
+            f.write(binary_data)
+        
+        with h5py.File(file_path, "r") as f:
+            timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
+            timestamps = pd.to_datetime(timestamps, errors='coerce')
+            prices = f['L2/Price'][:].astype(float)
+            df = pd.DataFrame({"datetime": timestamps, "close": prices})
+            df.dropna(subset=["datetime"], inplace=True)
+            data_frames.append(df)
+    
+    combined_df = pd.concat(data_frames)
+    combined_df.sort_values(by="datetime", inplace=True)
+    
+    return combined_df
 
-    print(f"Storing {file_path} in DB took {time.time() - start_time:.2f} seconds")
+def animate(ival, df_ticks, renko_chart, ax1, ax2, step, start_date, end_date, my_style):
+    start_idx = ival * step
+    end_idx = min(start_idx + step, len(df_ticks))
 
-def process_file(file_path, output_directory):
-    start_time = time.time()
-    try:
-        df = pd.read_csv(file_path, delimiter=';', header=None, low_memory=False)
+    if start_idx >= len(df_ticks):
+        print('No more data to plot')
+        return
 
-        # Separate L1 and L2 records
-        df_l1 = df[df[0] == 'L1'].copy()
-        df_l2 = df[df[0] == 'L2'].copy()
+    for i in range(start_idx, end_idx):
+        timestamp = df_ticks['datetime'].iat[i]
+        price = df_ticks['close'].iat[i]
+        renko_chart.add_prices(timestamp.value // 10**6, price)  # Convert to milliseconds
 
-        # Define column names for L1 and L2
-        l1_columns = [
-            'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Price', 
-            'Volume', 'Empty1', 'Empty2', 'Empty3'
-        ]
-        l2_columns = [
-            'RecordType', 'MarketDataType', 'Timestamp', 'Offset', 'Operation', 
-            'Position', 'MarketMaker', 'Price', 'Volume'
-        ]
+    df_wicks = renko_chart.renko_animate('wicks', max_len=10000, keep=5000)
 
-        # Log the shape of the DataFrames before assigning columns
-        print(f"Processing {file_path}: df_l1 shape = {df_l1.shape}, df_l2 shape = {df_l2.shape}")
+    ax1.clear()
+    ax2.clear()
 
-        # Check if the number of columns matches the expected number
-        if df_l1.shape[1] != len(l1_columns):
-            print(f"Error: {file_path} has {df_l1.shape[1]} columns in L1, expected {len(l1_columns)}. Skipping this file.")
-            return f"Error processing {file_path}"
-        if df_l2.shape[1] != len(l2_columns):
-            print(f"Error: {file_path} has {df_l2.shape[1]} columns in L2, expected {len(l2_columns)}. Skipping this file.")
-            return f"Error processing {file_path}"
-
-        # Assign column names
-        df_l1.columns = l1_columns
-        df_l2.columns = l2_columns
-
-        # Log data types before conversion
-        print(f"Before conversion: df_l1['Volume'] dtype = {df_l1['Volume'].dtype}, df_l2['Volume'] dtype = {df_l2['Volume'].dtype}")
-
-        # Ensure Price and Volume columns are strings before replacing commas
-        df_l1['Price'] = df_l1['Price'].astype(str)
-        df_l1['Volume'] = df_l1['Volume'].astype(str)
-        df_l2['Price'] = df_l2['Price'].astype(str)
-        df_l2['Volume'] = df_l2['Volume'].astype(str)
-
-        # Log data types after conversion to string
-        print(f"After conversion to string: df_l1['Volume'] dtype = {df_l1['Volume'].dtype}, df_l2['Volume'] dtype = {df_l2['Volume'].dtype}")
-
-        # Replace commas with dots in Price and Volume columns
-        df_l1['Price'] = df_l1['Price'].str.replace(',', '.').astype(float)
-        df_l1['Volume'] = df_l1['Volume'].str.replace(',', '.').astype(float)
-        df_l2['Price'] = df_l2['Price'].str.replace(',', '.').astype(float)
-        df_l2['Volume'] = df_l2['Volume'].str.replace(',', '.').astype(float)
-
-        # Log data types after replacing commas
-        print(f"After replacing commas: df_l1['Volume'] dtype = {df_l1['Volume'].dtype}, df_l2['Volume'] dtype = {df_l2['Volume'].dtype}")
-
-        # Convert columns to appropriate data types using .loc to avoid SettingWithCopyWarning
-        df_l1['Timestamp'] = pd.to_datetime(df_l1['Timestamp'], format='%Y%m%d%H%M%S%f', errors='coerce')
-        df_l1['Offset'] = df_l1['Offset'].astype(int)
-
-        df_l2['Timestamp'] = pd.to_datetime(df_l2['Timestamp'], format='%Y%m%d%H%M%S%f', errors='coerce')
-        df_l2['Offset'] = df_l2['Offset'].astype(int)
-        df_l2['Operation'] = df_l2['Operation'].astype(int)
-        df_l2['Position'] = df_l2['Position'].astype(int)
-        df_l2['MarketMaker'] = pd.to_numeric(df_l2['MarketMaker'], errors='coerce').fillna(0).astype(int)
-
-        # Convert Timestamp to string for HDF5 storage
-        df_l1['Timestamp'] = df_l1['Timestamp'].astype(str)
-        df_l2['Timestamp'] = df_l2['Timestamp'].astype(str)
-
-        # Create HDF5 file named after the CSV file
-        filename = os.path.basename(file_path)
-        hdf5_file = os.path.join(output_directory, f"{filename.split('.')[0]}.h5")
-        if os.path.exists(hdf5_file):
-            os.remove(hdf5_file)
-
-        with h5py.File(hdf5_file, 'w') as f:
-            # Store L1 data
-            grp_l1 = f.create_group('L1')
-            for col in df_l1.columns:
-                grp_l1.create_dataset(col, data=df_l1[col].values.astype('S'), compression="gzip", compression_opts=9)  # Store as bytes with compression
-
-            # Store L2 data
-            grp_l2 = f.create_group('L2')
-            for col in df_l2.columns:
-                grp_l2.create_dataset(col, data=df_l2[col].values.astype('S'), compression="gzip", compression_opts=9)  # Store as bytes with compression
-
-        # Store the .h5 file in the database
-        store_h5_in_db(hdf5_file)
-
-        # Remove the local .h5 file after storing it in the database
-        os.remove(hdf5_file)
-
-        process_time = time.time() - start_time
-        print(f"{filename} processed in {process_time:.2f} seconds")
-        return f"{filename} processed in {process_time:.2f} seconds"
-
-    except Exception as e:
-        print(f"Failed processing {file_path} due to {e}")
-        return f"Error processing {file_path} due to {e}"
+    title = f"NQ: {start_date} to {end_date}"
+    mpf.plot(df_wicks, type='candle', ax=ax1, volume=ax2, axtitle='6AM to NY Close (10:30PM)', style=my_style)
 
 def main():
-    # Directory containing the CSV files
-    input_directory = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/'
+    available_dates = fetch_available_dates()
+    
+    print("Available dates:")
+    for date in available_dates:
+        print(date)
+    
+    start_date = input("Enter the start date (YYYYMMDD): ")
+    end_date = input("Enter the end date (YYYYMMDD): ")
+    
+    speeds = {
+        '1x': 1,
+        '5x': 5,
+        '10x': 10,
+        '25x': 25,
+        '50x': 50,
+        '100x': 100,
+        '500x': 500,
+        '1000x': 1000,
+        '5000x': 5000,
+        '10000x': 10000,
+        '50000x': 50000
+    }
 
-    # Output directory for temporary HDF5 files
-    output_directory = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/temp/'
+    print("Select the speed:")
+    for key in speeds:
+        print(f"{key}: {speeds[key]}x")
 
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    speed_choice = input("Enter the speed (e.g., 1x, 5x, 10x, etc.): ")
 
-    # Get list of CSV files
-    csv_files = [os.path.join(input_directory, filename) for filename in os.listdir(input_directory) if filename.endswith('.csv')]
+    if speed_choice in speeds:
+        step = speeds[speed_choice]
+    else:
+        print("Invalid choice. Defaulting to 1x speed.")
+        step = 1
 
-    # Determine the number of workers
-    num_workers = min(multiprocessing.cpu_count(), len(csv_files))
+    df_l2 = load_data_from_db(start_date, end_date)
+    initial_timestamp = df_l2['datetime'].iat[0].value // 10**6  # Convert to milliseconds
+    initial_price = df_l2['close'].iat[0]
 
-    # Process files in parallel
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = {executor.submit(process_file, file, output_directory): file for file in csv_files}
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing files"):
-            print(future.result())
+    brick_size = 3  # Adjust based on NinjaTrader settings
+    brick_threshold = 5  # Adjust based on NinjaTrader settings
+
+    renko_chart = RenkoWS(initial_timestamp, initial_price, brick_size=brick_size, brick_threshold=brick_threshold)
+
+    # Define custom style
+    my_style = mpf.make_mpf_style(base_mpf_style='charles', 
+                                  marketcolors=mpf.make_marketcolors(up='g', down='r', inherit=True))
+
+    fig, axes = mpf.plot(renko_chart.initial_df, returnfig=True, volume=True,
+                         figsize=(16, 9), panel_ratios=(2, 1),
+                         title=f"NQ: {start_date} to {end_date}", type='candle', style=my_style)
+    ax1 = axes[0]
+    ax2 = axes[2]
+
+    ani = animation.FuncAnimation(fig, animate, fargs=(df_l2, renko_chart, ax1, ax2, step, start_date, end_date, my_style), interval=1)
+    mpf.show()
 
 if __name__ == "__main__":
     main()
