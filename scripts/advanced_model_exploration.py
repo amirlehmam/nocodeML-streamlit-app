@@ -299,7 +299,7 @@ def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
 
     if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "./data/processed"
+        st.session_state.base_dir = "./data/processed/"
 
     base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
 
