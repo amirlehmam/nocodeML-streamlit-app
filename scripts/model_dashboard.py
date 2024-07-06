@@ -149,7 +149,6 @@ def summarize_optimal_win_ranges(optimal_ranges):
     return pd.DataFrame(summary)
 
 def run_model_dashboard():
-    st.write("Starting model dashboard...")
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
@@ -160,16 +159,14 @@ def run_model_dashboard():
 
     def load_and_preprocess_data(base_dir):
         st.write(f"Base directory: {base_dir}")
-        data_dir = os.path.join(base_dir, "data/processed")
-        data = load_data(data_dir)
+        data = load_data(base_dir)
         return preprocess_data(data)
 
     st.title("Advanced Trading Dashboard")
 
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "."
+    st.session_state.base_dir = "./data/processed"
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    base_dir = st.session_state.base_dir
 
     if st.button("Load Data"):
         st.write("Loading data...")

@@ -230,12 +230,10 @@ def verify_trade_parsing(data_dir, output_dir):
 
 def run_data_ingestion_preparation():
     st.subheader("Data Ingestion and Preparation")
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "."
+    st.session_state.base_dir = "./data/raw"
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
-    data_output_dir = get_file_path(base_dir, "data/processed")
-    raw_data_dir = get_file_path(base_dir, "data/raw")
+    data_output_dir = get_file_path(st.session_state.base_dir, "../processed")
+    raw_data_dir = get_file_path(st.session_state.base_dir, "")
 
     uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
     if uploaded_file is not None:
@@ -296,3 +294,6 @@ def identify_trade_results(trade_data, event_data):
     
     trade_event_data = trade_event_data[trade_event_data['result'] != 'unknown']
     return trade_event_data
+
+if __name__ == "__main__":
+    run_data_ingestion_preparation()
