@@ -298,10 +298,7 @@ def reset_session_state():
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
 
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "./data/processed/"
-
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    st.session_state.base_dir = "./data/processed/"
 
     if "feature_importances" not in st.session_state:
         st.session_state.feature_importances = {}
@@ -320,7 +317,7 @@ def run_advanced_model_exploration():
     if st.session_state.current_step == "load_data" and st.button("Load Data"):
         st.write("Loading data...")
         try:
-            data = load_data(base_dir)
+            data = load_data(st.session_state.base_dir)
             if data is not None:
                 X_train, X_test, y_train, y_test, indicator_columns, data = preprocess_data(data, selected_feature_types)
                 st.session_state.data = data
@@ -476,7 +473,7 @@ def run_advanced_model_exploration():
                         text_sections.append(("Mean Squared Error", f"Mean Squared Error: {mse}"))
 
                     # Save the model
-                    model_save_path = os.path.join(base_dir, f"models/{model_type}_{task_type}_model.pkl")
+                    model_save_path = os.path.join(st.session_state.base_dir, f"models/{model_type}_{task_type}_model.pkl")
                     joblib.dump(model, model_save_path)
                     st.write(f"Model saved to {model_save_path}")
 
@@ -529,7 +526,7 @@ def run_advanced_model_exploration():
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
-                    output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
+                    output_path = os.path.join(st.session_state.base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
                     dataframes.append(optimal_win_ranges_summary)
@@ -602,7 +599,7 @@ def run_advanced_model_exploration():
                         dataframes.append(loss_conditions)
                         dataframe_descriptions.append("Loss Mitigation Analysis")
 
-                    pdf_filename = os.path.join(base_dir, f'docs/ml_analysis/{model_type}_{task_type}_complete_analysis.pdf')
+                    pdf_filename = os.path.join(st.session_state.base_dir, f'docs/ml_analysis/{model_type}_{task_type}_complete_analysis.pdf')
                     save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, descriptions)
                     st.write(f"Saved complete analysis to {pdf_filename}")
 

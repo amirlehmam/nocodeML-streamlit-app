@@ -286,10 +286,9 @@ def plot_additional_metrics(trades, timestamp_col):
 def run_strategy_performance():
     st.title("Strategy Performance Analysis")
 
-    if "base_dir" not in st.session_state:
-        st.session_state.base_dir = "./data/processed"
+    st.session_state.base_dir = "./data/processed"
 
-    base_dir = st.text_input("Base Directory", value=st.session_state.base_dir)
+    base_dir = st.session_state.base_dir
 
     entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=5)
 
