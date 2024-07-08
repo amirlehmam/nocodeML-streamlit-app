@@ -130,7 +130,7 @@ def calculate_indicators(data):
 
 def clean_numeric_columns(df, columns):
     for col in columns:
-        if (col in df.columns) and (df[col].dtype == 'object'):
+        if col in df.columns:
             df[col] = df[col].replace(r'[\$,]', '', regex=True).replace('', np.nan).astype(float)
     return df
 
