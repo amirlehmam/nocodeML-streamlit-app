@@ -220,7 +220,7 @@ def save_merged_data_to_db(merged_data):
     values = [tuple(x) for x in merged_data.to_numpy()]
 
     # Ensure all columns exist in the database table
-    add_missing_columns('merged_trade_indicator_event', set(columns))
+    add_missing_columns('merged_trade_indicator_event', set(col.strip('"') for col in columns))
 
     insert_sql = f"INSERT INTO merged_trade_indicator_event ({', '.join(columns)}) VALUES %s"
 
