@@ -182,6 +182,33 @@ def quote_column_names(columns):
     # Properly quote column names to avoid issues with special characters
     return [f'"{col}"' for col in columns]
 
+def add_missing_columns(table_name, required_columns):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Get existing columns
+    cur.execute(f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = '{table_name}';
+    """)
+    existing_columns = {row[0] for row in cur.fetchall()}
+
+    # Identify missing columns
+    missing_columns = required_columns - existing_columns
+
+    # Add missing columns
+    for column in missing_columns:
+        cur.execute(f"""
+            ALTER TABLE {table_name}
+            ADD COLUMN "{column}" FLOAT;  -- Adjust the data type as necessary
+        """)
+        print(f"Added missing column: {column}")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
 def save_merged_data_to_db(merged_data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -189,8 +216,11 @@ def save_merged_data_to_db(merged_data):
     merged_data = sanitize_column_names(merged_data)
 
     columns = merged_data.columns.tolist()
-    columns = quote_column_names(columns)  # Ensure all columns are properly quoted
+    columns = quote_column_names(columns)
     values = [tuple(x) for x in merged_data.to_numpy()]
+
+    # Ensure all columns exist in the database table
+    add_missing_columns('merged_trade_indicator_event', set(columns))
 
     insert_sql = f"INSERT INTO merged_trade_indicator_event ({', '.join(columns)}) VALUES %s"
 
