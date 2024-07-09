@@ -178,6 +178,10 @@ def sanitize_column_names(df):
     df.columns = [re.sub(r'\W|^(?=\d)', '_', col).lstrip('_') for col in df.columns]
     return df
 
+def quote_column_names(columns):
+    # Properly quote column names to avoid issues with special characters
+    return [f'"{col}"' for col in columns]
+
 def save_merged_data_to_db(merged_data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -185,10 +189,8 @@ def save_merged_data_to_db(merged_data):
     merged_data = sanitize_column_names(merged_data)
 
     columns = merged_data.columns.tolist()
+    columns = quote_column_names(columns)  # Ensure all columns are properly quoted
     values = [tuple(x) for x in merged_data.to_numpy()]
-
-    # Ensure all columns are properly quoted
-    columns = [f'"{col}"' for col in columns]
 
     insert_sql = f"INSERT INTO merged_trade_indicator_event ({', '.join(columns)}) VALUES %s"
 
