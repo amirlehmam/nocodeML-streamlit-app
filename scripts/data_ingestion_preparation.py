@@ -213,6 +213,10 @@ def save_merged_data_to_db(merged_data):
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # Clear existing data in the table
+    cur.execute("TRUNCATE TABLE merged_trade_indicator_event;")
+    print("Cleared existing data in the table")
+
     merged_data = sanitize_column_names(merged_data)
 
     columns = merged_data.columns.tolist()
