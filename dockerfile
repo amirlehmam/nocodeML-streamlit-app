@@ -1,34 +1,53 @@
-FROM python:3.10-slim
+# Use the official Python image from the Docker Hub
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
+FROM python:3.9-slim
 
-# Set working directory
+
+# Set the working directory
+
 WORKDIR /app
 
-# Install necessary system dependencies
+
+# Install system dependencies
+
 RUN apt-get update && \
+
     apt-get install -y --no-install-recommends apt-utils && \
+
     apt-get install -y curl && \
+
     apt-get install -y libgomp1 && \
+
     apt-get install -y gcc g++ && \
+
     ln -s /usr/lib/x86_64-linux-gnu/libgomp.so.1 /usr/lib/libgomp.so.1 && \
+
     apt-get clean && \
+
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+
+# Copy the requirements file
+
 COPY requirements.txt requirements.txt
 
-# Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# Install the dependencies
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# Copy the rest of the application
+
 COPY . .
 
-# Expose port
+
+# Expose the port Streamlit runs on
+
 EXPOSE 8501
 
-# Run the application
-CMD ["streamlit", "run", "app.py"]
+
+# Run the Streamlit app
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
