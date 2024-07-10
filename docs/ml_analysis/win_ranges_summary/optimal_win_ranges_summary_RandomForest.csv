@@ -1,4 +1,2 @@
 feature,optimal_win_range_start,optimal_win_range_end
-144_SMA_binary,0.0,0.1111111111111111
-144_SMA_binary,0.30930930930930933,0.6676676676676676
-144_SMA_binary,0.9129129129129129,1.0
+1000_SMA_binary,0.7687687687687688,1.0
