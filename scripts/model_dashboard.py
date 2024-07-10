@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 import numpy as np
+from sqlalchemy import create_engine
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
@@ -9,16 +10,35 @@ import xgboost as xgb
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.graph_objs as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
+from sklearn.decomposition import PCA
 from tqdm import tqdm
 
+# Database connection details
+DB_CONFIG = {
+    'dbname': 'defaultdb',
+    'user': 'doadmin',
+    'password': 'AVNS_hnzmIdBmiO7aj5nylWW',
+    'host': 'nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com',
+    'port': 25060,
+    'sslmode': 'require'
+}
+
+# SQLAlchemy connection string
+DATABASE_URL = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}?sslmode={DB_CONFIG['sslmode']}"
+
+def load_merged_data_from_db():
+    engine = create_engine(DATABASE_URL)
+    query = "SELECT * FROM merged_trade_indicator_event"
+    data = pd.read_sql(query, engine)
+    return data
+
 # Load data
-def load_data(data_dir):
-    st.write(f"Loading data from {data_dir}...")
-    data = pd.read_csv(os.path.join(data_dir, "merged_trade_indicator_event.csv"))
+def load_data_from_db():
+    st.write("Loading data from database...")
+    data = load_merged_data_from_db()
     st.write(f"Data loaded with shape: {data.shape}")
     return data
 
@@ -30,10 +50,26 @@ def preprocess_data(data):
     indicator_columns = data.columns[7:]
     st.write(f"Indicator columns: {indicator_columns}")
 
+    # Drop columns with all missing values
+    data = data.dropna(axis=1, how='all')
+    indicator_columns = data.columns[7:]
+
+    # Handle missing values
     imputer = SimpleImputer(strategy='mean')
     indicators_imputed = imputer.fit_transform(data[indicator_columns])
 
-    data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
+    # Check unique values before conversion
+    st.write(f"Unique values in 'result' column before conversion: {data['result'].unique()}")
+
+    # Convert result to binary
+    data.loc[:, 'result'] = data['result'].apply(lambda x: 1 if x.lower() == 'win' else 0).astype(int)
+
+    # Ensure result column is integer type
+    data['result'] = data['result'].astype(int)
+
+    # Check unique values after conversion
+    st.write(f"Unique values in 'result' column after conversion: {data['result'].unique()}")
+    st.write(f"Data type of 'result' column: {data['result'].dtype}")
 
     labeled_data = data.sample(frac=0.1, random_state=42)
     unlabeled_data = data.drop(labeled_data.index)
@@ -43,12 +79,21 @@ def preprocess_data(data):
 
     X_unlabeled = unlabeled_data[indicator_columns]
 
+    # Apply imputer to labeled and unlabeled data
     X_labeled_imputed = imputer.transform(X_labeled)
     X_unlabeled_imputed = imputer.transform(X_unlabeled)
 
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X_labeled_imputed, y_labeled, test_size=0.2, random_state=42)
     
+    # Print shapes and types of training and test data
+    st.write(f"Shape of X_train: {X_train.shape}")
+    st.write(f"Shape of X_test: {X_test.shape}")
+    st.write(f"Shape of y_train: {y_train.shape}")
+    st.write(f"Shape of y_test: {y_test.shape}")
+    st.write(f"Data type of y_train: {y_train.dtype}")
+    st.write(f"Data type of y_test: {y_test.dtype}")
+
     st.write("Data preprocessing completed.")
     return data, X_train, X_test, y_train, y_test, indicator_columns
 
@@ -61,14 +106,23 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
     for feature in tqdm(features, desc="Calculating Optimal Win Ranges"):
         data[feature] = pd.to_numeric(data[feature], errors='coerce')
         
-        win_values = data[data[target] == 0][feature].dropna().values.astype(float)
-        loss_values = data[data[target] == 1][feature].dropna().values.astype(float)
+        win_values = data[data[target] == 1][feature].dropna().values.astype(float)
+        loss_values = data[data[target] == 0][feature].dropna().values.astype(float)
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
 
-        win_kde = gaussian_kde(win_values)
-        loss_kde = gaussian_kde(loss_values)
+        # Dimensionality reduction for high-dimensional data
+        if len(win_values.shape) > 1:
+            pca = PCA(n_components=1)
+            win_values = pca.fit_transform(win_values)
+            loss_values = pca.transform(loss_values)
+
+        try:
+            win_kde = gaussian_kde(win_values)
+            loss_kde = gaussian_kde(loss_values)
+        except np.linalg.LinAlgError:
+            continue
 
         x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
         win_density = win_kde(x_grid)
@@ -119,8 +173,8 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         feature = item['feature']
         ranges = item['optimal_win_ranges']
         
-        win_values = data[data[target] == 0][feature].dropna()
-        loss_values = data[data[target] == 1][feature].dropna()
+        win_values = data[data[target] == 1][feature].dropna()
+        loss_values = data[data[target] == 0][feature].dropna()
         
         plt.figure(figsize=(12, 6))
         sns.histplot(win_values, color='blue', label='Win', kde=True, stat='density', element='step', fill=True)
@@ -152,26 +206,21 @@ def run_model_dashboard():
     classifiers = {
         'RandomForest': RandomForestClassifier(n_estimators=100, max_depth=10),
         'GradientBoosting': GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3),
-        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1),
-        'LogisticRegression': LogisticRegression(max_iter=1000),
+        'AdaBoost': AdaBoostClassifier(n_estimators=100, learning_rate=0.1, algorithm='SAMME'),
+        'LogisticRegression': LogisticRegression(max_iter=2000),
         'XGBoost': xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, use_label_encoder=False, eval_metric='logloss')
     }
 
-    def load_and_preprocess_data(base_dir):
-        st.write(f"Base directory: {base_dir}")
-        data = load_data(base_dir)
+    def load_and_preprocess_data():
+        data = load_data_from_db()
         return preprocess_data(data)
 
     st.title("Advanced Trading Dashboard")
 
-    st.session_state.base_dir = "./data/processed"
-
-    base_dir = st.session_state.base_dir
-
     if st.button("Load Data"):
         st.write("Loading data...")
         try:
-            data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data(base_dir)
+            data, X_train, X_test, y_train, y_test, indicator_columns = load_and_preprocess_data()
             st.success("Data loaded and preprocessed successfully.")
             st.session_state.data = data
             st.session_state.X_train = X_train
@@ -216,16 +265,26 @@ def run_model_dashboard():
 
                 if classifier:
                     importance = st.session_state.feature_importances[classifier]
-                    importance_df = pd.DataFrame({
-                        'Feature': st.session_state.indicator_columns,
-                        'Importance': importance
-                    }).sort_values(by='Importance', ascending=False)
+                    # Debug prints to verify lengths
+                    st.write(f"Length of indicator columns: {len(st.session_state.indicator_columns)}")
+                    st.write(f"Length of importance values: {len(importance)}")
+                    st.write(f"Indicator columns: {st.session_state.indicator_columns}")
+                    st.write(f"Importance values: {importance}")
+                    
+                    # Ensure lengths match before creating DataFrame
+                    if len(st.session_state.indicator_columns) == len(importance):
+                        importance_df = pd.DataFrame({
+                            'Feature': st.session_state.indicator_columns,
+                            'Importance': importance
+                        }).sort_values(by='Importance', ascending=False)
 
-                    top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
-                    selected_features = importance_df.head(top_n)
+                        top_n = st.selectbox("Select Top N Indicators", [3, 5, 10, len(importance_df)], index=2)
+                        selected_features = importance_df.head(top_n)
 
-                    fig = px.bar(selected_features, x='Importance', y='Feature', orientation='h')
-                    st.plotly_chart(fig)
+                        fig = px.bar(selected_features, x='Importance', y='Feature', orientation='h')
+                        st.plotly_chart(fig)
+                    else:
+                        st.error("Mismatch in lengths of indicator columns and importance values.")
 
             with st.expander("Optimal Win Ranges"):
                 st.subheader("Calculate Optimal Win Ranges")
@@ -247,7 +306,8 @@ def run_model_dashboard():
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
                     
-                    output_path = os.path.join(base_dir, f'docs/ml_analysis/win_ranges_summary/optimal_win_ranges_summary_{model_name}.csv')
+                    # Save summary to CSV
+                    output_path = f'optimal_win_ranges_summary_{model_name}.csv'
                     optimal_win_ranges_summary.to_csv(output_path, index=False)
                     st.write(f"Saved optimal win ranges summary to {output_path}")
 
@@ -264,7 +324,6 @@ def run_model_dashboard():
                     # Pie distribution plot
                     pie_fig = plot_pie_distribution(st.session_state.data, individual_indicator)
                     st.plotly_chart(pie_fig)
-
 
             with st.expander("Multiple Indicators Analysis"):
                 model_name = st.selectbox("Select Model", list(classifiers.keys()), key='multiple_indicators_model')

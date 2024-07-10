@@ -19,8 +19,51 @@ DB_CONFIG = {
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG)
 
-def get_file_path(base_dir, relative_path):
-    return os.path.join(base_dir, relative_path)
+def save_file_to_db(table_name, file_name, file_content):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Create table if it doesn't exist
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            file_name TEXT PRIMARY KEY,
+            file_content BYTEA
+        )
+    """)
+    
+    # Insert or update the file
+    cur.execute(f"""
+        INSERT INTO {table_name} (file_name, file_content)
+        VALUES (%s, %s)
+        ON CONFLICT (file_name)
+        DO UPDATE SET file_content = EXCLUDED.file_content
+    """, (file_name, file_content))
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def list_files_in_db(table_name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute(f"SELECT file_name FROM {table_name}")
+    files = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    return [file[0] for file in files]
+
+def load_file_from_db(table_name, file_name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute(f"SELECT file_content FROM {table_name} WHERE file_name = %s", (file_name,))
+    file_content = cur.fetchone()[0]
+    
+    cur.close()
+    conn.close()
+    return file_content
 
 def clean_and_parse_data(file_path):
     if not os.path.exists(file_path):
@@ -52,7 +95,7 @@ def clean_and_parse_data(file_path):
                 if i + 1 < len(indicators):
                     indicator_name = indicators[i]
                     indicator_value = indicators[i + 1].replace(',', '.')
-                    if indicator_name and indicator_value:
+                    if indicator_name and indicator_value:  # Ensure both name and value are not empty
                         try:
                             indicator_value = float(indicator_value)
                         except ValueError:
@@ -116,8 +159,8 @@ def calculate_indicators(data):
     merged_df['percent_away'] = ((merged_df['price'] - merged_df['indicator_value']) / merged_df['indicator_value']) * 100
 
     non_market_value_indicators = indicator_df[indicator_df['indicator_value'] <= 10000].copy()
-    non_market_value_indicators['binary_indicator'] = None
-    non_market_value_indicators['percent_away'] = None
+    non_market_value_indicators.loc[:, 'binary_indicator'] = None
+    non_market_value_indicators.loc[:, 'percent_away'] = None
 
     merged_df = merged_df.dropna(axis=1, how='all')
     non_market_value_indicators = non_market_value_indicators.dropna(axis=1, how='all')
@@ -274,12 +317,8 @@ def preprocess_events(event_data):
     return event_data
 
 def identify_trade_results(trade_data, event_data):
-    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2','SE3', 'SE4', 'SE5', 'SX']
+    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
     trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
-    
-    # Ensure time columns are in datetime format
-    trade_data['time'] = pd.to_datetime(trade_data['time'])
-    event_data['time'] = pd.to_datetime(event_data['time'])
     
     trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
 
@@ -290,6 +329,9 @@ def identify_trade_results(trade_data, event_data):
             elif 'Loss' in row['event_event']:
                 return 'loss'
         return 'unknown'
+    
+    # Remove duplicated trades by grouping on time and taking the first unique entry
+    trade_event_data = trade_event_data.groupby('time').first().reset_index()
     
     trade_event_data['result'] = trade_event_data.apply(classify_trade, axis=1)
     
@@ -305,18 +347,23 @@ def merge_with_indicators(trade_event_data, indicator_data):
     
     market_value_indicators = indicator_data[indicator_data['indicator_value'] > 10000]
     other_indicators = indicator_data[indicator_data['indicator_value'] <= 10000]
-    
-    # Ensure binary_indicator and percent_away are created
-    if 'binary_indicator' not in market_value_indicators.columns:
-        market_value_indicators['binary_indicator'] = 0
-    if 'percent_away' not in market_value_indicators.columns:
-        market_value_indicators['percent_away'] = 0.0
-    
-    # Ensure time columns are in datetime format
-    trade_event_data['time'] = pd.to_datetime(trade_event_data['time'])
-    market_value_indicators['time'] = pd.to_datetime(market_value_indicators['time'])
-    other_indicators['time'] = pd.to_datetime(other_indicators['time'])
-    
+
+    # Create binary_indicator and percent_away for all rows, defaulting to NaN
+    market_value_indicators = market_value_indicators.copy()
+    market_value_indicators.loc[:, 'binary_indicator'] = np.nan
+    market_value_indicators.loc[:, 'percent_away'] = np.nan
+
+    for time in market_value_indicators['time'].unique():
+        trade_price = trade_event_data.loc[trade_event_data['time'] == time, 'price'].values
+        if len(trade_price) > 0:
+            trade_price = trade_price[0]
+            for ind in market_value_indicators.loc[market_value_indicators['time'] == time].index:
+                ind_val = market_value_indicators.at[ind, 'indicator_value']
+                if pd.isna(trade_price) or pd.isna(ind_val):
+                    continue
+                market_value_indicators.at[ind, 'binary_indicator'] = 1 if trade_price > ind_val else 0
+                market_value_indicators.at[ind, 'percent_away'] = ((trade_price - ind_val) / ind_val) * 100
+
     indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='indicator_value').reset_index()
     binary_indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='binary_indicator').reset_index()
     percent_away_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='percent_away').reset_index()
@@ -369,8 +416,8 @@ def run_data_ingestion_preparation():
     st.subheader("Data Ingestion and Preparation")
     st.session_state.base_dir = "./data/raw"
 
-    data_output_dir = get_file_path(st.session_state.base_dir, "../processed")
-    raw_data_dir = get_file_path(st.session_state.base_dir, "")
+    data_output_dir = os.path.join(st.session_state.base_dir, "../processed")
+    raw_data_dir = os.path.join(st.session_state.base_dir, "")
 
     uploaded_file = st.file_uploader("Choose a data file", type=["csv"])
     if uploaded_file is not None:
@@ -379,9 +426,24 @@ def run_data_ingestion_preparation():
             f.write(uploaded_file.getbuffer())
         st.success(f"File {uploaded_file.name} uploaded successfully to {raw_file_path}")
 
-    file_dropdown = st.selectbox("Select a raw data file", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
+        # Save raw file to database
+        save_file_to_db("raw_files", uploaded_file.name, uploaded_file.getbuffer())
+        st.success(f"File {uploaded_file.name} saved to the database.")
+
+    # Section to list raw files stored in the database
+    st.subheader("Stored Raw Data Files in Database")
+    raw_files_in_db = list_files_in_db("raw_files")
+    selected_db_file = st.selectbox("Select a raw data file from database", raw_files_in_db)
+    if selected_db_file:
+        file_content = load_file_from_db("raw_files", selected_db_file)
+        raw_file_path = os.path.join(raw_data_dir, selected_db_file)
+        with open(raw_file_path, "wb") as f:
+            f.write(file_content)
+        st.success(f"Loaded {selected_db_file} from database to {raw_file_path}")
+
+    file_dropdown = st.selectbox("Select a raw data file from local storage", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
     if file_dropdown:
-        file_path = get_file_path(raw_data_dir, file_dropdown)
+        file_path = os.path.join(raw_data_dir, file_dropdown)
         data = clean_and_parse_data(file_path)
         st.write(data['trade_data'].head(15))
         st.write(data['indicator_data'].head(15))
@@ -406,10 +468,8 @@ def run_data_ingestion_preparation():
         save_parameters(parameters_df, os.path.join(data_output_dir, "parameters.csv"))
         
         st.success("Parameters successfully parsed and saved.")
-    
+
     if st.button("Verify Trade Parsing"):
-        selected_file = file_dropdown
-        file_path = get_file_path(raw_data_dir, selected_file)
         verify_trade_parsing(file_path, data_output_dir)
 
 if __name__ == "__main__":
