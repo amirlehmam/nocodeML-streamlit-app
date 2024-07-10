@@ -36,6 +36,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import logging
+from sqlalchemy import create_engine
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +54,21 @@ tf.config.run_functions_eagerly(True)
 BASE_DIR = "./data/processed/"
 MODEL_SAVE_PATH = os.path.join(BASE_DIR, "models")
 PDF_SAVE_PATH = os.path.join(BASE_DIR, "docs/ml_analysis")
+
+# Database connection details
+DB_CONFIG = {
+    'dbname': 'defaultdb',
+    'user': 'doadmin',
+    'password': 'AVNS_hnzmIdBmiO7aj5nylWW',
+    'host': 'nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com',
+    'port': 25060,
+    'sslmode': 'require'
+}
+
+def get_db_connection():
+    connection_str = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
+    engine = create_engine(connection_str)
+    return engine
 
 # Utility function to save plots to PDF
 def save_plots_to_pdf(c, plots, descriptions):
@@ -125,23 +141,29 @@ def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descripti
 
 # Load data with caching
 @st.cache_data
-def load_data(data_dir):
-    st.write(f"Loading data from {data_dir}...")
-    data_path = os.path.join(data_dir, "merged_trade_indicator_event.csv")
-    if not os.path.exists(data_path):
-        st.error(f"File not found: {data_path}")
+def load_data_from_db():
+    st.write("Loading data from the database...")
+    try:
+        engine = get_db_connection()
+        query = "SELECT * FROM merged_trade_indicator_event"
+        data = pd.read_sql_query(query, engine)
+        st.write(f"Data loaded with shape: {data.shape}")
+        return data
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
         return None
-    data = pd.read_csv(data_path)
-    st.write(f"Data loaded with shape: {data.shape}")
-    return data
 
 # Preprocess data
 @st.cache_data
 def preprocess_data(data, selected_feature_types):
     st.write("Preprocessing data...")
+    
+    if data is None:
+        raise ValueError("The provided data is None.")
+    
     if data.shape[1] < 8:
         raise ValueError("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
-
+    
     all_indicators = data.columns[7:]
     st.write(f"All indicators: {all_indicators}")
 
@@ -158,9 +180,16 @@ def preprocess_data(data, selected_feature_types):
 
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
+    # Ensure columns do not contain None values
+    data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(0))
+
     # Feature Engineering: Add derived metrics (changes, slopes)
     changes = data[indicator_columns].diff().add_suffix('_change')
     slopes = data[indicator_columns].diff().diff().add_suffix('_slope')
+    
+    # Ensure changes and slopes do not contain None values
+    changes = changes.fillna(0)
+    slopes = slopes.fillna(0)
     
     data = pd.concat([data, changes, slopes], axis=1)
 
@@ -178,6 +207,7 @@ def preprocess_data(data, selected_feature_types):
 
     st.write("Data preprocessing completed.")
     return X_train, X_test, y_train, y_test, indicator_columns, data
+
 
 # Create neural network model
 def create_nn_model(input_dim):
@@ -383,7 +413,7 @@ def run_advanced_model_exploration():
     if st.session_state.current_step == "load_data" and st.button("Load Data"):
         st.write("Loading data...")
         try:
-            data = load_data(st.session_state.base_dir)
+            data = load_data_from_db()
             if data is not None:
                 X_train, X_test, y_train, y_test, indicator_columns, data = preprocess_data(data, selected_feature_types)
                 st.session_state.data = data

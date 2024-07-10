@@ -7,15 +7,33 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from sqlalchemy import create_engine
 
-# Function to load event_data from the processed directory
-def load_event_data(base_dir):
+# Database connection details
+DB_CONFIG = {
+    'dbname': 'defaultdb',
+    'user': 'doadmin',
+    'password': 'AVNS_hnzmIdBmiO7aj5nylWW',
+    'host': 'nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com',
+    'port': 25060,
+    'sslmode': 'require'
+}
+
+def get_db_connection():
+    connection_str = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
+    engine = create_engine(connection_str)
+    return engine
+
+# Function to load event_data from the database
+@st.cache_data
+def load_event_data_from_db():
     try:
-        event_data_path = os.path.join(base_dir, "event_data.csv")
-        merged_data_path = os.path.join(base_dir, "merged_trade_indicator_event.csv")
+        engine = get_db_connection()
+        event_data_query = "SELECT * FROM event_data"
+        merged_data_query = "SELECT * FROM merged_trade_indicator_event"
         
-        event_data = pd.read_csv(event_data_path)
-        merged_data = pd.read_csv(merged_data_path)
+        event_data = pd.read_sql_query(event_data_query, engine)
+        merged_data = pd.read_sql_query(merged_data_query, engine)
         
         return event_data, merged_data
     except Exception as e:
@@ -286,15 +304,27 @@ def plot_additional_metrics(trades, timestamp_col):
 def run_strategy_performance():
     st.title("Strategy Performance Analysis")
 
-    st.session_state.base_dir = "./data/processed"
-
-    base_dir = st.session_state.base_dir
-
-    entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=5)
-
     if st.button("Load and Analyze Data"):
-        event_data, merged_data = load_event_data(base_dir)
+        st.cache_data.clear()  # Clear cached data
+        event_data, merged_data = load_event_data_from_db()
+        
         if event_data is not None and merged_data is not None:
+            st.write("Loaded event data:")
+            st.write(event_data.head())
+
+            st.write("Loaded merged data:")
+            st.write(merged_data.head())
+
+            # Determine the maximum number of entries
+            max_entries = merged_data['event'].str.extract(r'(\d+)', expand=False).astype(int).max()
+            st.write(f"Detected maximum entries: {max_entries}")
+
+            if max_entries > 1:
+                entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=max_entries, value=max_entries)
+            else:
+                entry_multiplier = 1
+                st.write("Only one entry type detected, using a single entry per trade.")
+
             event_data, merged_data, timestamp_col = process_initial_data(event_data, merged_data)
 
             if event_data is not None:

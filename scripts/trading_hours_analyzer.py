@@ -1,17 +1,34 @@
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from sqlalchemy import create_engine
 
-# Function to load event_data from the processed directory
-def load_event_data(base_dir):
+# Database connection details
+DB_CONFIG = {
+    'dbname': 'defaultdb',
+    'user': 'doadmin',
+    'password': 'AVNS_hnzmIdBmiO7aj5nylWW',
+    'host': 'nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com',
+    'port': 25060,
+    'sslmode': 'require'
+}
+
+def get_db_connection():
+    connection_str = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
+    engine = create_engine(connection_str)
+    return engine
+
+# Function to load event_data from the database
+@st.cache_data
+def load_event_data_from_db():
     try:
-        event_data_path = os.path.join(base_dir, "event_data.csv")
-        merged_data_path = os.path.join(base_dir, "merged_trade_indicator_event.csv")
+        engine = get_db_connection()
+        event_data_query = "SELECT * FROM event_data"
+        merged_data_query = "SELECT * FROM merged_trade_indicator_event"
         
-        event_data = pd.read_csv(event_data_path)
-        merged_data = pd.read_csv(merged_data_path)
+        event_data = pd.read_sql_query(event_data_query, engine)
+        merged_data = pd.read_sql_query(merged_data_query, engine)
         
         return event_data, merged_data
     except Exception as e:
@@ -199,8 +216,8 @@ def display_info_and_plots(performance_by_hour, merged_data):
     st.markdown("This box plot shows the distribution of trade values for each hour, highlighting the spread and outliers.")
     plot_box_trade_values(merged_data)
 
-def main(base_dir):
-    event_data, merged_data = load_event_data(base_dir)
+def main(base_dir=None):  # Accept an argument even if unused
+    event_data, merged_data = load_event_data_from_db()
     if event_data is None or merged_data is None:
         return
     
@@ -210,5 +227,4 @@ def main(base_dir):
     display_info_and_plots(performance_by_hour, merged_data)
 
 if __name__ == "__main__":
-    base_dir = "./data/processed/"  # Replace with your data directory
-    main(base_dir)
+    main()

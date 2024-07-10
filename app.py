@@ -137,8 +137,7 @@ def strategy_performance():
 
 def trading_hours():
     from scripts.trading_hours_analyzer import main
-    base_dir = "./data/processed/"  # Make sure this matches your directory structure
-    main(base_dir)
+    main() 
 
 # Mapping page names to functions
 page_dict = {
