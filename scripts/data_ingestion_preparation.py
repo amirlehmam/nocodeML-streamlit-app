@@ -5,6 +5,10 @@ import psycopg2
 from psycopg2.extras import execute_values
 import numpy as np
 import re
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Database connection details
 DB_CONFIG = {
@@ -83,7 +87,7 @@ def clean_and_parse_data(file_path):
     for line in data_lines:
         parts = line.strip().split(';')
         if len(parts) < 2:
-            print(f"Error parsing line: {line}")
+            logging.warning(f"Error parsing line: {line}")
             continue
         
         timestamp = parts[0]
@@ -104,11 +108,10 @@ def clean_and_parse_data(file_path):
         elif event_type == 'Signal':
             signals = parts[8:]
             row = [timestamp, 'Signal']
-            for i in range(0, len(signals), 2):
-                if i + 1 < len(signals):
-                    signal_name = signals[i]
-                    signal_value = signals[i + 1].replace(',', '.')
-                    row.extend([signal_name, signal_value])
+            for i in range(0, len(signals), 1):  # Adjusted to handle multiple signals
+                signal_value = signals[i]
+                if signal_value:
+                    row.append(signal_value)
             signal_data.append(row)
         elif event_type in ('LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', "SE4", 'SE5', 'SX', 'Profit target', 'Parabolic stop'):
             trade_data.append([timestamp, event_type, parts[2], parts[3].replace(',', '.')])
@@ -126,7 +129,7 @@ def clean_and_parse_data(file_path):
     event_df = pd.DataFrame(event_data, columns=event_columns)
 
     max_signal_length = max(len(row) for row in signal_data)
-    signal_columns = ['time', 'event'] + [f'signal_name{i//2+1}' if i % 2 == 0 else 'value' for i in range(max_signal_length - 2)]
+    signal_columns = ['time', 'event'] + [f'signal{i+1}' for i in range(max_signal_length - 2)]
     signal_df = pd.DataFrame(signal_data, columns=signal_columns)
 
     # Convert time columns to datetime
@@ -179,8 +182,8 @@ def clean_numeric_columns(df, columns):
 
 def inspect_data(data):
     for key, df in data.items():
-        print(f"\nInspecting {key}...")
-        print(df.describe())
+        logging.info(f"\nInspecting {key}...")
+        logging.info(df.describe())
 
 def save_data_to_db(data):
     conn = get_db_connection()
@@ -199,8 +202,8 @@ def save_data_to_db(data):
     data['trade_data'] = clean_numeric_columns(data['trade_data'], ['qty', 'price'])
     data['indicator_data'] = clean_numeric_columns(data['indicator_data'], ['indicator_value'])
     data['event_data'] = clean_numeric_columns(data['event_data'], ['amount'])
-    data['signal_data'] = clean_numeric_columns(data['signal_data'], ['value'])
-
+    # Removed cleaning for signal columns
+    
     # Inspect data
     inspect_data(data)
 
@@ -210,6 +213,13 @@ def save_data_to_db(data):
     insert_dataframe(data['trade_data'], 'trade_data')
     insert_dataframe(data['indicator_data'], 'indicator_data')
     insert_dataframe(data['event_data'], 'event_data')
+
+    # Remove columns with all null values
+    data['signal_data'].dropna(axis=1, how='all', inplace=True)
+
+    # Ensure all columns exist in the signal_data table
+    add_missing_columns('signal_data', set(data['signal_data'].columns))
+
     insert_dataframe(data['signal_data'], 'signal_data')
 
     conn.commit()
@@ -244,21 +254,38 @@ def add_missing_columns(table_name, required_columns):
     for column in missing_columns:
         cur.execute(f"""
             ALTER TABLE {table_name}
-            ADD COLUMN "{column}" FLOAT;  -- Adjust the data type as necessary
+            ADD COLUMN "{column}" TEXT;
         """)
-        print(f"Added missing column: {column}")
+        logging.info(f"Added missing column: {column}")
 
     conn.commit()
     cur.close()
     conn.close()
+
+def truncate_table_batch(table_name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    while True:
+        cur.execute(f"DELETE FROM {table_name} WHERE ctid IN (SELECT ctid FROM {table_name} LIMIT 1000)")
+        deleted = cur.rowcount
+        logging.info(f"Deleted {deleted} rows from {table_name}")
+        conn.commit()
+        if deleted == 0:
+            break
+    cur.close()
+    conn.close()
+
+def truncate_tables(table_names):
+    for table in table_names:
+        logging.info(f"Truncating table: {table}")
+        truncate_table_batch(table)
 
 def save_merged_data_to_db(merged_data):
     conn = get_db_connection()
     cur = conn.cursor()
 
     # Clear existing data in the table
-    cur.execute("TRUNCATE TABLE merged_trade_indicator_event;")
-    print("Cleared existing data in the table")
+    truncate_tables(['merged_trade_indicator_event'])
 
     merged_data = sanitize_column_names(merged_data)
 
@@ -271,8 +298,8 @@ def save_merged_data_to_db(merged_data):
 
     insert_sql = f"INSERT INTO merged_trade_indicator_event ({', '.join(columns)}) VALUES %s"
 
-    print(f"SQL statement: {insert_sql}")
-    print(f"Sample values: {values[:5]}")  # Print first 5 rows of values for inspection
+    logging.info(f"SQL statement: {insert_sql}")
+    logging.info(f"Sample values: {values[:5]}")  # Print first 5 rows of values for inspection
 
     execute_values(cur, insert_sql, values)
     
@@ -298,7 +325,7 @@ def parse_parameters(file_path):
 
 def save_parameters(parameters_df, output_path):
     parameters_df.to_csv(output_path, index=False)
-    print(f"Saved parameters to {output_path}")
+    logging.info(f"Saved parameters to {output_path}")
 
 def load_data(data_dir):
     indicator_data = pd.read_csv(os.path.join(data_dir, "indicator_data.csv"))
@@ -317,7 +344,7 @@ def preprocess_events(event_data):
     return event_data
 
 def identify_trade_results(trade_data, event_data):
-    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX']
+    relevant_trades = ['LE1','LE2','LE3','LE4','LE5','LX','SE1', 'SE2','SE3', 'SE4', 'SE5', 'SX']
     trade_data = trade_data[trade_data['event'].isin(relevant_trades)]
     
     trade_event_data = pd.merge_asof(trade_data.sort_values('time'), event_data.sort_values('time'), on='time', direction='forward', suffixes=('', '_event'))
@@ -361,6 +388,11 @@ def merge_with_indicators(trade_event_data, indicator_data):
                 ind_val = market_value_indicators.at[ind, 'indicator_value']
                 if pd.isna(trade_price) or pd.isna(ind_val):
                     continue
+                try:
+                    trade_price = float(trade_price)
+                    ind_val = float(ind_val)
+                except ValueError:
+                    continue
                 market_value_indicators.at[ind, 'binary_indicator'] = 1 if trade_price > ind_val else 0
                 market_value_indicators.at[ind, 'percent_away'] = ((trade_price - ind_val) / ind_val) * 100
 
@@ -368,7 +400,7 @@ def merge_with_indicators(trade_event_data, indicator_data):
     binary_indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='binary_indicator').reset_index()
     percent_away_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='percent_away').reset_index()
     
-    print(f"Data types before merge: {trade_event_data.dtypes}, {indicator_pivot.dtypes}")
+    logging.info(f"Data types before merge: {trade_event_data.dtypes}, {indicator_pivot.dtypes}")
 
     merged_data = pd.merge_asof(trade_event_data.sort_values('time'), indicator_pivot.sort_values('time'), on='time', direction='nearest')
     merged_data = pd.merge_asof(merged_data, binary_indicator_pivot.sort_values('time'), on='time', direction='nearest', suffixes=('', '_binary'))
@@ -383,6 +415,7 @@ def merge_with_indicators(trade_event_data, indicator_data):
     return merged_data
 
 def verify_trade_parsing(file_path, output_dir):
+    logging.info("Starting trade parsing verification")
     data = clean_and_parse_data(file_path)
     trade_data = data['trade_data']
     event_data = preprocess_events(data['event_data'])
@@ -399,10 +432,10 @@ def verify_trade_parsing(file_path, output_dir):
     sample_size = min(10, len(merged_data))  # Adjust sample size
     if sample_size > 0:
         sample_classified_trades = merged_data.sample(n=sample_size)
-        print(f"\nSample of classified trades (showing {sample_size}):")
-        print(sample_classified_trades)
+        logging.info(f"\nSample of classified trades (showing {sample_size}):")
+        logging.info(sample_classified_trades)
     else:
-        print("\nNo classified trades available for sampling.")
+        logging.info("\nNo classified trades available for sampling.")
 
     output_file = os.path.join(output_dir, "merged_trade_indicator_event.csv")
     merged_data.to_csv(output_file, index=False)
@@ -441,9 +474,8 @@ def run_data_ingestion_preparation():
             f.write(file_content)
         st.success(f"Loaded {selected_db_file} from database to {raw_file_path}")
 
-    file_dropdown = st.selectbox("Select a raw data file from local storage", os.listdir(raw_data_dir) if os.path.exists(raw_data_dir) else [])
-    if file_dropdown:
-        file_path = os.path.join(raw_data_dir, file_dropdown)
+    if selected_db_file:
+        file_path = os.path.join(raw_data_dir, selected_db_file)
         data = clean_and_parse_data(file_path)
         st.write(data['trade_data'].head(15))
         st.write(data['indicator_data'].head(15))
@@ -451,6 +483,10 @@ def run_data_ingestion_preparation():
         st.write(data['signal_data'].head(15))
         
         data['indicator_data'] = calculate_indicators(data)
+        
+        # Truncate relevant tables before saving new data
+        truncate_tables(['trade_data', 'indicator_data', 'event_data', 'signal_data'])
+        
         save_data_to_db(data)
         
         st.success("Data successfully parsed and saved to the database.")
