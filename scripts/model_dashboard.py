@@ -1,4 +1,3 @@
-# model_dashboard.py
 import os
 import pandas as pd
 import numpy as np
@@ -295,8 +294,10 @@ def run_model_dashboard():
                 individual_indicator = st.selectbox("Select Individual Indicator", st.session_state.indicator_columns, key='win_ranges_individual')
 
                 if st.button("Calculate and Plot Optimal Win Ranges", key='plot_win_ranges'):
-                    if top_n:
-                        selected_features = st.session_state.feature_importances[model_name]['feature'] if top_n == "ALL" else st.session_state.feature_importances[model_name]['feature'].head(top_n)
+                    if top_n == "ALL":
+                        selected_features = st.session_state.indicator_columns
+                    elif top_n is not None:
+                        selected_features = importance_df.head(int(top_n))['Feature'].tolist()
                     else:
                         selected_features = [individual_indicator]
 
