@@ -256,8 +256,8 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
     for feature in tqdm(features, desc="Calculating Optimal Win Ranges"):
         data[feature] = pd.to_numeric(data[feature], errors='coerce')
         
-        win_values = data[data[target] == 0][feature].dropna().values.astype(float)
-        loss_values = data[data[target] == 1][feature].dropna().values.astype(float)
+        win_values = data[data[target] == 1][feature].dropna().values.astype(float)
+        loss_values = data[data[target] == 0][feature].dropna().values.astype(float)
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
@@ -290,33 +290,52 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
     return optimal_ranges
 
 # Plot optimal win ranges using Plotly
-def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
+def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='both'):
     plots = []
     descriptions = []
     for item in optimal_ranges:
         feature = item['feature']
         ranges = item['optimal_win_ranges']
 
-        win_values = data[data[target] == 0][feature].dropna()
-        loss_values = data[data[target] == 1][feature].dropna()
+        if trade_type == 'long':
+            values = data[data['entry_type'].str.contains('LE')][feature].dropna()
+            name = 'Long (Win)'
+            color = 'blue'
+        elif trade_type == 'short':
+            values = data[data['entry_type'].str.contains('SE')][feature].dropna()
+            name = 'Short (Loss)'
+            color = 'red'
+        else:
+            win_values = data[data[target] == 1][feature].dropna()
+            loss_values = data[data[target] == 0][feature].dropna()
+            fig = go.Figure()
+            fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75, nbinsx=50))
+            fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75, nbinsx=50))
+            for range_start, range_end in ranges:
+                fig.add_shape(type="rect", x0=range_start, x1=range_end, y0=0, y1=1,
+                              fillcolor="blue", opacity=0.3, layer="below", line_width=0)
+            fig.update_layout(
+                title=f'Optimal Win Ranges for {feature} (Both)',
+                xaxis_title=feature,
+                yaxis_title='Count',
+                barmode='overlay'
+            )
+            plots.append(fig)
+            descriptions.append(f"Optimal Win Ranges for {feature} (Both)")
+            continue
 
         fig = go.Figure()
-        fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75, nbinsx=50))
-        fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75, nbinsx=50))
-
+        fig.add_trace(go.Histogram(x=values, name=name, marker_color=color, opacity=0.75, nbinsx=50))
         for range_start, range_end in ranges:
             fig.add_shape(type="rect", x0=range_start, x1=range_end, y0=0, y1=1,
-                          fillcolor="blue", opacity=0.3, layer="below", line_width=0)
-
+                          fillcolor=color, opacity=0.3, layer="below", line_width=0)
         fig.update_layout(
-            title=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})',
+            title=f'Optimal Win Ranges for {feature} ({trade_type.capitalize()})',
             xaxis_title=feature,
-            yaxis_title='Count',
-            barmode='overlay'
+            yaxis_title='Count'
         )
-        st.plotly_chart(fig)
         plots.append(fig)
-        descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type}, {model_name})")
+        descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type.capitalize()})")
     return plots, descriptions
 
 # Summarize optimal win ranges
@@ -337,6 +356,9 @@ def reset_session_state():
     st.session_state.current_step = "load_data"
     st.session_state.model_type = "Random Forest"
     st.session_state.feature_importances = {}
+    st.session_state.optimal_ranges = None
+    st.session_state.plot_type = 'both'
+    st.session_state.selected_features = []
 
 # Function to create CatBoost model
 def create_catboost_model(task_type):
@@ -414,6 +436,12 @@ def run_advanced_model_exploration():
         st.session_state.current_step = "load_data"
     if "model_type" not in st.session_state:
         st.session_state.model_type = "Random Forest"
+    if "optimal_ranges" not in st.session_state:
+        st.session_state.optimal_ranges = None
+    if "plot_type" not in st.session_state:
+        st.session_state.plot_type = 'both'
+    if "selected_features" not in st.session_state:
+        st.session_state.selected_features = []
 
     selected_feature_types = st.multiselect(
         "Select Feature Types",
@@ -656,9 +684,28 @@ def run_advanced_model_exploration():
 
                     optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
                     st.session_state.optimal_ranges = optimal_ranges
-                    opt_plots, opt_descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='', model_name=model_type)
-                    plots.extend(opt_plots)
-                    descriptions.extend(opt_descriptions)
+                    st.session_state.selected_features = selected_features
+
+                    st.write("Optimal Win Ranges")
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+                        st.write("Long Trades")
+                        long_plots, long_descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='long')
+                        for plot in long_plots:
+                            st.plotly_chart(plot)
+
+                    with col2:
+                        st.write("Short Trades")
+                        short_plots, short_descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='short')
+                        for plot in short_plots:
+                            st.plotly_chart(plot)
+
+                    with col3:
+                        st.write("Both Trades")
+                        both_plots, both_descriptions = plot_optimal_win_ranges(st.session_state.data, optimal_ranges, trade_type='both')
+                        for plot in both_plots:
+                            st.plotly_chart(plot)
 
                     optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
                     st.write(optimal_win_ranges_summary)
@@ -668,75 +715,9 @@ def run_advanced_model_exploration():
                     dataframes.append(optimal_win_ranges_summary)
                     dataframe_descriptions.append("Optimal Win Ranges Summary")
 
-                    model_type = st.session_state.model_type_selected
-                    optimal_ranges = st.session_state.optimal_ranges
-
-                    if model_type in st.session_state.feature_importances:
-                        st.write("Feature Importance Heatmap:")
-                        feature_importance_values = st.session_state.feature_importances[model_type]
-                        fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                        st.plotly_chart(fig)
-                        plots.append(fig)
-                        descriptions.append("Feature Importance Heatmap")
-
-                    st.write("Correlation Matrix of Top Indicators:")
-                    selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
-                    if selected_model in st.session_state.feature_importances:
-                        top_features = st.session_state.feature_importances[selected_model][:10]
-                        top_features_list = [st.session_state.indicator_columns[i] for i in np.argsort(top_features)[::-1][:10]]
-                        corr = st.session_state.data[top_features_list].corr()
-                        fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                        st.plotly_chart(fig)
-                        plots.append(fig)
-                        descriptions.append("Correlation Matrix of Top Indicators")
-
-                    st.write("Detailed Indicator Analysis")
-                    selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
-                    if selected_indicator:
-                        win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
-                        loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
-
-                        fig = go.Figure()
-                        fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
-                        fig.add_trace(go.Histogram(x=loss_data, name='Loss', marker_color='red', opacity=0.75))
-                        fig.update_layout(barmode='overlay', title_text=f'Distribution of {selected_indicator} for Winning and Losing Trades', width=800, height=400)
-                        fig.update_xaxes(title_text=selected_indicator)
-                        fig.update_yaxes(title_text='Count')
-                        st.plotly_chart(fig)
-                        plots.append(fig)
-                        descriptions.append(f"Distribution of {selected_indicator} for Winning and Losing Trades")
-
-                        kde_win = gaussian_kde(win_data)
-                        kde_loss = gaussian_kde(loss_data)
-                        x_grid = np.linspace(min(st.session_state.data[selected_indicator].dropna()), max(st.session_state.data[selected_indicator].dropna()), 1000)
-                        kde_win_density = kde_win(x_grid)
-                        kde_loss_density = kde_loss(x_grid)
-
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-                        fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-                        for range_item in optimal_ranges:
-                            if range_item['feature'] == selected_indicator:
-                                for start, end in range_item['optimal_win_ranges']:
-                                    fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-
-                        fig.update_layout(title_text=f'KDE Plot with Optimal Win Ranges for {selected_indicator}', xaxis_title=selected_indicator, yaxis_title='Density', width=800, height=400)
-                        st.plotly_chart(fig)
-                        plots.append(fig)
-                        descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
-
-                        st.write("Loss Mitigation Analysis")
-                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
-                        st.write(loss_conditions)
-                        fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
-                        st.plotly_chart(fig_loss_cond)
-                        plots.append(fig_loss_cond)
-                        descriptions.append("Mean Indicator Values for Losses")
-                        dataframes.append(loss_conditions)
-                        dataframe_descriptions.append("Loss Mitigation Analysis")
-
+                    # Save all plots and dataframes to PDF
                     pdf_filename = os.path.join(PDF_SAVE_PATH, f'{model_type}_{task_type}_complete_analysis.pdf')
-                    save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, descriptions)
+                    save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots + long_plots + short_plots + both_plots, descriptions + long_descriptions + short_descriptions + both_descriptions)
                     st.write(f"Saved complete analysis to {pdf_filename}")
 
                 except Exception as e:
