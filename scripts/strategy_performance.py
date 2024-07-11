@@ -1,14 +1,7 @@
 import streamlit as st
 import pandas as pd
-import os
-import quantstats as qs
-import plotly.graph_objects as go
-import plotly.express as px
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
+import hashlib
 from sqlalchemy import create_engine
-import time
 
 # Database connection details
 DB_CONFIG = {
@@ -25,9 +18,13 @@ def get_db_connection():
     engine = create_engine(connection_str)
     return engine
 
+# Function to calculate hash of the data
+def calculate_data_hash(data):
+    return hashlib.sha256(pd.util.hash_pandas_object(data, index=True).values).hexdigest()
+
 # Function to load event_data from the database
 @st.cache_data(show_spinner=False, persist=True, ttl=3600)
-def load_event_data_from_db(last_modified_time):
+def load_event_data_from_db(data_hash):
     try:
         engine = get_db_connection()
         event_data_query = "SELECT * FROM event_data"
@@ -41,16 +38,25 @@ def load_event_data_from_db(last_modified_time):
         st.error(f"Error loading data: {e}")
         return None, None
 
-# Function to get the last modified time of the data
-def get_last_modified_time():
+# Function to get the hash of the data
+def get_data_hash():
     try:
         engine = get_db_connection()
-        query = "SELECT max(last_modified) FROM event_data"
-        last_modified_time = pd.read_sql_query(query, engine).iloc[0, 0]
-        return last_modified_time
+        event_data_query = "SELECT * FROM event_data"
+        merged_data_query = "SELECT * FROM merged_trade_indicator_event"
+        
+        event_data = pd.read_sql_query(event_data_query, engine)
+        merged_data = pd.read_sql_query(merged_data_query, engine)
+        
+        event_data_hash = calculate_data_hash(event_data)
+        merged_data_hash = calculate_data_hash(merged_data)
+        
+        combined_hash = hashlib.sha256((event_data_hash + merged_data_hash).encode()).hexdigest()
+        
+        return combined_hash
     except Exception as e:
-        st.error(f"Error fetching last modified time: {e}")
-        return time.time()
+        st.error(f"Error calculating data hash: {e}")
+        return None
 
 # Function to process initial data
 def process_initial_data(event_data, merged_data):
@@ -319,8 +325,8 @@ def run_strategy_performance():
     entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=5)
 
     if st.button("Load and Analyze Data"):
-        last_modified_time = get_last_modified_time()
-        event_data, merged_data = load_event_data_from_db(last_modified_time)
+        data_hash = get_data_hash()
+        event_data, merged_data = load_event_data_from_db(data_hash)
         if event_data is not None and merged_data is not None:
             event_data, merged_data, timestamp_col = process_initial_data(event_data, merged_data)
 
