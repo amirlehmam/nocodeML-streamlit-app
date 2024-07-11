@@ -260,22 +260,22 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     return trades, metrics_df, additional_metrics_df
 
 # Function to generate quantstats tearsheet
-def generate_quantstats_tearsheet(data, timestamp_col, output_path="tearsheet.html"):
-    data.set_index(timestamp_col, inplace=True)
-    returns = data['amount'].pct_change().dropna()
-
-    qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
-
-    with open(output_path, 'r') as f:
-        html_content = f.read()
-
-    css_path = os.path.join(os.path.dirname(__file__), "custom_style.css")
-    with open(css_path, "r") as f:
-        custom_css = f.read()
-
-    html_content = html_content.replace('</head>', f'<style>{custom_css}</style></head>')
-
-    st.components.v1.html(html_content, height=800, scrolling=True)
+#def generate_quantstats_tearsheet(data, timestamp_col, output_path="tearsheet.html"):
+#    data.set_index(timestamp_col, inplace=True)
+#    returns = data['amount'].pct_change().dropna()
+#
+#    qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
+#
+#    with open(output_path, 'r') as f:
+#        html_content = f.read()
+#
+#    css_path = os.path.join(os.path.dirname(__file__), "custom_style.css")
+#    with open(css_path, "r") as f:
+#        custom_css = f.read()
+#
+#    html_content = html_content.replace('</head>', f'<style>{custom_css}</style></head>')
+#
+#    st.components.v1.html(html_content, height=800, scrolling=True)
 
 # Function to plot additional metrics
 def plot_additional_metrics(trades, timestamp_col):
@@ -358,7 +358,7 @@ def run_strategy_performance():
                 # Plot additional metrics
                 plot_additional_metrics(trades, timestamp_col)
 
-                generate_quantstats_tearsheet(trades, timestamp_col)
+                #generate_quantstats_tearsheet(trades, timestamp_col)
 
 if __name__ == "__main__":
     run_strategy_performance()
