@@ -259,24 +259,6 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
 
     return trades, metrics_df, additional_metrics_df
 
-# Function to generate quantstats tearsheet
-#def generate_quantstats_tearsheet(data, timestamp_col, output_path="tearsheet.html"):
-#    data.set_index(timestamp_col, inplace=True)
-#    returns = data['amount'].pct_change().dropna()
-#
-#    qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
-#
-#    with open(output_path, 'r') as f:
-#        html_content = f.read()
-#
-#    css_path = os.path.join(os.path.dirname(__file__), "custom_style.css")
-#    with open(css_path, "r") as f:
-#        custom_css = f.read()
-#
-#    html_content = html_content.replace('</head>', f'<style>{custom_css}</style></head>')
-#
-#    st.components.v1.html(html_content, height=800, scrolling=True)
-
 # Function to plot additional metrics
 def plot_additional_metrics(trades, timestamp_col):
     st.write("### Equity Curve")
@@ -309,6 +291,8 @@ def plot_additional_metrics(trades, timestamp_col):
     day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     if daily_returns_pivot.shape[1] == 7:
         day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    elif daily_returns_pivot.shape[1] == 6:
+        day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     ax.set_xticks(range(len(daily_returns_pivot.columns)))
     ax.set_xticklabels(day_labels, rotation=45)  # Rotated labels for clarity
     st.pyplot(fig)
@@ -357,8 +341,6 @@ def run_strategy_performance():
 
                 # Plot additional metrics
                 plot_additional_metrics(trades, timestamp_col)
-
-                #generate_quantstats_tearsheet(trades, timestamp_col)
 
 if __name__ == "__main__":
     run_strategy_performance()
