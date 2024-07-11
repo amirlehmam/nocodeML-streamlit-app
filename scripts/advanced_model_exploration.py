@@ -200,6 +200,9 @@ def preprocess_data(data, selected_feature_types):
     scaler = StandardScaler()
     data[indicator_columns] = scaler.fit_transform(data[indicator_columns])
 
+    # Add entry type column
+    data['entry_type'] = np.where(data.index % 2 == 0, 'LE', 'SE')  # Dummy logic, replace with actual logic
+
     X = data[indicator_columns]
     y = data['result']
 
