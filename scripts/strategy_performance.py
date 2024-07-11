@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from sqlalchemy import create_engine
+import time
 
 # Database connection details
 DB_CONFIG = {
@@ -25,8 +26,8 @@ def get_db_connection():
     return engine
 
 # Function to load event_data from the database
-@st.cache_data
-def load_event_data_from_db():
+@st.cache_data(show_spinner=False, persist=True, ttl=3600)
+def load_event_data_from_db(last_modified_time):
     try:
         engine = get_db_connection()
         event_data_query = "SELECT * FROM event_data"
@@ -39,6 +40,17 @@ def load_event_data_from_db():
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return None, None
+
+# Function to get the last modified time of the data
+def get_last_modified_time():
+    try:
+        engine = get_db_connection()
+        query = "SELECT max(last_modified) FROM event_data"
+        last_modified_time = pd.read_sql_query(query, engine).iloc[0, 0]
+        return last_modified_time
+    except Exception as e:
+        st.error(f"Error fetching last modified time: {e}")
+        return time.time()
 
 # Function to process initial data
 def process_initial_data(event_data, merged_data):
@@ -84,8 +96,6 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     total_trades = winning_trades + losing_trades
     total_gross_profit = trades[trades['event'].str.contains('Profit', case=False)]['amount'].sum()
     total_gross_loss = trades[trades['event'].str.contains('Loss', case=False)]['amount'].sum()
-    
-    # Corrected Net Profit/Loss calculation
     net_profit_loss = total_gross_profit - abs(total_gross_loss)
 
     trades['cum_return'] = trades['amount'].cumsum()
@@ -149,7 +159,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     metrics_df['Value'] = metrics_df['Value'].apply(lambda x: f"{x:.2f}")
     additional_metrics_df['Value'] = additional_metrics_df['Value'].apply(lambda x: f"{x:.2f}")
 
-    # Apply conditional formatting (no changes here)
+    # Apply conditional formatting for the main metrics
     def apply_styles(row):
         value = float(row['Value'].replace(',', ''))
         metric = row['Metric']
@@ -178,7 +188,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
                 background_color = 'background-color: green'
         return [''] * len(row) if background_color == '' else [background_color if col == 'Value' else '' for col in row.index]
 
-    # Apply conditional formatting for additional metrics (no changes here)
+    # Apply conditional formatting for additional metrics
     def apply_additional_styles(row):
         value = float(row['Value'].replace(',', ''))
         metric = row['Metric']
@@ -224,7 +234,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     styled_metrics_df = metrics_df.style.apply(apply_styles, axis=1)
     styled_additional_metrics_df = additional_metrics_df.style.apply(apply_additional_styles, axis=1)
 
-    # Display dataframes side by side (no changes here)
+    # Display dataframes side by side
     col1, col2 = st.columns(2)
     with col1:
         st.write("### Key Performance Metrics")
@@ -309,7 +319,8 @@ def run_strategy_performance():
     entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=5)
 
     if st.button("Load and Analyze Data"):
-        event_data, merged_data = load_event_data_from_db()
+        last_modified_time = get_last_modified_time()
+        event_data, merged_data = load_event_data_from_db(last_modified_time)
         if event_data is not None and merged_data is not None:
             event_data, merged_data, timestamp_col = process_initial_data(event_data, merged_data)
 
