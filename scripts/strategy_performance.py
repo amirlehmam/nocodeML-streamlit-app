@@ -1,4 +1,5 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 import hashlib
 from sqlalchemy import create_engine
