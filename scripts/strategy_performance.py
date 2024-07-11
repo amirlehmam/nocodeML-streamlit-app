@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from sqlalchemy import create_engine
+import quantstats as qs
 
 # Database connection details
 DB_CONFIG = {
