@@ -310,7 +310,7 @@ def plot_additional_metrics(trades, timestamp_col):
     # Adjust tick labels based on the actual number of days in the data
     day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     if daily_returns_pivot.shape[1] == 7:
-        day_labels are ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     ax.set_xticks(range(len(daily_returns_pivot.columns)))
     ax.set_xticklabels(day_labels, rotation=45)  # Rotated labels for clarity
     st.pyplot(fig)
