@@ -84,7 +84,9 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     total_trades = winning_trades + losing_trades
     total_gross_profit = trades[trades['event'].str.contains('Profit', case=False)]['amount'].sum()
     total_gross_loss = trades[trades['event'].str.contains('Loss', case=False)]['amount'].sum()
-    net_profit_loss = total_gross_profit + total_gross_loss
+    
+    # Corrected Net Profit/Loss calculation
+    net_profit_loss = total_gross_profit - abs(total_gross_loss)
 
     trades['cum_return'] = trades['amount'].cumsum()
     trades['cum_max'] = trades['cum_return'].cummax()
@@ -147,7 +149,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     metrics_df['Value'] = metrics_df['Value'].apply(lambda x: f"{x:.2f}")
     additional_metrics_df['Value'] = additional_metrics_df['Value'].apply(lambda x: f"{x:.2f}")
 
-    # Apply conditional formatting for the main metrics
+    # Apply conditional formatting (no changes here)
     def apply_styles(row):
         value = float(row['Value'].replace(',', ''))
         metric = row['Metric']
@@ -176,7 +178,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
                 background_color = 'background-color: green'
         return [''] * len(row) if background_color == '' else [background_color if col == 'Value' else '' for col in row.index]
 
-    # Apply conditional formatting for additional metrics
+    # Apply conditional formatting for additional metrics (no changes here)
     def apply_additional_styles(row):
         value = float(row['Value'].replace(',', ''))
         metric = row['Metric']
@@ -222,7 +224,7 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     styled_metrics_df = metrics_df.style.apply(apply_styles, axis=1)
     styled_additional_metrics_df = additional_metrics_df.style.apply(apply_additional_styles, axis=1)
 
-    # Display dataframes side by side
+    # Display dataframes side by side (no changes here)
     col1, col2 = st.columns(2)
     with col1:
         st.write("### Key Performance Metrics")
