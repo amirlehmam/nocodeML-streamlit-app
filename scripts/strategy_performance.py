@@ -245,32 +245,36 @@ def calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_
     styled_metrics_df = metrics_df.style.apply(apply_styles, axis=1)
     styled_additional_metrics_df = additional_metrics_df.style.apply(apply_additional_styles, axis=1)
 
-    # Display dataframes side by side
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("### Key Performance Metrics")
-        st.dataframe(styled_metrics_df)
-    with col2:
-        st.write("### Additional Metrics")
-        st.dataframe(styled_additional_metrics_df)
-
-    st.write("### Cumulative Return Over Time")
-    st.line_chart(trades.set_index(timestamp_col)['cum_return'])
-
-    return trades, metrics_df, additional_metrics_df
+    return trades, styled_metrics_df, styled_additional_metrics_df
 
 # Function to plot additional metrics
 def plot_additional_metrics(trades, timestamp_col):
-    st.write("### Equity Curve")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=trades[timestamp_col], y=trades['cum_return'], mode='lines', name='Equity Curve'))
-    fig.update_layout(title='Equity Curve', xaxis_title='Date', yaxis_title='Cumulative Return')
-    st.plotly_chart(fig)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("### Drawdown Periods")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=trades[timestamp_col], y=-trades['drawdown'], fill='tozeroy', fillcolor='rgba(255,0,0,0.3)', mode='lines', name='Drawdown'))
+        fig.update_layout(title='Drawdown Periods', xaxis_title='Date', yaxis_title='Drawdown ($)')
+        st.plotly_chart(fig)
+        
+    with col2:
+        st.write("### Profit and Loss Distribution")
+        fig = px.histogram(trades['amount'], x=trades['amount'], nbins=50, title='Profit and Loss Distribution')
+        st.plotly_chart(fig)
 
-    st.write("### Daily Returns")
-    daily_returns = trades.set_index(timestamp_col)['amount'].pct_change().dropna()
-    fig = px.histogram(daily_returns, x=daily_returns, nbins=50, title='Daily Returns Distribution')
-    st.plotly_chart(fig)
+    col3, col4 = st.columns(2)
+    with col3:
+        st.write("### Equity Curve")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=trades[timestamp_col], y=trades['cum_return'], mode='lines', name='Equity Curve'))
+        fig.update_layout(title='Equity Curve', xaxis_title='Date', yaxis_title='Cumulative Return')
+        st.plotly_chart(fig)
+    
+    with col4:
+        st.write("### Daily Returns")
+        daily_returns = trades.set_index(timestamp_col)['amount'].pct_change().dropna()
+        fig = px.histogram(daily_returns, x=daily_returns, nbins=50, title='Daily Returns Distribution')
+        st.plotly_chart(fig)
 
     st.write("### Daily Returns Heatmap")
     daily_returns = daily_returns.to_frame(name='daily_returns').astype(float)
@@ -297,35 +301,6 @@ def plot_additional_metrics(trades, timestamp_col):
     ax.set_xticklabels(day_labels, rotation=45)  # Rotated labels for clarity
     st.pyplot(fig)
 
-    st.write("### Drawdown Periods")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=trades[timestamp_col], y=-trades['drawdown'], fill='tozeroy', fillcolor='rgba(255,0,0,0.3)', mode='lines', name='Drawdown'))
-    fig.update_layout(title='Drawdown Periods', xaxis_title='Date', yaxis_title='Drawdown ($)')
-    st.plotly_chart(fig)
-
-    st.write("### Profit and Loss Distribution")
-    fig = px.histogram(trades['amount'], x=trades['amount'], nbins=50, title='Profit and Loss Distribution')
-    st.plotly_chart(fig)
-
-# Function to generate quantstats tearsheet
-#def generate_quantstats_tearsheet(data, timestamp_col, output_path="tearsheet.html"):
-#    data.set_index(timestamp_col, inplace=True)
-#    returns = data['amount'].pct_change().dropna()
-#
-#    qs.reports.html(returns, output=output_path, title="Strategy Performance Tearsheet")
-#
-#    with open(output_path, 'r') as f:
-#        html_content = f.read()
-#
-#    css_path = os.path.join(os.path.dirname(__file__), "custom_style.css")
-#    with open(css_path, "r") as f:
-#        custom_css = f.read()
-#
-#    html_content = html_content.replace('</head>', f'<style>{custom_css}</style></head>')
-#
-#    st.components.v1.html(html_content, height=800, scrolling=True)
-
-
 # Main function for Streamlit app
 def run_strategy_performance():
     st.title("Strategy Performance Analysis")
@@ -339,29 +314,23 @@ def run_strategy_performance():
             event_data, merged_data, timestamp_col = process_initial_data(event_data, merged_data)
 
             if event_data is not None:
-                trades, metrics_df, additional_metrics_df = calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_multiplier)
+                trades, styled_metrics_df, styled_additional_metrics_df = calculate_performance_metrics(event_data, merged_data, timestamp_col, entry_multiplier)
                 st.write("Performance analysis completed.")
-                
-                # Plot Max Drawdown using Plotly
-                st.write("### Max Drawdown Over Time")
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=trades[timestamp_col],
-                    y=-trades['drawdown'],
-                    marker_color='red'
-                ))
-                fig.update_layout(
-                    title='Max Drawdown Over Time',
-                    xaxis_title='Date',
-                    yaxis_title='Drawdown ($)',
-                    yaxis=dict(autorange='reversed')
-                )
-                st.plotly_chart(fig)
 
-                # Plot additional metrics
+                # Layout similar to the screenshot
+                with st.container():
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write("### Key Performance Metrics")
+                        st.dataframe(styled_metrics_df)
+                    with col2:
+                        st.write("### Additional Metrics")
+                        st.dataframe(styled_additional_metrics_df)
+                    with col3:
+                        st.write("### Cumulative Return Over Time")
+                        st.line_chart(trades.set_index(timestamp_col)['cum_return'])
+
                 plot_additional_metrics(trades, timestamp_col)
-
-                #generate_quantstats_tearsheet(trades, timestamp_col)
 
 if __name__ == "__main__":
     run_strategy_performance()
