@@ -1,7 +1,11 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 import hashlib
+import plotly.graph_objects as go
+import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 from sqlalchemy import create_engine
 
 # Database connection details
