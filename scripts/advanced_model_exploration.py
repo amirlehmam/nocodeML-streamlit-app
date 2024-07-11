@@ -354,10 +354,21 @@ def perform_hyperparameter_tuning(model, param_grid, X_train, y_train):
 
 # Function to perform model training with optional hyperparameter tuning
 def train_model(model, X_train, y_train, X_test, y_test, task_type, perform_tuning=False, param_grid=None):
+    # Make sure the arrays are writable
+    X_train = np.array(X_train, copy=True, subok=True)
+    y_train = np.array(y_train, copy=True, subok=True)
+    X_test = np.array(X_test, copy=True, subok=True)
+    y_test = np.array(y_test, copy=True, subok=True)
+    
+    X_train.setflags(write=1)
+    y_train.setflags(write=1)
+    X_test.setflags(write=1)
+    y_test.setflags(write=1)
+
     if perform_tuning and param_grid:
         model, best_params = perform_hyperparameter_tuning(model, param_grid, X_train, y_train)
         st.write(f"Best Hyperparameters: {best_params}")
-    
+
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
