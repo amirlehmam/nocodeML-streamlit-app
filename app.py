@@ -95,30 +95,6 @@ def data_ingestion():
     from scripts.data_ingestion_preparation import run_data_ingestion_preparation
     run_data_ingestion_preparation()
 
-#def advanced_eda_indicators():
-#    from scripts.advanced_eda_indicators import run_advanced_eda_indicators
-#    run_advanced_eda_indicators()
-
-#def optimal_win_ranges():
-#    from scripts.optimal_win_ranges import run_optimal_win_ranges
-#    run_optimal_win_ranges()
-
-#def model_percentage_away():
-#    from scripts.model_percentage_away import run_model_percentage_away
-#    run_model_percentage_away()
-
-#def specific_model_focus():
-#    from scripts.specific_model_focus import run_specific_model_focus
-#    run_specific_model_focus()
-
-#def advanced_eda_specific_model():
-#    from scripts.advanced_eda_specific_model import run_advanced_eda_specific_model
-#    run_advanced_eda_specific_model()
-
-#def win_ranges_specific_model():
-#    from scripts.win_ranges_specific_model import run_win_ranges_specific_model
-#    run_win_ranges_specific_model()
-
 def advanced_trading_dashboard():
     from scripts.model_dashboard import run_model_dashboard
     run_model_dashboard()
@@ -126,10 +102,6 @@ def advanced_trading_dashboard():
 def advanced_model_exploration():
     from scripts.advanced_model_exploration import run_advanced_model_exploration
     run_advanced_model_exploration()
-
-#def ma_convergence():
-#    from scripts.ma_convergence import run_moving_average_convergence
-#    run_moving_average_convergence()
 
 def strategy_performance():
     from scripts.strategy_performance import run_strategy_performance
@@ -145,13 +117,6 @@ page_dict = {
     'Data Ingestion': data_ingestion,
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
- #   'MA Convergence': ma_convergence,
- #   'EDA Indicators': advanced_eda_indicators,
- #   'Win Ranges': optimal_win_ranges,
- #   '% Away Indicators': model_percentage_away,
- #   'Model Focus': specific_model_focus,
- #   'EDA Specific': advanced_eda_specific_model,
- #   'Ranges Specific': win_ranges_specific_model,
     'Strategy Performance': strategy_performance,
     'Trading Hours': trading_hours
 }
@@ -300,6 +265,30 @@ def main():
                 border-radius: 5px;
             }
 
+            /* Navigation Bar */
+            .navbar {
+                display: flex;
+                background-color: royalblue;
+                justify-content: flex-start;
+            }
+
+            .navbar-item {
+                color: white;
+                padding: 14px;
+                cursor: pointer;
+            }
+
+            .navbar-item:hover {
+                background-color: #1565C0;
+            }
+
+            .navbar-item.active {
+                background-color: white;
+                color: black;
+                font-weight: normal;
+                padding: 14px;
+            }
+
             </style>
             <script>
                 function toggleContent(id) {
@@ -317,28 +306,27 @@ def main():
 
         # Navigation bar
         pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'Strategy Performance', 'Trading Hours']
-        styles = {
-            "nav": {
-                "background-color": "royalblue",
-                "justify-content": "left",
-            },
-            "img": {
-                "padding-right": "14px",
-            },
-            "span": {
-                "color": "white",
-                "padding": "14px",
-            },
-            "active": {
-                "background-color": "white",
-                "color": "var(--text-color)",
-                "font-weight": "normal",
-                "padding": "14px",
-            }
-        }
         selected = st_navbar(
             pages,
-            styles=styles
+            styles={
+                "nav": {
+                    "background-color": "royalblue",
+                    "justify-content": "left",
+                },
+                "img": {
+                    "padding-right": "14px",
+                },
+                "span": {
+                    "color": "white",
+                    "padding": "14px",
+                },
+                "active": {
+                    "background-color": "white",
+                    "color": "black",
+                    "font-weight": "normal",
+                    "padding": "14px",
+                }
+            }
         )
 
         # Display the logo
