@@ -6,9 +6,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import os
 from sqlalchemy import create_engine
-import quantstats as qs
 
 # Database connection details
 DB_CONFIG = {
