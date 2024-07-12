@@ -55,13 +55,25 @@ def process_initial_data(event_data, merged_data):
     
     return event_data, merged_data, timestamp_col
 
+# Function to convert hour to 12-hour format with AM/PM
+def convert_to_12_hour(hour):
+    if hour == 0:
+        return '12 AM'
+    elif hour < 12:
+        return f'{hour} AM'
+    elif hour == 12:
+        return '12 PM'
+    else:
+        return f'{hour - 12} PM'
+
 # Function to analyze trading hours
 def analyze_trading_hours(merged_data, timestamp_col):
     merged_data['hour'] = merged_data[timestamp_col].dt.hour
+    merged_data['hour_12'] = merged_data['hour'].apply(convert_to_12_hour)
     merged_data['profit'] = merged_data['amount'].apply(lambda x: x if x > 0 else 0)
     merged_data['loss'] = merged_data['amount'].apply(lambda x: x if x < 0 else 0)
     
-    performance_by_hour = merged_data.groupby('hour').agg(
+    performance_by_hour = merged_data.groupby('hour_12').agg(
         total_trades=('result', 'count'),
         total_profit=('profit', 'sum'),
         total_loss=('loss', 'sum'),
@@ -76,18 +88,18 @@ def analyze_trading_hours(merged_data, timestamp_col):
 
 # Function to plot total trades by hour
 def plot_total_trades(performance_by_hour):
-    fig = px.bar(performance_by_hour, x='hour', y='total_trades', title='Total Trades by Hour',
-                 labels={'hour': 'Hour of Day', 'total_trades': 'Total Trades'},
+    fig = px.bar(performance_by_hour, x='hour_12', y='total_trades', title='Total Trades by Hour',
+                 labels={'hour_12': 'Hour of Day', 'total_trades': 'Total Trades'},
                  color='total_trades', color_continuous_scale='Viridis')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hours with the highest trading volumes are: {performance_by_hour.loc[performance_by_hour['total_trades'].idxmax()]['hour']} with {performance_by_hour['total_trades'].max()} trades.")
-    st.markdown(f"Hours with the lowest trading volumes are: {performance_by_hour.loc[performance_by_hour['total_trades'].idxmin()]['hour']} with {performance_by_hour['total_trades'].min()} trades.")
+    st.markdown(f"Hours with the highest trading volumes are: {performance_by_hour.loc[performance_by_hour['total_trades'].idxmax()]['hour_12']} with {performance_by_hour['total_trades'].max()} trades.")
+    st.markdown(f"Hours with the lowest trading volumes are: {performance_by_hour.loc[performance_by_hour['total_trades'].idxmin()]['hour_12']} with {performance_by_hour['total_trades'].min()} trades.")
 
 # Function to plot total profit by hour
 def plot_total_profit(performance_by_hour):
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=performance_by_hour['hour'], y=performance_by_hour['total_profit'], 
+    fig.add_trace(go.Bar(x=performance_by_hour['hour_12'], y=performance_by_hour['total_profit'], 
                          name='Profit', marker_color='green', 
                          text=performance_by_hour['total_profit'], textposition='auto'))
     fig.update_layout(title='Total Profit by Hour',
@@ -95,13 +107,13 @@ def plot_total_profit(performance_by_hour):
                       yaxis_title='Total Profit ($)')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hours with the highest total profit are: {performance_by_hour.loc[performance_by_hour['total_profit'].idxmax()]['hour']} with ${performance_by_hour['total_profit'].max():,.2f} profit.")
-    st.markdown(f"Hours with the lowest total profit are: {performance_by_hour.loc[performance_by_hour['total_profit'].idxmin()]['hour']} with ${performance_by_hour['total_profit'].min():,.2f} profit.")
+    st.markdown(f"Hours with the highest total profit are: {performance_by_hour.loc[performance_by_hour['total_profit'].idxmax()]['hour_12']} with ${performance_by_hour['total_profit'].max():,.2f} profit.")
+    st.markdown(f"Hours with the lowest total profit are: {performance_by_hour.loc[performance_by_hour['total_profit'].idxmin()]['hour_12']} with ${performance_by_hour['total_profit'].min():,.2f} profit.")
 
 # Function to plot total loss by hour
 def plot_total_loss(performance_by_hour):
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=performance_by_hour['hour'], y=performance_by_hour['total_loss'], 
+    fig.add_trace(go.Bar(x=performance_by_hour['hour_12'], y=performance_by_hour['total_loss'], 
                          name='Loss', marker_color='red', 
                          text=performance_by_hour['total_loss'], textposition='auto'))
     fig.update_layout(title='Total Loss by Hour',
@@ -109,13 +121,13 @@ def plot_total_loss(performance_by_hour):
                       yaxis_title='Total Loss ($)')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hours with the highest total loss are: {performance_by_hour.loc[performance_by_hour['total_loss'].idxmin()]['hour']} with ${performance_by_hour['total_loss'].min():,.2f} loss.")
-    st.markdown(f"Hours with the lowest total loss are: {performance_by_hour.loc[performance_by_hour['total_loss'].idxmax()]['hour']} with ${performance_by_hour['total_loss'].max():,.2f} loss.")
+    st.markdown(f"Hours with the highest total loss are: {performance_by_hour.loc[performance_by_hour['total_loss'].idxmin()]['hour_12']} with ${performance_by_hour['total_loss'].min():,.2f} loss.")
+    st.markdown(f"Hours with the lowest total loss are: {performance_by_hour.loc[performance_by_hour['total_loss'].idxmax()]['hour_12']} with ${performance_by_hour['total_loss'].max():,.2f} loss.")
 
 # Function to plot net profit by hour
 def plot_net_profit(performance_by_hour):
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=performance_by_hour['hour'], y=performance_by_hour['net_profit'], 
+    fig.add_trace(go.Bar(x=performance_by_hour['hour_12'], y=performance_by_hour['net_profit'], 
                          name='Net Profit', marker_color='blue', 
                          text=performance_by_hour['net_profit'], textposition='auto'))
     fig.update_layout(title='Net Profit by Hour',
@@ -123,32 +135,32 @@ def plot_net_profit(performance_by_hour):
                       yaxis_title='Net Profit ($)')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    max_net_profit_hour = performance_by_hour.loc[performance_by_hour['net_profit'].idxmax()]['hour']
+    max_net_profit_hour = performance_by_hour.loc[performance_by_hour['net_profit'].idxmax()]['hour_12']
     max_net_profit = performance_by_hour['net_profit'].max()
-    min_net_profit_hour = performance_by_hour.loc[performance_by_hour['net_profit'].idxmin()]['hour']
+    min_net_profit_hour = performance_by_hour.loc[performance_by_hour['net_profit'].idxmin()]['hour_12']
     min_net_profit = performance_by_hour['net_profit'].min()
     st.markdown(f"Hour with the highest net profit: {max_net_profit_hour} with ${max_net_profit:,.2f} net profit.")
     st.markdown(f"Hour with the lowest net profit: {min_net_profit_hour} with ${min_net_profit:,.2f} net profit.")
 
 # Function to plot profit/loss ratio by hour
 def plot_profit_loss_ratio(performance_by_hour):
-    fig = px.bar(performance_by_hour, x='hour', y='profit_loss_ratio', title='Profit/Loss Ratio by Hour',
-                 labels={'hour': 'Hour of Day', 'profit_loss_ratio': 'Profit/Loss Ratio'},
+    fig = px.bar(performance_by_hour, x='hour_12', y='profit_loss_ratio', title='Profit/Loss Ratio by Hour',
+                 labels={'hour_12': 'Hour of Day', 'profit_loss_ratio': 'Profit/Loss Ratio'},
                  color='profit_loss_ratio', color_continuous_scale='Bluered')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hours with the highest profit/loss ratio are: {performance_by_hour.loc[performance_by_hour['profit_loss_ratio'].idxmax()]['hour']} with a ratio of {performance_by_hour['profit_loss_ratio'].max():.2f}.")
-    st.markdown(f"Hours with the lowest profit/loss ratio are: {performance_by_hour.loc[performance_by_hour['profit_loss_ratio'].idxmin()]['hour']} with a ratio of {performance_by_hour['profit_loss_ratio'].min():.2f}.")
+    st.markdown(f"Hours with the highest profit/loss ratio are: {performance_by_hour.loc[performance_by_hour['profit_loss_ratio'].idxmax()]['hour_12']} with a ratio of {performance_by_hour['profit_loss_ratio'].max():.2f}.")
+    st.markdown(f"Hours with the lowest profit/loss ratio are: {performance_by_hour.loc[performance_by_hour['profit_loss_ratio'].idxmin()]['hour_12']} with a ratio of {performance_by_hour['profit_loss_ratio'].min():.2f}.")
 
 # Function to plot win rate by hour
 def plot_win_rate(performance_by_hour):
-    fig = px.bar(performance_by_hour, x='hour', y='win_rate', title='Win Rate by Hour',
-                 labels={'hour': 'Hour of Day', 'win_rate': 'Win Rate'},
+    fig = px.bar(performance_by_hour, x='hour_12', y='win_rate', title='Win Rate by Hour',
+                 labels={'hour_12': 'Hour of Day', 'win_rate': 'Win Rate'},
                  color='win_rate', color_continuous_scale='Magma')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hour with the highest win rate: {performance_by_hour.loc[performance_by_hour['win_rate'].idxmax()]['hour']} with a win rate of {performance_by_hour['win_rate'].max() * 100:.2f}%.")
-    st.markdown(f"Hour with the lowest win rate: {performance_by_hour.loc[performance_by_hour['win_rate'].idxmin()]['hour']} with a win rate of {performance_by_hour['win_rate'].min() * 100:.2f}%.")
+    st.markdown(f"Hour with the highest win rate: {performance_by_hour.loc[performance_by_hour['win_rate'].idxmax()]['hour_12']} with a win rate of {performance_by_hour['win_rate'].max() * 100:.2f}%.")
+    st.markdown(f"Hour with the lowest win rate: {performance_by_hour.loc[performance_by_hour['win_rate'].idxmin()]['hour_12']} with a win rate of {performance_by_hour['win_rate'].min() * 100:.2f}%.")
 
 # Function to plot trade volume vs. net profit
 def plot_trade_volume_vs_net_profit(performance_by_hour):
@@ -161,18 +173,18 @@ def plot_trade_volume_vs_net_profit(performance_by_hour):
 
 # Function to plot average trade value by hour
 def plot_avg_trade_value(performance_by_hour):
-    fig = px.bar(performance_by_hour, x='hour', y='avg_trade_value', title='Average Trade Value by Hour',
-                 labels={'hour': 'Hour of Day', 'avg_trade_value': 'Average Trade Value ($)'},
+    fig = px.bar(performance_by_hour, x='hour_12', y='avg_trade_value', title='Average Trade Value by Hour',
+                 labels={'hour_12': 'Hour of Day', 'avg_trade_value': 'Average Trade Value ($)'},
                  color='avg_trade_value', color_continuous_scale='Cividis')
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
-    st.markdown(f"Hour with the highest average trade value: {performance_by_hour.loc[performance_by_hour['avg_trade_value'].idxmax()]['hour']} with an average value of ${performance_by_hour['avg_trade_value'].max():,.2f}.")
-    st.markdown(f"Hour with the lowest average trade value: {performance_by_hour.loc[performance_by_hour['avg_trade_value'].idxmin()]['hour']} with an average value of ${performance_by_hour['avg_trade_value'].min():,.2f}.")
+    st.markdown(f"Hour with the highest average trade value: {performance_by_hour.loc[performance_by_hour['avg_trade_value'].idxmax()]['hour_12']} with an average value of ${performance_by_hour['avg_trade_value'].max():,.2f}.")
+    st.markdown(f"Hour with the lowest average trade value: {performance_by_hour.loc[performance_by_hour['avg_trade_value'].idxmin()]['hour_12']} with an average value of ${performance_by_hour['avg_trade_value'].min():,.2f}.")
 
 # Function to plot box plot of trade values by hour
 def plot_box_trade_values(merged_data):
-    fig = px.box(merged_data, x='hour', y='amount', title='Trade Values Distribution by Hour',
-                 labels={'hour': 'Hour of Day', 'amount': 'Trade Value ($)'})
+    fig = px.box(merged_data, x='hour_12', y='amount', title='Trade Values Distribution by Hour',
+                 labels={'hour_12': 'Hour of Day', 'amount': 'Trade Value ($)'})
     st.plotly_chart(fig)
     st.markdown(f"### Analysis:")
     st.markdown(f"The distribution of trade values by hour indicates the range and outliers of trade amounts for each hour. This can help identify periods of high volatility or stability.")
