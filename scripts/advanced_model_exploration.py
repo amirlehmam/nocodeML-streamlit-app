@@ -111,7 +111,7 @@ def save_text_to_pdf(c, text_sections):
             current_line += 1
         c.showPage()
 
-# Function to save dataframes to PDF (including optimal win ranges)
+# Utility function to save dataframes to PDF
 def save_dataframe_to_pdf(c, dataframes, descriptions):
     width, height = letter
     for df, description in zip(dataframes, descriptions):
@@ -305,7 +305,6 @@ def calculate_optimal_win_ranges(data, target='result', features=None, trade_typ
 
     return optimal_ranges
 
-
 # Plot optimal win ranges using Plotly
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
     plots = []
@@ -352,8 +351,19 @@ def summarize_optimal_win_ranges(optimal_ranges, trade_type):
 
 # Reset session state
 def reset_session_state():
-    for key in st.session_state.keys():
-        del st.session_state[key]
+    # Clear specific session state variables instead of all
+    st.session_state.current_step = "load_data"
+    st.session_state.model_type = "Random Forest"
+    st.session_state.feature_importances = {}
+    st.session_state.data = None
+    st.session_state.X_train = None
+    st.session_state.X_test = None
+    st.session_state.y_train = None
+    st.session_state.y_test = None
+    st.session_state.indicator_columns = None
+    st.session_state.optimal_ranges_long = None
+    st.session_state.optimal_ranges_short = None
+    st.session_state.optimal_ranges_both = None
     st.rerun()
 
 # Function to create CatBoost model
@@ -432,42 +442,24 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
 
+        kde_win = gaussian_kde(win_values)
+        kde_loss = gaussian_kde(loss_values)
+        x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
+        kde_win_density = kde_win(x_grid)
+        kde_loss_density = kde_loss(x_grid)
+
         fig = go.Figure()
-        # Check if the data is binary
-        if np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1]) and \
-           np.unique(loss_values).size == 2 and np.array_equal(np.unique(loss_values), [0, 1]):
-            win_count = win_values.value_counts().sort_index()
-            loss_count = loss_values.value_counts().sort_index()
-
-            fig.add_trace(go.Bar(x=win_count.index, y=win_count.values, name='Win', marker_color='blue', opacity=0.75))
-            fig.add_trace(go.Bar(x=loss_count.index, y=loss_count.values, name='Loss', marker_color='red', opacity=0.75))
-
-            for range_item in optimal_ranges:
-                if range_item['feature'] == feature:
-                    for start, end in range_item['optimal_win_ranges']:
-                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-        else:
-            try:
-                kde_win = gaussian_kde(win_values)
-                kde_loss = gaussian_kde(loss_values)
-                x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
-                kde_win_density = kde_win(x_grid)
-                kde_loss_density = kde_loss(x_grid)
-
-                fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-                fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-
-                for range_item in optimal_ranges:
-                    if range_item['feature'] == feature:
-                        for start, end in range_item['optimal_win_ranges']:
-                            fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
-            except np.linalg.LinAlgError:
-                st.warning(f"Skipped KDE for {feature} due to singular covariance matrix.")
+        fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+        for range_item in optimal_ranges:
+            if range_item['feature'] == feature:
+                for start, end in range_item['optimal_win_ranges']:
+                    fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
 
         fig.update_layout(
             title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
             xaxis_title=feature,
-            yaxis_title='Density' if not (np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1])) else 'Count',
+            yaxis_title='Density',
             width=800,
             height=400
         )
@@ -629,7 +621,7 @@ def run_advanced_model_exploration():
                 model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
-
+        
         elif model_type == "Stacking Ensemble":
             if task_type == "Classification":
                 base_learners = [
@@ -649,7 +641,7 @@ def run_advanced_model_exploration():
                 model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
 
         perform_tuning = st.checkbox("Perform Hyperparameter Tuning", value=False)
-
+        
         if st.button("Train Model"):
             st.write(f"Training {model_type} for {task_type} task...")
             with st.spinner("Training in progress..."):
@@ -709,8 +701,8 @@ def run_advanced_model_exploration():
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        top15_importance_df = importance_df.head(15)
-                        fig_feat_imp = px.bar(top15_importance_df, x='Importance', y='Feature', orientation='h')
+                        top_15_importance_df = importance_df.head(15)
+                        fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
