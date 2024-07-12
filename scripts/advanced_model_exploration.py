@@ -111,7 +111,7 @@ def save_text_to_pdf(c, text_sections):
             current_line += 1
         c.showPage()
 
-# Utility function to save dataframes to PDF
+# Function to save dataframes to PDF (including optimal win ranges)
 def save_dataframe_to_pdf(c, dataframes, descriptions):
     width, height = letter
     for df, description in zip(dataframes, descriptions):
@@ -201,7 +201,7 @@ def preprocess_data(data, selected_feature_types):
     data[indicator_columns] = scaler.fit_transform(data[indicator_columns])
 
     X = data[indicator_columns]
-    y = data['result']
+    y = data['result'].astype(int)  # Ensure target is of integer type
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -246,17 +246,22 @@ def create_cnn_model(input_shape):
     return model
 
 # Calculate optimal win ranges
-def calculate_optimal_win_ranges(data, target='result', features=None):
+def calculate_optimal_win_ranges(data, target='result', features=None, trade_type=None):
     optimal_ranges = []
 
     if features is None:
         features = data.columns.drop([target])
 
-    for feature in tqdm(features, desc="Calculating Optimal Win Ranges"):
+    for feature in tqdm(features, desc=f"Calculating Optimal Win Ranges ({trade_type})"):
         data[feature] = pd.to_numeric(data[feature], errors='coerce')
         
-        win_values = data[data[target] == 0][feature].dropna().values.astype(float)
-        loss_values = data[data[target] == 1][feature].dropna().values.astype(float)
+        if trade_type:
+            trade_data = data[data['event'].str.startswith(trade_type)]
+        else:
+            trade_data = data
+
+        win_values = trade_data[trade_data[target] == 0][feature].dropna().values.astype(float)
+        loss_values = trade_data[trade_data[target] == 1][feature].dropna().values.astype(float)
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
@@ -264,7 +269,7 @@ def calculate_optimal_win_ranges(data, target='result', features=None):
         win_kde = gaussian_kde(win_values)
         loss_kde = gaussian_kde(loss_values)
 
-        x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
+        x_grid = np.linspace(min(trade_data[feature].dropna()), max(trade_data[feature].dropna()), 1000)
         win_density = win_kde(x_grid)
         loss_density = loss_kde(x_grid)
 
@@ -319,13 +324,14 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
     return plots, descriptions
 
 # Summarize optimal win ranges
-def summarize_optimal_win_ranges(optimal_ranges):
+def summarize_optimal_win_ranges(optimal_ranges, trade_type):
     summary = []
     for item in optimal_ranges:
         feature = item['feature']
         for range_start, range_end in item['optimal_win_ranges']:
             summary.append({
                 'feature': feature,
+                'trade_type': trade_type,
                 'optimal_win_range_start': range_start,
                 'optimal_win_range_end': range_end
             })
@@ -333,9 +339,9 @@ def summarize_optimal_win_ranges(optimal_ranges):
 
 # Reset session state
 def reset_session_state():
-    st.session_state.current_step = "load_data"
-    st.session_state.model_type = "Random Forest"
-    st.session_state.feature_importances = {}
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.experimental_rerun()
 
 # Function to create CatBoost model
 def create_catboost_model(task_type):
@@ -407,8 +413,8 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
     for item in optimal_ranges:
         feature = item['feature']
-        win_values = data[(data['result'] == 0) & (data['trade_type'].str.startswith(trade_type))][feature].dropna()
-        loss_values = data[(data['result'] == 1) & (data['trade_type'].str.startswith(trade_type))][feature].dropna()
+        win_values = data[(data['result'] == 0) & (data['event'].str.startswith(trade_type))][feature].dropna()
+        loss_values = data[(data['result'] == 1) & (data['event'].str.startswith(trade_type))][feature].dropna()
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
@@ -430,11 +436,14 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         fig.update_layout(
             title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
             xaxis_title=feature,
-            yaxis_title='Density'
+            yaxis_title='Density',
+            width=800,
+            height=400
         )
+
         plots.append(fig)
         descriptions.append(f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})')
-
+    
     return plots, descriptions
 
 # Run advanced model exploration
@@ -589,7 +598,7 @@ def run_advanced_model_exploration():
                 model = KerasClassifier(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
             else:
                 model = KerasRegressor(model=create_cnn_model, model__input_shape=input_shape, epochs=model_params['epochs'], batch_size=model_params['batch_size'], verbose=0)
-        
+
         elif model_type == "Stacking Ensemble":
             if task_type == "Classification":
                 base_learners = [
@@ -609,7 +618,7 @@ def run_advanced_model_exploration():
                 model = StackingRegressor(estimators=base_learners, final_estimator=final_estimator)
 
         perform_tuning = st.checkbox("Perform Hyperparameter Tuning", value=False)
-        
+
         if st.button("Train Model"):
             st.write(f"Training {model_type} for {task_type} task...")
             with st.spinner("Training in progress..."):
@@ -669,8 +678,8 @@ def run_advanced_model_exploration():
                         feature_importances = np.abs(shap_values.values).mean(axis=0)
                         importance_df['Importance'] = feature_importances
                         importance_df.sort_values(by='Importance', ascending=False, inplace=True)
-                        top_15_importance_df = importance_df.head(15)
-                        fig_feat_imp = px.bar(top_15_importance_df, x='Importance', y='Feature', orientation='h')
+                        top15_importance_df = importance_df.head(15)
+                        fig_feat_imp = px.bar(top15_importance_df, x='Importance', y='Feature', orientation='h')
                         st.plotly_chart(fig_feat_imp)
                         st.session_state.feature_importances[model_type] = feature_importances
                         plots.append(fig_feat_imp)
@@ -690,47 +699,70 @@ def run_advanced_model_exploration():
                     else:
                         selected_features = st.session_state.indicator_columns[:top_n]
 
-                    optimal_ranges = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
-                    st.session_state.optimal_ranges = optimal_ranges
+                    # Calculate optimal win ranges for long, short, and both trades
+                    optimal_ranges_long = calculate_optimal_win_ranges(st.session_state.data, features=selected_features, trade_type='LE')
+                    optimal_ranges_short = calculate_optimal_win_ranges(st.session_state.data, features=selected_features, trade_type='SE')
+                    optimal_ranges_both = calculate_optimal_win_ranges(st.session_state.data, features=selected_features)
+
+                    st.session_state.optimal_ranges_long = optimal_ranges_long
+                    st.session_state.optimal_ranges_short = optimal_ranges_short
+                    st.session_state.optimal_ranges_both = optimal_ranges_both
 
                     # Plot KDE distributions for Long, Short, and Both trades
                     st.subheader("KDE Distribution for Long Trades")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        long_plots, long_descriptions = plot_kde_distribution(st.session_state.data, 'LE', optimal_ranges)
+                        long_plots, long_descriptions = plot_kde_distribution(st.session_state.data, 'LE', optimal_ranges_long)
                         for fig in long_plots:
                             st.plotly_chart(fig)
 
                     st.subheader("KDE Distribution for Short Trades")
                     with col2:
-                        short_plots, short_descriptions = plot_kde_distribution(st.session_state.data, 'SE', optimal_ranges)
+                        short_plots, short_descriptions = plot_kde_distribution(st.session_state.data, 'SE', optimal_ranges_short)
                         for fig in short_plots:
                             st.plotly_chart(fig)
 
                     st.subheader("KDE Distribution for Both Long and Short Trades")
                     with col3:
-                        both_plots, both_descriptions = plot_kde_distribution(st.session_state.data, '', optimal_ranges)
+                        both_plots, both_descriptions = plot_kde_distribution(st.session_state.data, '', optimal_ranges_both)
                         for fig in both_plots:
                             st.plotly_chart(fig)
 
-                    optimal_win_ranges_summary = summarize_optimal_win_ranges(optimal_ranges)
-                    st.write(optimal_win_ranges_summary)
-                    output_path = os.path.join(PDF_SAVE_PATH, f'win_ranges_summary/optimal_win_ranges_summary_{model_type}.csv')
-                    optimal_win_ranges_summary.to_csv(output_path, index=False)
-                    st.write(f"Saved optimal win ranges summary to {output_path}")
-                    dataframes.append(optimal_win_ranges_summary)
-                    dataframe_descriptions.append("Optimal Win Ranges Summary")
+                    # Summarize optimal win ranges for each trade type
+                    optimal_win_ranges_summary_long = summarize_optimal_win_ranges(optimal_ranges_long, 'LE')
+                    optimal_win_ranges_summary_short = summarize_optimal_win_ranges(optimal_ranges_short, 'SE')
+                    optimal_win_ranges_summary_both = summarize_optimal_win_ranges(optimal_ranges_both, '')
 
-                    model_type = st.session_state.model_type_selected
-                    optimal_ranges = st.session_state.optimal_ranges
+                    st.write("Optimal Win Ranges Summary for Long Trades")
+                    st.dataframe(optimal_win_ranges_summary_long)
+                    st.write("Optimal Win Ranges Summary for Short Trades")
+                    st.dataframe(optimal_win_ranges_summary_short)
+                    st.write("Optimal Win Ranges Summary for Both Long and Short Trades")
+                    st.dataframe(optimal_win_ranges_summary_both)
 
-                    if model_type in st.session_state.feature_importances:
-                        st.write("Feature Importance Heatmap:")
-                        feature_importance_values = st.session_state.feature_importances[model_type]
-                        fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
-                        st.plotly_chart(fig)
-                        plots.append(fig)
-                        descriptions.append("Feature Importance Heatmap")
+                    # Save optimal win ranges summary to CSV
+                    output_path_long = os.path.join(PDF_SAVE_PATH, f'win_ranges_summary/optimal_win_ranges_summary_long_{model_type}.csv')
+                    optimal_win_ranges_summary_long.to_csv(output_path_long, index=False)
+                    output_path_short = os.path.join(PDF_SAVE_PATH, f'win_ranges_summary/optimal_win_ranges_summary_short_{model_type}.csv')
+                    optimal_win_ranges_summary_short.to_csv(output_path_short, index=False)
+                    output_path_both = os.path.join(PDF_SAVE_PATH, f'win_ranges_summary/optimal_win_ranges_summary_both_{model_type}.csv')
+                    optimal_win_ranges_summary_both.to_csv(output_path_both, index=False)
+
+                    st.write(f"Saved optimal win ranges summary to {output_path_long}, {output_path_short}, and {output_path_both}")
+
+                    dataframes.append(optimal_win_ranges_summary_long)
+                    dataframe_descriptions.append("Optimal Win Ranges Summary for Long Trades")
+                    dataframes.append(optimal_win_ranges_summary_short)
+                    dataframe_descriptions.append("Optimal Win Ranges Summary for Short Trades")
+                    dataframes.append(optimal_win_ranges_summary_both)
+                    dataframe_descriptions.append("Optimal Win Ranges Summary for Both Long and Short Trades")
+
+                    st.write("Feature Importance Heatmap:")
+                    feature_importance_values = st.session_state.feature_importances[model_type]
+                    fig = px.imshow([feature_importance_values], labels=dict(x="Features", color="Importance"), x=st.session_state.indicator_columns, color_continuous_scale='Blues')
+                    st.plotly_chart(fig)
+                    plots.append(fig)
+                    descriptions.append("Feature Importance Heatmap")
 
                     st.write("Correlation Matrix of Top Indicators:")
                     selected_model = st.selectbox("Select Model for Correlation", list(st.session_state.feature_importances.keys()), key='correlation_model')
@@ -768,7 +800,7 @@ def run_advanced_model_exploration():
                         fig = go.Figure()
                         fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
                         fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-                        for range_item in optimal_ranges:
+                        for range_item in optimal_ranges_both:
                             if range_item['feature'] == selected_indicator:
                                 for start, end in range_item['optimal_win_ranges']:
                                     fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
@@ -790,7 +822,15 @@ def run_advanced_model_exploration():
 
                     pdf_filename = os.path.join(PDF_SAVE_PATH, f'{model_type}_{task_type}_complete_analysis.pdf')
                     save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descriptions, plots, descriptions)
-                    st.write(f"Saved complete analysis to {pdf_filename}")
+
+                    # Add download button for PDF
+                    with open(pdf_filename, "rb") as file:
+                        st.download_button(
+                            label="Download PDF",
+                            data=file,
+                            file_name=f'{model_type}_{task_type}_complete_analysis.pdf',
+                            mime='application/octet-stream',
+                        )
 
                 except Exception as e:
                     st.error(f"Error during model training: {e}")
