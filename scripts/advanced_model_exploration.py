@@ -341,7 +341,7 @@ def summarize_optimal_win_ranges(optimal_ranges, trade_type):
 def reset_session_state():
     for key in st.session_state.keys():
         del st.session_state[key]
-    st.experimental_rerun()
+    st.rerun()
 
 # Function to create CatBoost model
 def create_catboost_model(task_type):
