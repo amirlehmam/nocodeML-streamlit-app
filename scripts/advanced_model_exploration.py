@@ -267,39 +267,44 @@ def calculate_optimal_win_ranges(data, target='result', features=None, trade_typ
             continue
 
         # Check if the data is binary
-        if np.array_equal(np.unique(win_values), [0, 1]) and np.array_equal(np.unique(loss_values), [0, 1]):
+        if np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1]) and \
+           np.unique(loss_values).size == 2 and np.array_equal(np.unique(loss_values), [0, 1]):
             optimal_ranges.append({
                 'feature': feature,
                 'optimal_win_ranges': [(0, 1)]
             })
             continue
 
-        win_kde = gaussian_kde(win_values)
-        loss_kde = gaussian_kde(loss_values)
+        try:
+            win_kde = gaussian_kde(win_values)
+            loss_kde = gaussian_kde(loss_values)
 
-        x_grid = np.linspace(min(trade_data[feature].dropna()), max(trade_data[feature].dropna()), 1000)
-        win_density = win_kde(x_grid)
-        loss_density = loss_kde(x_grid)
+            x_grid = np.linspace(min(trade_data[feature].dropna()), max(trade_data[feature].dropna()), 1000)
+            win_density = win_kde(x_grid)
+            loss_density = loss_kde(x_grid)
 
-        is_winning = win_density > loss_density
-        ranges = []
-        start_idx = None
+            is_winning = win_density > loss_density
+            ranges = []
+            start_idx = None
 
-        for i in range(len(is_winning)):
-            if is_winning[i] and start_idx is None:
-                start_idx = i
-            elif not is_winning[i] and start_idx is not None:
-                ranges.append((x_grid[start_idx], x_grid[i - 1]))
-                start_idx = None
-        if start_idx is not None:
-            ranges.append((x_grid[start_idx], x_grid[-1]))
+            for i in range(len(is_winning)):
+                if is_winning[i] and start_idx is None:
+                    start_idx = i
+                elif not is_winning[i] and start_idx is not None:
+                    ranges.append((x_grid[start_idx], x_grid[i - 1]))
+                    start_idx = None
+            if start_idx is not None:
+                ranges.append((x_grid[start_idx], x_grid[-1]))
 
-        optimal_ranges.append({
-            'feature': feature,
-            'optimal_win_ranges': ranges
-        })
+            optimal_ranges.append({
+                'feature': feature,
+                'optimal_win_ranges': ranges
+            })
+        except np.linalg.LinAlgError:
+            st.warning(f"Skipped KDE for {feature} due to singular covariance matrix.")
 
     return optimal_ranges
+
 
 # Plot optimal win ranges using Plotly
 def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type='', model_name=''):
@@ -429,7 +434,8 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
         fig = go.Figure()
         # Check if the data is binary
-        if np.array_equal(np.unique(win_values), [0, 1]) and np.array_equal(np.unique(loss_values), [0, 1]):
+        if np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1]) and \
+           np.unique(loss_values).size == 2 and np.array_equal(np.unique(loss_values), [0, 1]):
             win_count = win_values.value_counts().sort_index()
             loss_count = loss_values.value_counts().sort_index()
 
@@ -441,24 +447,27 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
                     for start, end in range_item['optimal_win_ranges']:
                         fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
         else:
-            kde_win = gaussian_kde(win_values)
-            kde_loss = gaussian_kde(loss_values)
-            x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
-            kde_win_density = kde_win(x_grid)
-            kde_loss_density = kde_loss(x_grid)
+            try:
+                kde_win = gaussian_kde(win_values)
+                kde_loss = gaussian_kde(loss_values)
+                x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
+                kde_win_density = kde_win(x_grid)
+                kde_loss_density = kde_loss(x_grid)
 
-            fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-            fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+                fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+                fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
 
-            for range_item in optimal_ranges:
-                if range_item['feature'] == feature:
-                    for start, end in range_item['optimal_win_ranges']:
-                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+                for range_item in optimal_ranges:
+                    if range_item['feature'] == feature:
+                        for start, end in range_item['optimal_win_ranges']:
+                            fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+            except np.linalg.LinAlgError:
+                st.warning(f"Skipped KDE for {feature} due to singular covariance matrix.")
 
         fig.update_layout(
             title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
             xaxis_title=feature,
-            yaxis_title='Density' if not np.array_equal(np.unique(win_values), [0, 1]) else 'Count',
+            yaxis_title='Density' if not (np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1])) else 'Count',
             width=800,
             height=400
         )
