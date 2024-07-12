@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from sqlalchemy import create_engine
+import pytz
 
 # Database connection details
 DB_CONFIG = {
@@ -38,8 +39,8 @@ def load_event_data_from_db():
 # Function to process initial data
 def process_initial_data(event_data, merged_data):
     timestamp_col = 'time'
-    event_data[timestamp_col] = pd.to_datetime(event_data[timestamp_col], errors='coerce')
-    merged_data[timestamp_col] = pd.to_datetime(merged_data[timestamp_col], errors='coerce')
+    event_data[timestamp_col] = pd.to_datetime(event_data[timestamp_col], errors='coerce').dt.tz_localize('UTC').dt.tz_convert('America/New_York')
+    merged_data[timestamp_col] = pd.to_datetime(merged_data[timestamp_col], errors='coerce').dt.tz_localize('UTC').dt.tz_convert('America/New_York')
 
     if 'amount' in event_data.columns:
         event_data['amount'] = event_data['amount'].str.replace(r'[\$,]', '', regex=True)
