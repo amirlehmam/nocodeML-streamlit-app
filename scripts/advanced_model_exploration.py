@@ -266,6 +266,14 @@ def calculate_optimal_win_ranges(data, target='result', features=None, trade_typ
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
 
+        # Check if the data is binary
+        if np.array_equal(np.unique(win_values), [0, 1]) and np.array_equal(np.unique(loss_values), [0, 1]):
+            optimal_ranges.append({
+                'feature': feature,
+                'optimal_win_ranges': [(0, 1)]
+            })
+            continue
+
         win_kde = gaussian_kde(win_values)
         loss_kde = gaussian_kde(loss_values)
 
@@ -419,24 +427,38 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
 
-        kde_win = gaussian_kde(win_values)
-        kde_loss = gaussian_kde(loss_values)
-        x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
-        kde_win_density = kde_win(x_grid)
-        kde_loss_density = kde_loss(x_grid)
-
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-        for range_item in optimal_ranges:
-            if range_item['feature'] == feature:
-                for start, end in range_item['optimal_win_ranges']:
-                    fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+        # Check if the data is binary
+        if np.array_equal(np.unique(win_values), [0, 1]) and np.array_equal(np.unique(loss_values), [0, 1]):
+            win_count = win_values.value_counts().sort_index()
+            loss_count = loss_values.value_counts().sort_index()
+
+            fig.add_trace(go.Bar(x=win_count.index, y=win_count.values, name='Win', marker_color='blue', opacity=0.75))
+            fig.add_trace(go.Bar(x=loss_count.index, y=loss_count.values, name='Loss', marker_color='red', opacity=0.75))
+
+            for range_item in optimal_ranges:
+                if range_item['feature'] == feature:
+                    for start, end in range_item['optimal_win_ranges']:
+                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+        else:
+            kde_win = gaussian_kde(win_values)
+            kde_loss = gaussian_kde(loss_values)
+            x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
+            kde_win_density = kde_win(x_grid)
+            kde_loss_density = kde_loss(x_grid)
+
+            fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+            fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+
+            for range_item in optimal_ranges:
+                if range_item['feature'] == feature:
+                    for start, end in range_item['optimal_win_ranges']:
+                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
 
         fig.update_layout(
             title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
             xaxis_title=feature,
-            yaxis_title='Density',
+            yaxis_title='Density' if not np.array_equal(np.unique(win_values), [0, 1]) else 'Count',
             width=800,
             height=400
         )
