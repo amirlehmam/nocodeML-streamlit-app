@@ -147,8 +147,6 @@ def load_data_from_db():
         engine = get_db_connection()
         query = "SELECT * FROM merged_trade_indicator_event"
         data = pd.read_sql_query(query, engine)
-        st.write(f"Data loaded with shape: {data.shape}")
-        st.write(data.head())  # Debug: Display first few rows
         return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
