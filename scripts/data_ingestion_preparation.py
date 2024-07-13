@@ -165,6 +165,9 @@ def calculate_indicators(data):
     non_market_value_indicators.loc[:, 'binary_indicator'] = None
     non_market_value_indicators.loc[:, 'percent_away'] = None
 
+    # Ensure VROC and Volume indicators are included in non-market value indicators
+    non_market_value_indicators = non_market_value_indicators.append(indicator_df[indicator_df['indicator_name'].isin(['VROC', 'VOLUME_DOWN', 'VOLUME_UP'])], ignore_index=True)
+
     merged_df = merged_df.dropna(axis=1, how='all')
     non_market_value_indicators = non_market_value_indicators.dropna(axis=1, how='all')
 
