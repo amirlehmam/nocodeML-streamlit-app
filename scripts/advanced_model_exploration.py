@@ -491,7 +491,7 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
                 title=f'Binary Indicator Distribution for {feature} ({trade_type})',
                 xaxis_title=feature,
                 yaxis_title='Count',
-                barmode='overlay'
+                barmode='group'  # Changed to group for better visibility
             )
         else:
             kde_win = gaussian_kde(win_values)
@@ -520,8 +520,6 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         descriptions.append(f'Optimal Win Ranges for {feature} ({trade_type})')
     
     return plots, descriptions
-
-# Adjusted the function to ensure binary plots are correctly handled
 
 
 # Run advanced model exploration
