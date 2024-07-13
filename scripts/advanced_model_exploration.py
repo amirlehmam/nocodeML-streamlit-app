@@ -166,6 +166,10 @@ def preprocess_data(data, selected_feature_types):
     all_indicators = data.columns[7:]
     st.write(f"All indicators: {all_indicators}")
 
+    # Exclude 'strategy_amount' and 'account_amount' from the indicators
+    excluded_columns = ['strategy_amount', 'account_amount']
+    all_indicators = [col for col in all_indicators if col not in excluded_columns]
+
     # Filter features based on user selection
     indicator_columns = []
     if "Non-Market Value Data" in selected_feature_types:
@@ -216,6 +220,7 @@ def preprocess_data(data, selected_feature_types):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     return X_train, X_test, y_train, y_test, indicator_columns, data
+
 
 # Create neural network model
 def create_nn_model(input_dim):
