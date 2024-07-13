@@ -190,28 +190,14 @@ def preprocess_data(data, selected_feature_types):
         if '_binary' in col:
             data[col] = data[col].apply(lambda x: 1 if x > 0 else 0)
 
-    # Debug: Show the processed binary columns
-    st.write("Processed binary columns:")
-    st.write(data[indicator_columns].head())
-
     # Split columns into binary and non-binary
     binary_columns = [col for col in indicator_columns if '_binary' in col]
     non_binary_columns = [col for col in indicator_columns if col not in binary_columns]
-
-    # Debug: Show non-binary columns
-    st.write("Non-binary columns before normalization:")
-    st.write(non_binary_columns)
 
     if non_binary_columns:
         # Normalize only non-binary columns
         scaler = StandardScaler()
         data[non_binary_columns] = scaler.fit_transform(data[non_binary_columns])
-
-        # Debug: Show the processed columns after normalization
-        st.write("Processed columns after normalization:")
-        st.write(data[non_binary_columns].head())
-    else:
-        st.write("No non-binary columns to normalize.")
 
     # Feature Engineering: Add derived metrics (changes, slopes)
     changes = data[indicator_columns].diff().add_suffix('_change')
@@ -231,8 +217,6 @@ def preprocess_data(data, selected_feature_types):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    st.write("Data preprocessing completed.")
-    st.write(data.head())  # Debug: Display first few rows after preprocessing
     return X_train, X_test, y_train, y_test, indicator_columns, data
 
 # Create neural network model
