@@ -492,13 +492,18 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
     for item in optimal_ranges:
         feature = item['feature']
-        win_values = data[(data['result'] == 0) & (data['event'].str.startswith(trade_type))][feature].dropna()
-        loss_values = data[(data['result'] == 1) & (data['event'].str.startswith(trade_type))][feature].dropna()
+        
+        win_values = data[(data['result'] == 1) & (data['event'].str.startswith(trade_type))][feature].dropna()
+        loss_values = data[(data['result'] == 0) & (data['event'].str.startswith(trade_type))][feature].dropna()
 
-        if len(win_values) == 0 or len(loss_values) == 0:
+        win_count = len(win_values)
+        loss_count = len(loss_values)
+
+        feature_info.append(f"Plotting feature: {feature}, trade type: {trade_type}\n"
+                            f"Win values count: {win_count}, Loss values count: {loss_count}")
+
+        if win_count == 0 or loss_count == 0:
             continue
-
-        feature_info.append(f"Feature: {feature}, Trade Type: {trade_type}, Win Values Count: {len(win_values)}, Loss Values Count: {len(loss_values)}")
 
         if data[feature].nunique() == 2:  # Check if the feature is binary
             fig = go.Figure()
@@ -521,7 +526,7 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
                 title=f'Binary Indicator Distribution for {feature} ({trade_type})',
                 xaxis_title=feature,
                 yaxis_title='Count',
-                barmode='overlay'
+                barmode='group'  # Change here to display side-by-side bars
             )
         else:
             kde_win = gaussian_kde(win_values)
@@ -548,13 +553,13 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
         plots.append(fig)
         descriptions.append(f'Optimal Win Ranges for {feature} ({trade_type})')
-    
+
     return plots, descriptions, feature_info
 
-def display_feature_info(feature_info):
-    st.write("### Feature Information")
-    for info in feature_info:
-        st.write(info)
+#def display_feature_info(feature_info):
+#    st.subheader("Feature Information")
+#    for info in feature_info:
+#        st.text(info)
 
 # Run advanced model exploration
 def run_advanced_model_exploration():
@@ -825,21 +830,21 @@ def run_advanced_model_exploration():
                         long_plots, long_descriptions, long_feature_info = plot_kde_distribution(st.session_state.data, 'LE', optimal_ranges_long)
                         for fig in long_plots:
                             st.plotly_chart(fig)
-                        display_feature_info(long_feature_info)
+                        #display_feature_info(long_feature_info)
 
                     st.subheader("KDE Distribution for Short Trades")
                     with col2:
                         short_plots, short_descriptions, short_feature_info = plot_kde_distribution(st.session_state.data, 'SE', optimal_ranges_short)
                         for fig in short_plots:
                             st.plotly_chart(fig)
-                        display_feature_info(short_feature_info)
+                        #display_feature_info(short_feature_info)
 
                     st.subheader("KDE Distribution for Both Long and Short Trades")
                     with col3:
                         both_plots, both_descriptions, both_feature_info = plot_kde_distribution(st.session_state.data, '', optimal_ranges_both)
                         for fig in both_plots:
                             st.plotly_chart(fig)
-                        display_feature_info(both_feature_info)
+                        #display_feature_info(both_feature_info)
 
                     # Summarize optimal win ranges for each trade type
                     optimal_win_ranges_summary_long = summarize_optimal_win_ranges(optimal_ranges_long, 'LE')
@@ -924,7 +929,7 @@ def run_advanced_model_exploration():
                         descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
 
                         st.write("Loss Mitigation Analysis")
-                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
+                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 0][st.session_state.indicator_columns].describe().transpose()
                         st.write(loss_conditions)
                         fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
                         st.plotly_chart(fig_loss_cond)
