@@ -439,7 +439,6 @@ def verify_trade_parsing(file_path, output_dir):
 
     output_file = os.path.join(output_dir, "merged_trade_indicator_event.csv")
     merged_data.to_csv(output_file, index=False)
-    st.write(f"Saved merged data to {output_file}")
 
     # Save merged data directly to the database
     save_merged_data_to_db(merged_data)
@@ -472,7 +471,7 @@ def run_data_ingestion_preparation():
         raw_file_path = os.path.join(raw_data_dir, selected_db_file)
         with open(raw_file_path, "wb") as f:
             f.write(file_content)
-        st.success(f"Loaded {selected_db_file} from database to {raw_file_path}")
+        st.success(f"Loaded {selected_db_file} from database")
 
     if selected_db_file:
         file_path = os.path.join(raw_data_dir, selected_db_file)

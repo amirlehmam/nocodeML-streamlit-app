@@ -305,7 +305,7 @@ def plot_additional_metrics(trades, timestamp_col):
 def run_strategy_performance():
     st.title("Strategy Performance Analysis")
 
-    entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=5)
+    entry_multiplier = st.slider("Select the number of entries per trade", min_value=1, max_value=5, value=1)
 
     if st.button("Load and Analyze Data"):
         data_hash = get_data_hash()
