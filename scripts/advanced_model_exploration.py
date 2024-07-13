@@ -143,28 +143,35 @@ def save_all_to_pdf(pdf_filename, text_sections, dataframes, dataframe_descripti
 @st.cache_data
 def load_data_from_db():
     st.write("Loading data from the database...")
+    logger.info("Loading data from the database...")
     try:
         engine = get_db_connection()
         query = "SELECT * FROM merged_trade_indicator_event"
         data = pd.read_sql_query(query, engine)
+        logger.info(f"Data loaded: {data.shape[0]} rows, {data.shape[1]} columns")
         return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        logger.error(f"Error loading data: {e}")
         return None
+
 
 # Preprocess data
 @st.cache_data
 def preprocess_data(data, selected_feature_types):
     st.write("Preprocessing data...")
+    logger.info("Starting data preprocessing")
 
     if data is None:
+        logger.error("The provided data is None.")
         raise ValueError("The provided data is None.")
     
     if data.shape[1] < 8:
+        logger.error("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
         raise ValueError("Data does not have enough columns for indicators. Ensure indicators start after the 7th column.")
     
     all_indicators = data.columns[7:]
-    st.write(f"All indicators: {all_indicators}")
+    logger.info(f"All indicators: {all_indicators}")
 
     # Exclude 'strategy_amount' and 'account_amount' from the indicators
     excluded_columns = ['strategy_amount', 'account_amount']
@@ -179,7 +186,7 @@ def preprocess_data(data, selected_feature_types):
     if "Binary Indicators" in selected_feature_types:
         indicator_columns.extend([col for col in all_indicators if "_binary" in col])
 
-    st.write(f"Selected indicators: {indicator_columns}")
+    logger.info(f"Selected indicators: {indicator_columns}")
 
     # Ensure 'result' column is correctly processed
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
@@ -219,8 +226,8 @@ def preprocess_data(data, selected_feature_types):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    logger.info("Data preprocessing completed")
     return X_train, X_test, y_train, y_test, indicator_columns, data
-
 
 # Create neural network model
 def create_nn_model(input_dim):
