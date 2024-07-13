@@ -313,26 +313,54 @@ def plot_optimal_win_ranges(data, optimal_ranges, target='result', trade_type=''
         feature = item['feature']
         ranges = item['optimal_win_ranges']
 
-        win_values = data[data[target] == 0][feature].dropna()
-        loss_values = data[data[target] == 1][feature].dropna()
+        if data[feature].nunique() == 2:  # Check if the feature is binary
+            win_values = data[data[target] == 0][feature].dropna()
+            loss_values = data[data[target] == 1][feature].dropna()
 
-        fig = go.Figure()
-        fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75, nbinsx=50))
-        fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75, nbinsx=50))
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=['Under', 'Above'],
+                y=[(win_values == 0).sum(), (win_values == 1).sum()],
+                name='Win',
+                marker_color='blue',
+                opacity=0.75
+            ))
+            fig.add_trace(go.Bar(
+                x=['Under', 'Above'],
+                y=[(loss_values == 0).sum(), (loss_values == 1).sum()],
+                name='Loss',
+                marker_color='red',
+                opacity=0.75
+            ))
 
-        for range_start, range_end in ranges:
-            fig.add_shape(type="rect", x0=range_start, x1=range_end, y0=0, y1=1,
-                          fillcolor="blue", opacity=0.3, layer="below", line_width=0)
+            fig.update_layout(
+                title=f'Binary Indicator Distribution for {feature} ({trade_type}, {model_name})',
+                xaxis_title=feature,
+                yaxis_title='Count',
+                barmode='overlay'
+            )
+        else:
+            win_values = data[data[target] == 0][feature].dropna()
+            loss_values = data[data[target] == 1][feature].dropna()
 
-        fig.update_layout(
-            title=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})',
-            xaxis_title=feature,
-            yaxis_title='Count',
-            barmode='overlay'
-        )
-        st.plotly_chart(fig)
+            fig = go.Figure()
+            fig.add_trace(go.Histogram(x=win_values, name='Win', marker_color='blue', opacity=0.75, nbinsx=50))
+            fig.add_trace(go.Histogram(x=loss_values, name='Loss', marker_color='red', opacity=0.75, nbinsx=50))
+
+            for range_start, range_end in ranges:
+                fig.add_shape(type="rect", x0=range_start, x1=range_end, y0=0, y1=1,
+                              fillcolor="blue", opacity=0.3, layer="below", line_width=0)
+
+            fig.update_layout(
+                title=f'Optimal Win Ranges for {feature} ({trade_type}, {model_name})',
+                xaxis_title=feature,
+                yaxis_title='Count',
+                barmode='overlay'
+            )
+        
         plots.append(fig)
         descriptions.append(f"Optimal Win Ranges for {feature} ({trade_type}, {model_name})")
+    
     return plots, descriptions
 
 # Summarize optimal win ranges
@@ -442,30 +470,54 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
 
-        kde_win = gaussian_kde(win_values)
-        kde_loss = gaussian_kde(loss_values)
-        x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
-        kde_win_density = kde_win(x_grid)
-        kde_loss_density = kde_loss(x_grid)
+        if data[feature].nunique() == 2:  # Check if the feature is binary
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=['Under', 'Above'],
+                y=[(win_values == 0).sum(), (win_values == 1).sum()],
+                name='Win',
+                marker_color='blue',
+                opacity=0.75
+            ))
+            fig.add_trace(go.Bar(
+                x=['Under', 'Above'],
+                y=[(loss_values == 0).sum(), (loss_values == 1).sum()],
+                name='Loss',
+                marker_color='red',
+                opacity=0.75
+            ))
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
-        for range_item in optimal_ranges:
-            if range_item['feature'] == feature:
-                for start, end in range_item['optimal_win_ranges']:
-                    fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+            fig.update_layout(
+                title=f'Binary Indicator Distribution for {feature} ({trade_type})',
+                xaxis_title=feature,
+                yaxis_title='Count',
+                barmode='overlay'
+            )
+        else:
+            kde_win = gaussian_kde(win_values)
+            kde_loss = gaussian_kde(loss_values)
+            x_grid = np.linspace(min(data[feature].dropna()), max(data[feature].dropna()), 1000)
+            kde_win_density = kde_win(x_grid)
+            kde_loss_density = kde_loss(x_grid)
 
-        fig.update_layout(
-            title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
-            xaxis_title=feature,
-            yaxis_title='Density',
-            width=800,
-            height=400
-        )
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x_grid, y=kde_win_density, mode='lines', name='Win', line=dict(color='blue')))
+            fig.add_trace(go.Scatter(x=x_grid, y=kde_loss_density, mode='lines', name='Loss', line=dict(color='red')))
+            for range_item in optimal_ranges:
+                if range_item['feature'] == feature:
+                    for start, end in range_item['optimal_win_ranges']:
+                        fig.add_vrect(x0=start, x1=end, fillcolor="blue", opacity=0.3, line_width=0)
+
+            fig.update_layout(
+                title=f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})',
+                xaxis_title=feature,
+                yaxis_title='Density',
+                width=800,
+                height=400
+            )
 
         plots.append(fig)
-        descriptions.append(f'KDE Plot with Optimal Win Ranges for {feature} ({trade_type})')
+        descriptions.append(f'Optimal Win Ranges for {feature} ({trade_type})')
     
     return plots, descriptions
 
