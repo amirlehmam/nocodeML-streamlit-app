@@ -464,10 +464,11 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
     for item in optimal_ranges:
         feature = item['feature']
-        win_values = data[(data['result'] == 0) & (data['event'].str.startswith(trade_type))][feature].dropna()
-        loss_values = data[(data['result'] == 1) & (data['event'].str.startswith(trade_type))][feature].dropna()
+        win_values = data[(data['result'] == 1) & (data['event'].str.startswith(trade_type))][feature].dropna()
+        loss_values = data[(data['result'] == 0) & (data['event'].str.startswith(trade_type))][feature].dropna()
 
         if len(win_values) == 0 or len(loss_values) == 0:
+            print(f"No data for feature: {feature}, trade type: {trade_type}")
             continue
 
         if data[feature].nunique() == 2:  # Check if the feature is binary
@@ -518,7 +519,9 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
         plots.append(fig)
         descriptions.append(f'Optimal Win Ranges for {feature} ({trade_type})')
-    
+
+        print(f"Plotted feature: {feature}, trade type: {trade_type}")
+
     return plots, descriptions
 
 
@@ -854,8 +857,8 @@ def run_advanced_model_exploration():
                     st.write("Detailed Indicator Analysis")
                     selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
                     if selected_indicator:
-                        win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
-                        loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+                        win_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+                        loss_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
 
                         fig = go.Figure()
                         fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
@@ -887,7 +890,7 @@ def run_advanced_model_exploration():
                         descriptions.append(f'KDE Plot with Optimal Win Ranges for {selected_indicator}')
 
                         st.write("Loss Mitigation Analysis")
-                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 1][st.session_state.indicator_columns].describe().transpose()
+                        loss_conditions = st.session_state.data[st.session_state.data['result'] == 0][st.session_state.indicator_columns].describe().transpose()
                         st.write(loss_conditions)
                         fig_loss_cond = px.bar(loss_conditions, x=loss_conditions.index, y="mean", labels={'x': 'Indicators', 'y': 'Mean Value'}, title='Mean Indicator Values for Losses')
                         st.plotly_chart(fig_loss_cond)
