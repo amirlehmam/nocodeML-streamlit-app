@@ -521,6 +521,9 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
     
     return plots, descriptions
 
+# Adjusted the function to ensure binary plots are correctly handled
+
+
 # Run advanced model exploration
 def run_advanced_model_exploration():
     st.title("Advanced Model Exploration")
