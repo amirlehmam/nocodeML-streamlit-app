@@ -148,6 +148,7 @@ def load_data_from_db():
         query = "SELECT * FROM merged_trade_indicator_event"
         data = pd.read_sql_query(query, engine)
         st.write(f"Data loaded with shape: {data.shape}")
+        st.write(data.head())  # Debug: Display first few rows
         return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -157,7 +158,7 @@ def load_data_from_db():
 @st.cache_data
 def preprocess_data(data, selected_feature_types):
     st.write("Preprocessing data...")
-    
+
     if data is None:
         raise ValueError("The provided data is None.")
     
@@ -178,10 +179,39 @@ def preprocess_data(data, selected_feature_types):
 
     st.write(f"Selected indicators: {indicator_columns}")
 
+    # Ensure 'result' column is correctly processed
     data['result'] = data['result'].apply(lambda x: 1 if x == 'win' else 0)
 
-    # Ensure columns do not contain None values
-    data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(0))
+    # Fill NaN values in indicator columns
+    data[indicator_columns] = data[indicator_columns].fillna(0)
+
+    # Ensure binary columns contain only 0 and 1
+    for col in indicator_columns:
+        if '_binary' in col:
+            data[col] = data[col].apply(lambda x: 1 if x > 0 else 0)
+
+    # Debug: Show the processed binary columns
+    st.write("Processed binary columns:")
+    st.write(data[indicator_columns].head())
+
+    # Split columns into binary and non-binary
+    binary_columns = [col for col in indicator_columns if '_binary' in col]
+    non_binary_columns = [col for col in indicator_columns if col not in binary_columns]
+
+    # Debug: Show non-binary columns
+    st.write("Non-binary columns before normalization:")
+    st.write(non_binary_columns)
+
+    if non_binary_columns:
+        # Normalize only non-binary columns
+        scaler = StandardScaler()
+        data[non_binary_columns] = scaler.fit_transform(data[non_binary_columns])
+
+        # Debug: Show the processed columns after normalization
+        st.write("Processed columns after normalization:")
+        st.write(data[non_binary_columns].head())
+    else:
+        st.write("No non-binary columns to normalize.")
 
     # Feature Engineering: Add derived metrics (changes, slopes)
     changes = data[indicator_columns].diff().add_suffix('_change')
@@ -196,16 +226,13 @@ def preprocess_data(data, selected_feature_types):
     # Fill NaN values with column mean
     data[indicator_columns] = data[indicator_columns].apply(lambda col: col.fillna(col.mean()))
 
-    # Normalize the data
-    scaler = StandardScaler()
-    data[indicator_columns] = scaler.fit_transform(data[indicator_columns])
-
     X = data[indicator_columns]
     y = data['result'].astype(int)  # Ensure target is of integer type
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     st.write("Data preprocessing completed.")
+    st.write(data.head())  # Debug: Display first few rows after preprocessing
     return X_train, X_test, y_train, y_test, indicator_columns, data
 
 # Create neural network model
@@ -260,8 +287,8 @@ def calculate_optimal_win_ranges(data, target='result', features=None, trade_typ
         else:
             trade_data = data
 
-        win_values = trade_data[trade_data[target] == 0][feature].dropna().values.astype(float)
-        loss_values = trade_data[trade_data[target] == 1][feature].dropna().values.astype(float)
+        win_values = trade_data[trade_data[target] == 1][feature].dropna().values.astype(float)
+        loss_values = trade_data[trade_data[target] == 0][feature].dropna().values.astype(float)
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
@@ -461,6 +488,7 @@ def display_shap_explanations(model, X_train, X_test):
 def plot_kde_distribution(data, trade_type, optimal_ranges):
     plots = []
     descriptions = []
+    feature_info = []
 
     for item in optimal_ranges:
         feature = item['feature']
@@ -469,6 +497,8 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
 
         if len(win_values) == 0 or len(loss_values) == 0:
             continue
+
+        feature_info.append(f"Feature: {feature}, Trade Type: {trade_type}, Win Values Count: {len(win_values)}, Loss Values Count: {len(loss_values)}")
 
         if data[feature].nunique() == 2:  # Check if the feature is binary
             fig = go.Figure()
@@ -491,7 +521,7 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
                 title=f'Binary Indicator Distribution for {feature} ({trade_type})',
                 xaxis_title=feature,
                 yaxis_title='Count',
-                barmode='group'  # Changed to group for better visibility
+                barmode='overlay'
             )
         else:
             kde_win = gaussian_kde(win_values)
@@ -519,8 +549,12 @@ def plot_kde_distribution(data, trade_type, optimal_ranges):
         plots.append(fig)
         descriptions.append(f'Optimal Win Ranges for {feature} ({trade_type})')
     
-    return plots, descriptions
+    return plots, descriptions, feature_info
 
+def display_feature_info(feature_info):
+    st.write("### Feature Information")
+    for info in feature_info:
+        st.write(info)
 
 # Run advanced model exploration
 def run_advanced_model_exploration():
@@ -788,21 +822,24 @@ def run_advanced_model_exploration():
                     st.subheader("KDE Distribution for Long Trades")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        long_plots, long_descriptions = plot_kde_distribution(st.session_state.data, 'LE', optimal_ranges_long)
+                        long_plots, long_descriptions, long_feature_info = plot_kde_distribution(st.session_state.data, 'LE', optimal_ranges_long)
                         for fig in long_plots:
                             st.plotly_chart(fig)
+                        display_feature_info(long_feature_info)
 
                     st.subheader("KDE Distribution for Short Trades")
                     with col2:
-                        short_plots, short_descriptions = plot_kde_distribution(st.session_state.data, 'SE', optimal_ranges_short)
+                        short_plots, short_descriptions, short_feature_info = plot_kde_distribution(st.session_state.data, 'SE', optimal_ranges_short)
                         for fig in short_plots:
                             st.plotly_chart(fig)
+                        display_feature_info(short_feature_info)
 
                     st.subheader("KDE Distribution for Both Long and Short Trades")
                     with col3:
-                        both_plots, both_descriptions = plot_kde_distribution(st.session_state.data, '', optimal_ranges_both)
+                        both_plots, both_descriptions, both_feature_info = plot_kde_distribution(st.session_state.data, '', optimal_ranges_both)
                         for fig in both_plots:
                             st.plotly_chart(fig)
+                        display_feature_info(both_feature_info)
 
                     # Summarize optimal win ranges for each trade type
                     optimal_win_ranges_summary_long = summarize_optimal_win_ranges(optimal_ranges_long, 'LE')
@@ -854,8 +891,8 @@ def run_advanced_model_exploration():
                     st.write("Detailed Indicator Analysis")
                     selected_indicator = st.selectbox("Select Indicator for Detailed Analysis", st.session_state.indicator_columns)
                     if selected_indicator:
-                        win_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
-                        loss_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+                        win_data = st.session_state.data[st.session_state.data['result'] == 1][selected_indicator].dropna()
+                        loss_data = st.session_state.data[st.session_state.data['result'] == 0][selected_indicator].dropna()
 
                         fig = go.Figure()
                         fig.add_trace(go.Histogram(x=win_data, name='Win', marker_color='blue', opacity=0.75))
