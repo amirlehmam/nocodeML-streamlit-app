@@ -1,336 +1,691 @@
-import pandas as pd
+"""
+renkodf
+=====
+Transform Tick Data into OHLCV Renko Dataframe!
+"""
+import gc
+
 import numpy as np
-import h5py
-import psycopg2
-import tempfile
-from datetime import datetime
-from qiskit_aer import Aer
-from qiskit import QuantumCircuit
-from qiskit.circuit.library import ZZFeatureMap, TwoLocal
-from qiskit_machine_learning.algorithms import QSVC
-from qiskit_algorithms import VQE
-from qiskit.primitives import Sampler, Estimator
-from qiskit_algorithms.optimizers import COBYLA
-from renkodf import RenkoWS  # Ensure renkodf.py is in the same directory
+import pandas as pd
+import mplfinance as mpf
 
-# PostgreSQL database credentials
-db_credentials = {
-    "dbname": "defaultdb",
-    "user": "doadmin",
-    "password": "AVNS_hnzmIdBmiO7aj5nylWW",
-    "host": "nocodemldb-do-user-16993120-0.c.db.ondigitalocean.com",
-    "port": 25060,
-    "sslmode": "require"
-}
+_MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'fake-r-wicks', 'fake-r-nongap']
 
-def connect_db():
-    conn = psycopg2.connect(**db_credentials)
-    return conn
 
-def fetch_available_dates():
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT filename FROM h5_files;')
-    rows = cursor.fetchall()
-    conn.close()
-    
-    dates = [row[0].replace('.h5', '') for row in rows]
-    return sorted(dates)
+class Renko:
+    def __init__(self, df: pd.DataFrame, brick_size: float, add_columns: list = None, show_progress: bool = False):
+        """
+        Create Renko OHLCV dataframe with existing Ticks data.
 
-def load_h5_from_db(filename):
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT data FROM h5_files WHERE filename = %s;', (filename,))
-    result = cursor.fetchone()
-    conn.close()
-    
-    if result is None:
-        return None
-    
-    binary_data = result[0]
-    temp_dir = tempfile.gettempdir()
-    file_path = f"{temp_dir}/{filename}.h5"
-    
-    with open(file_path, "wb") as f:
-        f.write(binary_data)
-    
-    return file_path
+        Usage
+        ------
+        >> from renkodf import Renko \n
+        >> r = Renko(df_ticks, brick_size) \n
+        >> df = r.renkodf() \n
 
-def process_h5(file_path, brick_size, brick_threshold):
-    with h5py.File(file_path, "r") as f:
-        timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
-        timestamps = pd.to_datetime(timestamps, errors='coerce')
-        prices = f['L2/Price'][:].astype(float)
-        df = pd.DataFrame({"datetime": timestamps, "close": prices})
-        df.dropna(subset=["datetime"], inplace=True)
-        
-        # Generate High, Low, Close prices using Renko
-        initial_price = df['close'].iloc[0]
-        renko_chart = RenkoWS(ws_price=initial_price, brick_size=brick_size, brick_threshold=brick_threshold)
-        renko_chart.add_prices(df['datetime'].values, df['close'].values)
-        df_wicks = renko_chart.renko_animate('wicks')
-        
-        df['High'] = df_wicks['High']
-        df['Low'] = df_wicks['Low']
-        df['Close'] = df_wicks['Close']
-        
-        return df
+        Parameters
+        ----------
+        df : dataframe
+            Only two columns are required:
 
-def load_data_for_date(date, brick_size, brick_threshold):
-    filename = date.strftime('%Y%m%d') + ".h5"
-    file_path = load_h5_from_db(filename)
-    if file_path:
-        df = process_h5(file_path, brick_size, brick_threshold)
-        return df
-    return None
+            * "close": Mandatory.
+            * "datetime": If is not present, the index will be used.
 
-def data_generator(dates, brick_size, brick_threshold):
-    for date in dates:
-        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None:
-            yield df_ticks
-        else:
-            print(f"No data for {date.strftime('%Y-%m-%d')}")
+        brick_size : float
+            Cannot be less than or equal to 0.00...
+        add_columns : list
+            A list of strings(column names) to be added to the final result, such as spread, quantity, etc.
+        show_progress : bool
+            A self-explanatory percentage number from 0 to 100;
+            The performance will be affected by 2x if it's True
+        """
 
-class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000):
-        self.data = data
-        self.trade_log = []
-        self.pnl = 0.0
-        self.starting_capital = starting_capital
-        self.position = 0
-        self.entry_price = 0.0
-        self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
-        self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
-        self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
-        self._initialize_parameters()
-        self._initialize_indicators()
-        self._initialize_fibonacci()
-        self._initialize_quantum_components()
+        if brick_size is None or brick_size <= 0:
+            raise ValueError("brick_size cannot be 'None' or '<= 0'")
+        if 'datetime' not in df.columns:
+            df["datetime"] = df.index
+        if 'close' not in df.columns:
+            raise ValueError("Column 'close' doesn't exist!")
+        if add_columns is not None:
+            if not set(add_columns).issubset(df.columns):
+                raise ValueError(f"One or more of {add_columns} columns don't exist!")
 
-    def _initialize_parameters(self):
-        self.bars_required_to_trade = 200
-        self.default_quantity = 1
-        self.enable_fib_weight_ma_cross = True
-        self.fib_weight_ma_period = 10
-        self.smoothing_simple_ma_period = 20
+        self._brick_size = brick_size
+        self._custom_columns = add_columns
+        self._df_len = len(df["close"])
+        self._show_progress = show_progress
 
-    def _initialize_indicators(self):
-        self.zlema8 = self.calculate_zlema(8)
-        self.zlema62 = self.calculate_zlema(62)
-        self.atr = self.calculate_atr(14)
-        self.psar = self.calculate_psar()
+        first_close = df["close"].iat[0]
+        initial_price = (first_close // brick_size) * brick_size
+        # Renko Single Data
+        self._rsd = {
+            "origin_index": [0],
+            "date": [df["datetime"].iat[0]],
+            "price": [initial_price],
+            "direction": [0],
+            "wick": [initial_price],
+            "volume": [1],
+        }
+        if add_columns is not None:
+            for name in add_columns:
+                self._rsd.update({
+                    name: [df[name].iat[0]]
+                })
 
-    def _initialize_fibonacci(self):
-        self.fib_weightings = np.zeros(self.fib_weight_ma_period)
-        self.fib_weighted_ma = np.zeros(len(self.data))
-        self.smoothed_fib_weighted_ma = np.zeros(len(self.data))
-        self._calculate_fibonacci_weights()
+        self._wick_min_i = initial_price
+        self._wick_max_i = initial_price
+        self._volume_i = 1
 
-    def _calculate_fibonacci_weights(self):
-        a, b = 1, 1
-        for i in range(self.fib_weight_ma_period):
-            self.fib_weightings[i] = a
-            a, b = b, a + b
-        self.fib_weightings = self.fib_weightings[::-1]
-        self.sum_of_fib_weights = np.sum(self.fib_weightings)
+        for i in range(1, self._df_len):
+            self._add_prices(i, df)
 
-    def calculate_zlema(self, period):
-        return self.data['Close'].ewm(span=period).mean()
+    def _add_prices(self, i, df):
+        """
+        Determine if there are new bricks to add according to the current (loop) price relative to the previous renko.
 
-    def calculate_atr(self, period):
-        tr = pd.Series(np.maximum.reduce([self.data['High'] - self.data['Low'],
-                                          (self.data['High'] - self.data['Close'].shift()).abs(),
-                                          (self.data['Low'] - self.data['Close'].shift()).abs()]))
-        self.data['atr'] = tr.rolling(window=period).mean()
-        return self.data['atr']
+        Here, the 'Renko Single Data' is constructed.
+        """
+        df_close = df["close"].iat[i]
+        self._wick_min_i = df_close if df_close < self._wick_min_i else self._wick_min_i
+        self._wick_max_i = df_close if df_close > self._wick_max_i else self._wick_max_i
+        self._volume_i += 1
 
-    def calculate_psar(self):
-        high = self.data['High']
-        low = self.data['Low']
-        close = self.data['Close']
-
-        af = 0.02
-        max_af = 0.2
-        psar = np.zeros(len(close))
-        bull = True
-        ep = low[0]
-        hp = high[0]
-        lp = low[0]
-
-        for i in range(1, len(close)):
-            psar[i] = psar[i - 1] + af * (hp if bull else lp - psar[i - 1])
-            reverse = False
-
-            if bull:
-                if low[i] < psar[i]:
-                    bull = False
-                    psar[i] = hp
-                    lp = low[i]
-                    af = 0.02
-                    reverse = True
-            else:
-                if high[i] > psar[i]:
-                    bull = True
-                    psar[i] = lp
-                    hp = high[i]
-                    af = 0.02
-                    reverse = True
-
-            if not reverse:
-                if bull:
-                    if high[i] > hp:
-                        hp = high[i]
-                        af = min(af + 0.02, max_af)
-                    if i > 1 and low[i - 1] < psar[i]:
-                        psar[i] = low[i - 1]
-                    if i > 2 and low[i - 2] < psar[i]:
-                        psar[i] = low[i - 2]
-                else:
-                    if low[i] < lp:
-                        lp = low[i]
-                        af = min(af + 0.02, max_af)
-                    if i > 1 and high[i - 1] > psar[i]:
-                        psar[i] = high[i - 1]
-                    if i > 2 and high[i - 2] > psar[i]:
-                        psar[i] = high[i - 2]
-
-        self.data['PSAR'] = psar
-        return psar
-
-    def _initialize_quantum_components(self):
-        self.sampler = Sampler()
-        self.estimator = Estimator()
-        self.feature_map = ZZFeatureMap(feature_dimension=len(self.data.columns), reps=2)
-        self.qsvc = None
-        self.vqe = None
-        self.variational_circuit = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
-
-    def _initialize_qsvc(self):
-        self.qsvc = QSVC(quantum_instance=self.sampler, feature_map=self.feature_map)
-        self.qsvc.fit(self.data['features'], self.data['labels'])
-
-    def _initialize_vqe(self):
-        optimizer = COBYLA()
-        self.vqe = VQE(self.variational_circuit, optimizer=optimizer, quantum_instance=self.estimator)
-
-    def _bar_update(self, i):
-        if i < self.bars_required_to_trade:
+        last_price = self._rsd["price"][-1]
+        current_n_bricks = (df_close - last_price) / self._brick_size
+        current_direction = np.sign(current_n_bricks)
+        if current_direction == 0:
             return
+        last_direction = self._rsd["direction"][-1]
+        is_same_direction = ((current_direction > 0 and last_direction >= 0)
+                             or (current_direction < 0 and last_direction <= 0))
 
-        if self.enable_fib_weight_ma_cross:
-            self._calculate_fib_weighted_ma()
+        # CURRENT PRICE in same direction of the LAST RENKO
+        total_same_bricks = current_n_bricks if is_same_direction else 0
+        # >= 2 can be a 'GAP' or 'OPPOSITE DIRECTION'.
+        # In both cases we add the current wick/volume to the first brick and 'reset' the value of both, since:
+        # If it's a GAP:
+        # - The following bricks after first brick will be 'artificial' since the price has 'skipped' that price region.
+        # - (the reason of 'totalSameBricks')
+        # If it's a OPPOSITE DIRECTION:
+        # - Only the first brick will be kept. (the reason of '2' multiply)
+        if not is_same_direction and abs(current_n_bricks) >= 2:
+            self._add_brink_loop(df, i, 2, current_direction, current_n_bricks)
+            total_same_bricks = current_n_bricks - 2 * current_direction
 
-        self._generate_signals(i)
-        self._manage_positions(i)
+        # Add all bricks in the same direction
+        for not_in_use in range(abs(int(total_same_bricks))):
+            self._add_brink_loop(df, i, 1, current_direction, current_n_bricks)
 
-    def _generate_signals(self, i):
-        if self.enable_fib_weight_ma_cross:
-            self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'], i)
-            self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'], i)
+        if self._show_progress:
+            print(f"\r {round(float((i + 1) / self._df_len * 100), 2)}%", end='')
 
-    def _cross_above(self, series1, series2, i):
-        return series1[i-1] < series2[i-1] and series1[i] > series2[i]
+    def _add_brink_loop(self, df, i, renko_multiply, current_direction, current_n_bricks):
+        last_price = self._rsd["price"][-1]
+        renko_price = last_price + (current_direction * renko_multiply * self._brick_size)
+        wick = self._wick_min_i if current_n_bricks > 0 else self._wick_max_i
 
-    def _cross_below(self, series1, series2, i):
-        return series1[i-1] > series2[i-1] and series1[i] < series2[i]
+        to_add = [i, df["datetime"].iat[i], renko_price, current_direction, wick, self._volume_i]
+        for name, add in zip(list(self._rsd.keys()), to_add):
+            self._rsd[name].append(add)
+        if self._custom_columns is not None:
+            for name in self._custom_columns:
+                self._rsd[name].append(df[name].iat[i])
 
-    def _manage_positions(self, i):
-        if self.position == 0:
-            if self.signals['buy_signal'][i]:
-                self._enter_position(i, 'long')
-            elif self.signals['sell_signal'][i]:
-                self._enter_position(i, 'short')
-        elif self.position > 0:
-            if self.signals['sell_signal'][i] or self.data['Close'][i] <= self.stop_loss[i] or self.data['Close'][i] >= self.take_profit[i]:
-                self._exit_position(i)
-        elif self.position < 0:
-            if self.signals['buy_signal'][i] or self.data['Close'][i] >= self.stop_loss[i] or self.data['Close'][i] <= self.take_profit[i]:
-                self._exit_position(i)
+        self._volume_i = 1
+        self._wick_min_i = renko_price if current_n_bricks > 0 else self._wick_min_i
+        self._wick_max_i = renko_price if current_n_bricks < 0 else self._wick_max_i
 
-    def _enter_position(self, index, direction):
-        if direction == 'long':
-            self.position = self.default_quantity
-            self.entry_price = self.data['Close'][index]
-            self.stop_loss[index] = self.data['PSAR'][index]
-            self.take_profit[index] = self.entry_price + 2 * self.data['atr'][index]
-        elif direction == 'short':
-            self.position = -self.default_quantity
-            self.entry_price = self.data['Close'][index]
-            self.stop_loss[index] = self.data['PSAR'][index]
-            self.take_profit[index] = self.entry_price - 2 * self.data['atr'][index]
-        self._log_entry(index, direction)
+    def plot(self, mode: str = "wicks", volume: bool = True, df: pd.DataFrame = None, add_plots: [] = None):
+        """
+        Redundant function only to plot the Renko Chart with fewer lines of code. \n
+        If parameter "df" is used: the "add_plots" is mandatory. \n
+        If parameter "df" is empty: only the 'renko_df' of the current instance will be plotted.
 
-    def _exit_position(self, index):
-        if self.position > 0:
-            self.pnl += (self.data['Close'][index] - self.entry_price) * self.default_quantity
-        elif self.position < 0:
-            self.pnl += (self.entry_price - self.data['Close'][index]) * self.default_quantity
-        self.position = 0
-        self.entry_price = 0.0
-        self.stop_loss[index] = 0.0
-        self.take_profit[index] = 0.0
-        self._log_exit(index)
+        Notes
+        -----
+        This function is equivalent to: \n
+        > mpf.plot(df, type='candle', volume=True, style="charles") \n
+        > mpf.plot(df, type='candle', volume=True, style="charles", addplot=[]) \n
+        > mpf.show() \n
 
-    def _log_entry(self, index, direction):
-        log_entry = {
-            'timestamp': self.data.index[index],
-            'action': 'enter',
-            'direction': direction,
-            'price': self.data['Close'][index],
-            'quantity': self.default_quantity,
-            'position': self.position,
-            'pnl': self.pnl
-        }
-        self.trade_log.append(log_entry)
+        Parameters
+        ----------
+        mode : str
+            The method for building the renko dataframe, described in the function 'renko_df'.
+        volume : bool
+            Plot with Volume or not.
+        df : dataframe
+            Modified external dataframe, usually with new columns for plotting indicators, signals, etc.
+        add_plots : list
+            A list with instances of mpf.make_addplot().
+        """
+        if df is not None and add_plots is None:
+            raise ValueError("If 'df' parameter is used, 'add_plots' is mandatory!")
 
-    def _log_exit(self, index):
-        log_exit = {
-            'timestamp': self.data.index[index],
-            'action': 'exit',
-            'price': self.data['Close'][index],
-            'quantity': self.default_quantity,
-            'position': self.position,
-            'pnl': self.pnl
-        }
-        self.trade_log.append(log_exit)
-
-    def execute_strategy(self):
-        if self.enable_fib_weight_ma_cross:
-            self._calculate_fib_weighted_ma()
-
-        for i in range(len(self.data)):
-            self._bar_update(i)
-
-def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    for date in market_replay_data:
-        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None:
-            strategy.data = df_ticks
-            strategy.execute_strategy()
-            print(f"PNL for {date}: {strategy.pnl}")
+        if df is not None:
+            mpf.plot(df, type='candle', style="charles", volume=volume, addplot=add_plots,
+                     title=f"\n renko: {mode} \nbrick size: {self._brick_size}")
         else:
-            print(f"No data for {date}")
+            df_renko = self.renko_df(mode)
+            mpf.plot(df_renko, type='candle', style="charles", volume=volume,
+                     title=f"\n renko: {mode} \nbrick size: {self._brick_size}")
 
-# Get user inputs
-available_dates = fetch_available_dates()
-    
-print("Available dates:")
-for date in available_dates:
-    print(date)
-    
-start_date_str = input("Enter the start date (YYYYMMDD): ")
-end_date_str = input("Enter the end date (YYYYMMDD): ")
-brick_size = int(input("Enter the brick size: "))
-brick_threshold = int(input("Enter the brick threshold: "))
+        return mpf.show()
 
-start_date = pd.to_datetime(start_date_str, format='%Y%m%d')
-end_date = pd.to_datetime(end_date_str, format='%Y%m%d')
+    def renko_df(self, mode: str = "wicks"):
+        """
+        Transforms 'Renko Single Data' into OHLCV Dataframe.
 
-market_replay_data = pd.date_range(start=start_date, end=end_date, freq='D')
+        Parameters
+        ----------
+        mode : str
+            The method for building the renko dataframe, there are 7 modes available, where 3 are significant variations:
 
-# Initialize strategy
-delta2_strategy = Delta2Strategy(data=load_data_for_date(start_date, brick_size, brick_threshold))
+              * "normal" : Standard Renko.
+              * "wicks" : Standard Renko with Wicks. (default)
+              * "nongap": Same logic of 'wicks' mode but the OPEN will have the same value as the respective wick.
+              * "reverse-wicks": 'wicks' only on price reversals.
+              * "reverse-nongap": 'nongap' only in price reversals.
+              * "fake-r-wicks": fake reverse wicks, where it will have the same value as the Previous Close.
+              * "fake-r-nongap": fake reverse nongap, where it will have the same value as the Previous Close.
 
-# Backtest strategy
-backtest_strategy(delta2_strategy, market_replay_data, brick_size, brick_threshold)
+        Returns
+        -------
+        x : dataframe
+            pandas.Dataframe
+        """
+        if mode not in _MODE_dict:
+            raise ValueError(f"Only {_MODE_dict} options are valid.")
+
+        dates = self._rsd["date"]
+        prices = self._rsd["price"]
+        directions = self._rsd["direction"]
+        wicks = self._rsd["wick"]
+        volumes = self._rsd["volume"]
+        indexes = list(range(len(prices)))
+        brick_size = self._brick_size
+
+        df_dict = {
+            "datetime": [],
+            "open": [],
+            "high": [],
+            "low": [],
+            "close": [],
+            "volume": [],
+        }
+        if self._custom_columns is not None:
+            for name in self._custom_columns:
+                df_dict.update({
+                    name: []
+                })
+
+        reverse_rule = mode in ["normal", "wicks", "reverse-wicks", "fake-r-wicks"]
+        fake_reverse_rule = mode in ["fake-r-nongap", "fake-r-wicks"]
+        same_direction_rule = mode in ["wicks", "nongap"]
+
+        prev_direction = 0
+        prev_close = 0
+        prev_close_up = 0
+        prev_close_down = 0
+        for price, direction, date, wick, volume, index in zip(prices, directions, dates, wicks, volumes, indexes):
+            if direction != 0:
+                df_dict["datetime"].append(date)
+                df_dict["close"].append(price)
+                df_dict["volume"].append(volume)
+
+            # Current Renko (UP)
+            if direction == 1.0:
+                df_dict["high"].append(price)
+                if self._custom_columns is not None:
+                    for name in self._custom_columns:
+                        df_dict[name].append(self._rsd[name][index])
+                # Previous same direction(UP)
+                if prev_direction == 1:
+                    df_dict["open"].append(wick if mode == "nongap" else prev_close_up)
+                    df_dict["low"].append(wick if same_direction_rule else prev_close_up)
+                # Previous reverse direction(DOWN)
+                else:
+                    if reverse_rule:
+                        df_dict["open"].append(prev_close + brick_size)
+                    elif mode == "fake-r-nongap":
+                        df_dict["open"].append(prev_close_down)
+                    else:
+                        df_dict["open"].append(wick)
+
+                    if mode == "normal":
+                        df_dict["low"].append(prev_close + brick_size)
+                    elif fake_reverse_rule:
+                        df_dict["low"].append(prev_close_down)
+                    else:
+                        df_dict["low"].append(wick)
+                prev_close_up = price
+            # Current Renko (DOWN)
+            elif direction == -1.0:
+                df_dict["low"].append(price)
+                if self._custom_columns is not None:
+                    for name in self._custom_columns:
+                        df_dict[name].append(self._rsd[name][index])
+                # Previous same direction(DOWN)
+                if prev_direction == -1:
+                    df_dict["open"].append(wick if mode == "nongap" else prev_close_down)
+                    df_dict["high"].append(wick if same_direction_rule else prev_close_down)
+                # Previous reverse direction(UP)
+                else:
+                    if reverse_rule:
+                        df_dict["open"].append(prev_close - brick_size)
+                    elif mode == "fake-r-nongap":
+                        df_dict["open"].append(prev_close_up)
+                    else:
+                        df_dict["open"].append(wick)
+
+                    if mode == "normal":
+                        df_dict["high"].append(prev_close - brick_size)
+                    elif fake_reverse_rule:
+                        df_dict["high"].append(prev_close_up)
+                    else:
+                        df_dict["high"].append(wick)
+                prev_close_down = price
+            # BEGIN OF DICT
+            else:
+                df_dict["datetime"].append(np.NaN)
+                df_dict["low"].append(np.NaN)
+                df_dict["close"].append(np.NaN)
+                df_dict["high"].append(np.NaN)
+                df_dict["open"].append(np.NaN)
+                df_dict["volume"].append(np.NaN)
+                if self._custom_columns is not None:
+                    for name in self._custom_columns:
+                        df_dict[name].append(np.NaN)
+
+            prev_direction = direction
+            prev_close = price
+
+        df = pd.DataFrame(df_dict)
+        # Removing the first 2 lines of DataFrame that are the beginning of respective loops (df_dict and self._rsd)
+        df.drop(df.head(2).index, inplace=True)
+        # Setting Index
+        df.index = pd.DatetimeIndex(df["datetime"])
+        df.drop(columns=['datetime'], inplace=True)
+
+        return df
+
+    def to_rws(self, use_iloc: int = None):
+        """
+        Transforms 'Renko Single Data' into a Dataframe,
+        which can be used as initial data in the 'RenkoWS' class. \n
+        The DatetimeIndex will be converted to Timestamp (from nanoseconds to milliseconds)
+
+        Parameters
+        ----------
+        use_iloc : int
+            * If positive: First nº rows will be returned
+            * If negative: Last nº rows will be returned
+
+        Returns
+        -------
+        x : dataframe
+            pandas.Dataframe
+        """
+        rws = pd.DataFrame(self._rsd)
+        rws.index = pd.DatetimeIndex(rws["date"]).asi8 // 10 ** 6  # Datetime to Timestamp (ns to ms)
+        rws.index.name = 'timestamp'
+        rws['timestamp'] = rws.index
+        rws['brick_size'] = self._brick_size
+
+        if use_iloc is not None:
+            if use_iloc < 0:
+                return rws.iloc[use_iloc:]
+            else:
+                return rws.iloc[:use_iloc]
+        else:
+            return rws
+
+
+class RenkoWS:
+    def __init__(self, ws_timestamp: int = None, ws_price: float = None,
+                 brick_size: float = None, brick_threshold: int = 1,
+                 external_df: pd.DataFrame = None, external_mode: str = 'wicks'):
+        """
+        Create real-time Renko charts, usually over a WebSocket connection.
+
+        Usage
+        -----
+        >> from renkodf import RenkoWS \n
+        >> r = RenkoWS(your combination) \n
+        >> # At every price change \n
+        >> r.add_prices(ws_timestamp, ws_price) \n
+        >> df = r.renko_animate() \n
+
+        Notes
+        -----
+        Only the following combinations are possible: \n
+        > RenkoWS(ws_timestamp, ws_price, brick_size) \n
+        > RenkoWS(external_df, external_mode) \n
+
+        Parameters
+        ----------
+        ws_timestamp : int
+            Timestamp in milliseconds.
+        ws_price : float
+            Self-explanatory.
+        brick_size : float
+            Cannot be less than or equal to 0.00...
+        brick_threshold : int
+            Number of bricks threshold before a new brick is formed.
+        external_df : dataframe
+            The dataframe made from Renko.to_rws()
+        external_mode : str
+            The method for building the external renko df, described in the 'Renko.renko_df()'.
+        """
+        if external_df is None:
+            if brick_size is None or brick_size <= 0:
+                raise ValueError("brick_size cannot be 'None' or '<= 0'")
+            if ws_price is None:
+                raise ValueError("ws_price cannot be 'None'")
+            if ws_timestamp is None:
+                raise ValueError("ws_timestamp cannot be 'None'")
+
+        self._brick_size = brick_size if external_df is None else external_df['brick_size'].iat[0]
+        self._brick_threshold = brick_threshold
+
+        initial_price = 0.0
+        if external_df is None:
+            initial_price = (ws_price // self._brick_size) * self._brick_size
+            self._rsd = {
+                "timestamp": [ws_timestamp],
+                "price": [initial_price],
+                "direction": [0],
+                "wick": [initial_price],
+                "volume": [1],
+            }
+        else:
+            self._rsd = {
+                "timestamp": external_df['timestamp'].to_list(),
+                "price": external_df['price'].to_list(),
+                "direction": external_df['direction'].to_list(),
+                "wick": external_df['wick'].to_list(),
+                "volume": external_df['volume'].to_list(),
+            }
+
+        if external_df is None:
+            initial_df = {
+                "timestamp": [ws_timestamp],
+                "open": [initial_price],
+                "high": [initial_price],
+                "low": [initial_price],
+                "close": [initial_price],
+                "volume": [1]
+            }
+            initial_df = pd.DataFrame(initial_df, columns=["timestamp", "open", "high", "low", "close", "volume"])
+            initial_df.index = pd.DatetimeIndex(
+                pd.to_datetime(initial_df["timestamp"].values.astype(np.int64), unit="ms"))
+            initial_df.drop(columns=['timestamp'], inplace=True)
+        else:
+            initial_df = self._renko_df(external_mode)
+
+        self.initial_df = initial_df
+
+        # For loop
+        self._volume_i = 1
+        self._wick_min_i = initial_price if external_df is None else external_df['price'].iat[-1]
+        self._wick_max_i = initial_price if external_df is None else external_df['price'].iat[-1]
+
+        self._ws_timestamp = ws_timestamp
+        self._ws_price = ws_price
+
+    def initial_dfs(self, mode: str = 'wicks'):
+        return self._renko_df(mode)
+
+    def add_prices(self, ws_timestamp: int, ws_price: float):
+        """
+        Determine if there are new bricks to add according to the current price relative to the previous renko.
+
+        Must be called at every price change.
+
+        Here, the 'Renko Single Data' is constructed.
+
+        Parameters
+        ----------
+        ws_timestamp : int
+            Timestamp in milliseconds.
+        ws_price : float
+            Self-explanatory.
+        """
+        self._ws_timestamp = ws_timestamp
+        self._ws_price = ws_price
+
+        self._wick_min_i = ws_price if ws_price < self._wick_min_i else self._wick_min_i
+        self._wick_max_i = ws_price if ws_price > self._wick_max_i else self._wick_max_i
+        self._volume_i += 1
+
+        last_price = self._rsd["price"][-1]
+        current_n_bricks = (ws_price - last_price) / self._brick_size
+        current_direction = np.sign(current_n_bricks)
+        if abs(current_n_bricks) < self._brick_threshold:
+            return
+        last_direction = self._rsd["direction"][-1]
+        is_same_direction = ((current_direction > 0 and last_direction >= 0)
+                             or (current_direction < 0 and last_direction <= 0))
+
+        # CURRENT PRICE in same direction of the LAST RENKO
+        total_same_bricks = current_n_bricks if is_same_direction else 0
+        # >= 2 can be a 'GAP' or 'OPPOSITE DIRECTION'.
+        # In both cases we add the current wick/volume to the first brick and 'reset' the value of both, since:
+        # If it's a GAP:
+        # - The following bricks after first brick will be 'artificial' since the price has 'skipped' that price region.
+        # - (the reason of 'totalSameBricks')
+        # If it's a OPPOSITE DIRECTION:
+        # - Only the first brick will be kept. (the reason of '2' multiply)
+        if not is_same_direction and abs(current_n_bricks) >= 2:
+            self._add_brick_loop(ws_timestamp, 2, current_direction, current_n_bricks)
+            total_same_bricks = current_n_bricks - 2 * current_direction
+
+        # Add all bricks in the same direction
+        for not_in_use in range(abs(int(total_same_bricks))):
+            self._add_brick_loop(ws_timestamp, 1, current_direction, current_n_bricks)
+
+    def _add_brick_loop(self, ws_timestamp, renko_multiply, current_direction, current_n_bricks):
+        last_price = self._rsd["price"][-1]
+        renko_price = last_price + (current_direction * renko_multiply * self._brick_size)
+        wick = self._wick_min_i if current_n_bricks > 0 else self._wick_max_i
+
+        to_add = [ws_timestamp, renko_price, current_direction, wick, self._volume_i]
+        for name, add in zip(list(self._rsd.keys()), to_add):
+            self._rsd[name].append(add)
+
+        self._volume_i = 1
+        self._wick_min_i = renko_price if current_n_bricks > 0 else self._wick_min_i
+        self._wick_max_i = renko_price if current_n_bricks < 0 else self._wick_max_i
+
+    def _renko_df(self, mode: str = "wicks"):
+        """
+        Transforms 'Renko Single Data' into OHLCV Dataframe.
+        """
+        _MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'fake-r-wicks', 'fake-r-nongap']
+        if mode not in _MODE_dict:
+            raise ValueError(f"Only {_MODE_dict} options are valid.")
+
+        timestamps = self._rsd["timestamp"]
+        prices = self._rsd["price"]
+        directions = self._rsd["direction"]
+        wicks = self._rsd["wick"]
+        volumes = self._rsd["volume"]
+        brick_size = self._brick_size
+
+        df_dict = {
+            "timestamp": [],
+            "open": [],
+            "high": [],
+            "low": [],
+            "close": [],
+            "volume": []
+        }
+
+        reverse_rule = mode in ["normal", "wicks", "reverse-wicks", "fake-r-wicks"]
+        fake_reverse_rule = mode in ["fake-r-nongap", "fake-r-wicks"]
+        same_direction_rule = mode in ["wicks", "nongap"]
+
+        prev_direction = 0
+        prev_close = 0
+        prev_close_up = 0
+        prev_close_down = 0
+        for price, direction, timestamp, wick, volume in zip(prices, directions, timestamps, wicks, volumes):
+            if direction != 0:
+                df_dict["timestamp"].append(timestamp)
+                df_dict["close"].append(price)
+                df_dict["volume"].append(volume)
+
+            # Current Renko (UP)
+            if direction == 1.0:
+                df_dict["high"].append(price)
+                # Previous same direction(UP)
+                if prev_direction == 1:
+                    df_dict["open"].append(wick if mode == "nongap" else prev_close_up)
+                    df_dict["low"].append(wick if same_direction_rule else prev_close_up)
+                # Previous reverse direction(DOWN)
+                else:
+                    if reverse_rule:
+                        df_dict["open"].append(prev_close + brick_size)
+                    elif mode == "fake-r-nongap":
+                        df_dict["open"].append(prev_close_down)
+                    else:
+                        df_dict["open"].append(wick)
+
+                    if mode == "normal":
+                        df_dict["low"].append(prev_close + brick_size)
+                    elif fake_reverse_rule:
+                        df_dict["low"].append(prev_close_down)
+                    else:
+                        df_dict["low"].append(wick)
+                prev_close_up = price
+            # Current Renko (DOWN)
+            elif direction == -1.0:
+                df_dict["low"].append(price)
+                # Previous same direction(DOWN)
+                if prev_direction == -1:
+                    df_dict["open"].append(wick if mode == "nongap" else prev_close_down)
+                    df_dict["high"].append(wick if same_direction_rule else prev_close_down)
+                # Previous reverse direction(UP)
+                else:
+                    if reverse_rule:
+                        df_dict["open"].append(prev_close - brick_size)
+                    elif mode == "fake-r-nongap":
+                        df_dict["open"].append(prev_close_up)
+                    else:
+                        df_dict["open"].append(wick)
+
+                    if mode == "normal":
+                        df_dict["high"].append(prev_close - brick_size)
+                    elif fake_reverse_rule:
+                        df_dict["high"].append(prev_close_up)
+                    else:
+                        df_dict["high"].append(wick)
+                prev_close_down = price
+            # BEGIN OF DICT
+            else:
+                df_dict["timestamp"].append(np.NaN)
+                df_dict["low"].append(np.NaN)
+                df_dict["close"].append(np.NaN)
+                df_dict["high"].append(np.NaN)
+                df_dict["open"].append(np.NaN)
+                df_dict["volume"].append(np.NaN)
+
+            prev_direction = direction
+            prev_close = price
+
+        df = pd.DataFrame(df_dict)
+        # Removing the first 2 lines of DataFrame that are the beginning of respective loops (df_dict and self._rsd)
+        df.drop(df.head(2).index, inplace=True)
+        # Setting Index
+        df.index = pd.DatetimeIndex(pd.to_datetime(df["timestamp"].values.astype(np.int64), unit="ms"))
+        df.index.name = 'datetime'
+        df.drop(columns=['timestamp'], inplace=True)
+
+        return df
+
+    def renko_animate(self, mode: str = 'wicks', max_len: int = 500, keep: int = 250):
+        """
+        Should be called after 'add_prices(ws_timestamp, ws_price)'
+
+        Parameters
+        ----------
+        mode : str
+            The method for building the renko dataframe, described in the Renko.renko_df().
+        max_len : int
+            Once reached, the 'Single Renko Data' values will be deleted.
+        keep : int
+            Keep last nº values after deletion.
+
+        Returns
+        -------
+        x : dataframe
+            pandas.Dataframe
+        """
+        renko_df = self._renko_df(mode)
+
+        ws_timestamp = self._ws_timestamp
+        ws_price = self._ws_price
+
+        raw_ws = {
+            "timestamp": [ws_timestamp],
+            "open": [ws_price],
+            "high": [ws_price],
+            "low": [ws_price],
+            "close": [ws_price],
+            "volume": self._volume_i
+        }
+        length = len(renko_df)
+        if length < 1:
+            raw_ws["open"][-1] = self.initial_df["close"].iat[-1]
+            raw_ws["high"][-1] = self._wick_max_i
+            raw_ws["low"][-1] = self._wick_min_i
+
+            df_ws = pd.DataFrame(raw_ws)
+            df_ws.index = pd.DatetimeIndex(pd.to_datetime(df_ws["timestamp"].values.astype(np.int64), unit="ms"))
+            df_ws.index.name = 'datetime'
+            df_ws.drop(columns=['timestamp'], inplace=True)
+
+            return pd.concat([self.initial_df, df_ws])
+
+        # Forming wick
+        raw_ws["high"][-1] = self._wick_max_i if mode != 'normal' else ws_price
+        raw_ws["low"][-1] = self._wick_min_i if mode != 'normal' else ws_price
+
+        nongap_rule = mode in ['nongap', 'reverse-nongap', 'fake-r-nongap']
+        last_renko_close = renko_df["close"].iat[-1]
+        last_renko_open = renko_df["open"].iat[-1]
+        # Last Renko (UP)
+        if last_renko_close > last_renko_open:
+            if ws_price > last_renko_close:
+                raw_ws["open"][-1] = self._wick_min_i if nongap_rule else last_renko_close
+                if mode == "normal":
+                    raw_ws["low"][-1] = last_renko_close
+            else:
+                if ws_price < last_renko_open:
+                    raw_ws["open"][-1] = self._wick_max_i if nongap_rule else last_renko_open
+                    if mode == "normal":
+                        raw_ws["high"][-1] = last_renko_open
+        # Last Renko (DOWN)
+        else:
+            if ws_price < last_renko_close:
+                raw_ws["open"][-1] = self._wick_max_i if nongap_rule else last_renko_close
+                if mode == "normal":
+                    raw_ws["high"][-1] = last_renko_close
+            else:
+                if ws_price > last_renko_open:
+                    raw_ws["open"][-1] = self._wick_min_i if nongap_rule else last_renko_open
+                    if mode == "normal":
+                        raw_ws["low"][-1] = last_renko_open
+
+        df_ws = pd.DataFrame(raw_ws)
+        df_ws.index = pd.DatetimeIndex(pd.to_datetime(df_ws["timestamp"].values.astype(np.int64), unit="ms"))
+        df_ws.index.name = 'datetime'
+        df_ws.drop(columns=['timestamp'], inplace=True)
+
+        if length >= max_len:
+            # Cleaning dictionary, keeping keys and nº last values/bricks
+            for value in self._rsd.values():
+                del value[:-keep]
+            gc.collect()
+
+        return pd.concat([renko_df, df_ws])

@@ -65,7 +65,8 @@ def process_h5(file_path, brick_size, brick_threshold):
         df.dropna(subset=["datetime"], inplace=True)
         
         # Generate High, Low, Close prices using Renko
-        renko_chart = RenkoWS(brick_size=brick_size, brick_threshold=brick_threshold)
+        initial_price = df['close'].iloc[0]
+        renko_chart = RenkoWS(ws_price=initial_price, brick_size=brick_size, brick_threshold=brick_threshold)
         renko_chart.add_prices(df['datetime'].values, df['close'].values)
         df_wicks = renko_chart.renko_animate('wicks')
         
