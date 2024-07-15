@@ -12,6 +12,7 @@ from qiskit_algorithms import VQE
 from qiskit.primitives import Sampler, Estimator
 from qiskit_algorithms.optimizers import COBYLA
 from renkodf import Renko  # Ensure renkodf.py is in the same directory
+from tqdm import tqdm
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -61,7 +62,7 @@ def process_h5(file_path, brick_size, brick_threshold):
         timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
         timestamps = pd.to_datetime(timestamps, errors='coerce')
         prices = f['L2/Price'][:].astype(float)
-        df = pd.DataFrame({"datetime": timestamps, "close": prices})
+        df = pd.DataFrame({"datetime": timestamps, "Close": prices})
         df.dropna(subset=["datetime"], inplace=True)
         
         # Generate High, Low, Close prices using Renko
@@ -77,14 +78,6 @@ def load_data_for_date(date, brick_size, brick_threshold):
         df = process_h5(file_path, brick_size, brick_threshold)
         return df
     return None
-
-def data_generator(dates, brick_size, brick_threshold):
-    for date in dates:
-        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None:
-            yield df_ticks
-        else:
-            print(f"No data for {date.strftime('%Y-%m-%d')}")
 
 class Delta2Strategy:
     def __init__(self, data, starting_capital=300000):
@@ -293,11 +286,11 @@ class Delta2Strategy:
         if self.enable_fib_weight_ma_cross:
             self._calculate_fib_weighted_ma()
 
-        for i in range(len(self.data)):
+        for i in tqdm(range(len(self.data)), desc="Executing Strategy"):
             self._bar_update(i)
 
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    for date in market_replay_data:
+    for date in tqdm(market_replay_data, desc="Backtesting"):
         df_ticks = load_data_for_date(date, brick_size, brick_threshold)
         if df_ticks is not None:
             strategy.data = df_ticks
