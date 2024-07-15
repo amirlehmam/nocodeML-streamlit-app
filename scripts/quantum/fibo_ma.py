@@ -11,7 +11,7 @@ from qiskit_machine_learning.algorithms import QSVC
 from qiskit_algorithms import VQE
 from qiskit.primitives import Sampler, Estimator
 from qiskit_algorithms.optimizers import COBYLA
-from renkodf import RenkoWS  # Ensure renkodf.py is in the same directory
+from renkodf import Renko  # Ensure renkodf.py is in the same directory
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -65,16 +65,10 @@ def process_h5(file_path, brick_size, brick_threshold):
         df.dropna(subset=["datetime"], inplace=True)
         
         # Generate High, Low, Close prices using Renko
-        initial_price = df['close'].iloc[0]
-        renko_chart = RenkoWS(ws_price=initial_price, brick_size=brick_size, brick_threshold=brick_threshold)
-        renko_chart.add_prices(df['datetime'].values, df['close'].values)
-        df_wicks = renko_chart.renko_animate('wicks')
+        renko = Renko(df, brick_size, brick_threshold=brick_threshold)
+        df_renko = renko.renko_df('wicks')
         
-        df['High'] = df_wicks['High']
-        df['Low'] = df_wicks['Low']
-        df['Close'] = df_wicks['Close']
-        
-        return df
+        return df_renko
 
 def load_data_for_date(date, brick_size, brick_threshold):
     filename = date.strftime('%Y%m%d') + ".h5"
@@ -312,25 +306,22 @@ def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold)
         else:
             print(f"No data for {date}")
 
-# Get user inputs
-available_dates = fetch_available_dates()
+if __name__ == "__main__":
+    available_dates = fetch_available_dates()
     
-print("Available dates:")
-for date in available_dates:
-    print(date)
+    print("Available dates:")
+    for date in available_dates:
+        print(date)
     
-start_date_str = input("Enter the start date (YYYYMMDD): ")
-end_date_str = input("Enter the end date (YYYYMMDD): ")
-brick_size = int(input("Enter the brick size: "))
-brick_threshold = int(input("Enter the brick threshold: "))
+    start_date = input("Enter the start date (YYYYMMDD): ")
+    end_date = input("Enter the end date (YYYYMMDD): ")
+    brick_size = float(input("Enter the brick size: "))
+    brick_threshold = int(input("Enter the brick threshold: "))
 
-start_date = pd.to_datetime(start_date_str, format='%Y%m%d')
-end_date = pd.to_datetime(end_date_str, format='%Y%m%d')
+    dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
-market_replay_data = pd.date_range(start=start_date, end=end_date, freq='D')
+    # Initialize strategy
+    delta2_strategy = Delta2Strategy(data=load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d'), brick_size, brick_threshold))
 
-# Initialize strategy
-delta2_strategy = Delta2Strategy(data=load_data_for_date(start_date, brick_size, brick_threshold))
-
-# Backtest strategy
-backtest_strategy(delta2_strategy, market_replay_data, brick_size, brick_threshold)
+    # Backtest strategy
+    backtest_strategy(delta2_strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)

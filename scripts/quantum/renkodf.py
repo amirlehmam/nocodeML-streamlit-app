@@ -13,14 +13,14 @@ _MODE_dict = ['normal', 'wicks', 'nongap', 'reverse-wicks', 'reverse-nongap', 'f
 
 
 class Renko:
-    def __init__(self, df: pd.DataFrame, brick_size: float, add_columns: list = None, show_progress: bool = False):
+    def __init__(self, df: pd.DataFrame, brick_size: float, brick_threshold: int = 1, add_columns: list = None, show_progress: bool = False):
         """
         Create Renko OHLCV dataframe with existing Ticks data.
 
         Usage
         ------
         >> from renkodf import Renko \n
-        >> r = Renko(df_ticks, brick_size) \n
+        >> r = Renko(df_ticks, brick_size, brick_threshold) \n
         >> df = r.renkodf() \n
 
         Parameters
@@ -33,6 +33,8 @@ class Renko:
 
         brick_size : float
             Cannot be less than or equal to 0.00...
+        brick_threshold : int
+            Number of bricks threshold before a new brick is formed.
         add_columns : list
             A list of strings(column names) to be added to the final result, such as spread, quantity, etc.
         show_progress : bool
@@ -42,6 +44,8 @@ class Renko:
 
         if brick_size is None or brick_size <= 0:
             raise ValueError("brick_size cannot be 'None' or '<= 0'")
+        if brick_threshold is None or brick_threshold <= 0:
+            raise ValueError("brick_threshold cannot be 'None' or '<= 0'")
         if 'datetime' not in df.columns:
             df["datetime"] = df.index
         if 'close' not in df.columns:
@@ -51,6 +55,7 @@ class Renko:
                 raise ValueError(f"One or more of {add_columns} columns don't exist!")
 
         self._brick_size = brick_size
+        self._brick_threshold = brick_threshold
         self._custom_columns = add_columns
         self._df_len = len(df["close"])
         self._show_progress = show_progress
@@ -93,7 +98,7 @@ class Renko:
         last_price = self._rsd["price"][-1]
         current_n_bricks = (df_close - last_price) / self._brick_size
         current_direction = np.sign(current_n_bricks)
-        if current_direction == 0:
+        if abs(current_n_bricks) < self._brick_threshold:
             return
         last_direction = self._rsd["direction"][-1]
         is_same_direction = ((current_direction > 0 and last_direction >= 0)
@@ -109,17 +114,17 @@ class Renko:
         # If it's a OPPOSITE DIRECTION:
         # - Only the first brick will be kept. (the reason of '2' multiply)
         if not is_same_direction and abs(current_n_bricks) >= 2:
-            self._add_brink_loop(df, i, 2, current_direction, current_n_bricks)
+            self._add_brick_loop(df, i, 2, current_direction, current_n_bricks)
             total_same_bricks = current_n_bricks - 2 * current_direction
 
         # Add all bricks in the same direction
         for not_in_use in range(abs(int(total_same_bricks))):
-            self._add_brink_loop(df, i, 1, current_direction, current_n_bricks)
+            self._add_brick_loop(df, i, 1, current_direction, current_n_bricks)
 
         if self._show_progress:
             print(f"\r {round(float((i + 1) / self._df_len * 100), 2)}%", end='')
 
-    def _add_brink_loop(self, df, i, renko_multiply, current_direction, current_n_bricks):
+    def _add_brick_loop(self, df, i, renko_multiply, current_direction, current_n_bricks):
         last_price = self._rsd["price"][-1]
         renko_price = last_price + (current_direction * renko_multiply * self._brick_size)
         wick = self._wick_min_i if current_n_bricks > 0 else self._wick_max_i
@@ -339,7 +344,6 @@ class Renko:
                 return rws.iloc[:use_iloc]
         else:
             return rws
-
 
 class RenkoWS:
     def __init__(self, ws_timestamp: int = None, ws_price: float = None,
