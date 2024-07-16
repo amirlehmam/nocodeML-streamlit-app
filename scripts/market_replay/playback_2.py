@@ -112,15 +112,15 @@ class Delta2Strategy:
         self._initialize_quantum_components()
 
     def _initialize_parameters(self):
-        self.bars_required_to_trade = 200
+        self.bars_required_to_trade = 20
         self.default_quantity = 1
         self.enable_fib_weight_ma_cross = True
-        self.fib_weight_ma_period = 10
+        self.fib_weight_ma_period = 9
         self.smoothing_simple_ma_period = 20
-        self.acceleration = 0.02
-        self.max_acceleration = 0.2
-        self.acceleration_step = 0.02
-        self.cooldown_period = 10  # Number of bars to wait before considering a new trade
+        self.acceleration = 0.0162  
+        self.max_acceleration = 0.162
+        self.acceleration_step = 0.0162
+        self.cooldown_period = 1  # Number of bars to wait before considering a new trade
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -232,8 +232,10 @@ class Delta2Strategy:
         if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
             if self.fib_weighted_ma.iloc[i] > self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] <= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['buy_signal'][i] = True
+                self.signals['sell_signal'][i] = False
             elif self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['sell_signal'][i] = True
+                self.signals['buy_signal'][i] = False
             else:
                 self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False  # No signal
 
@@ -262,23 +264,21 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            if 'PSAR' in self.data.columns:
-                self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price + 30  # Adjust take profit level if needed
+            self.stop_loss.iloc[index] = self.entry_price - 90
+            self.take_profit.iloc[index] = self.entry_price + 90  # Adjust take profit level if needed
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            if 'PSAR' in self.data.columns:
-                self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price - 30  # Adjust take profit level if needed
+            self.stop_loss.iloc[index] = self.entry_price + 90
+            self.take_profit.iloc[index] = self.entry_price - 90  # Adjust take profit level if needed
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
         print(f"Exiting position at index {index}")
         if self.position > 0:
-            self.pnl += (self.data['Close'].iloc[index] - self.entry_price) * self.default_quantity
+            self.pnl += (self.data['Close'].iloc[index] - self.entry_price) * self.default_quantity * 20
         elif self.position < 0:
-            self.pnl += (self.entry_price - self.data['Close'].iloc[index]) * self.default_quantity
+            self.pnl += (self.entry_price - self.data['Close'].iloc[index]) * self.default_quantity * 20
         self.position = 0
         self.entry_price = 0.0
         self.stop_loss.iloc[index] = 0.0
@@ -452,7 +452,7 @@ def main():
     ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=500, repeat=False, cache_frame_data=False)  # Throttle the animation with interval=500
     
     print("Starting animation")
-    plt.show()
+    mpf.show()
     print("Animation done")
 
 if __name__ == "__main__":
