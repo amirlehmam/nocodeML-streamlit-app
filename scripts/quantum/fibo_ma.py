@@ -305,6 +305,33 @@ class Delta2Strategy:
         for i in range(len(self.data)):
             self._bar_update(i)
 
+    def detailed_analysis(self):
+        trades_df = pd.DataFrame(self.trade_log)
+        if trades_df.empty:
+            print("No trades were made.")
+            return
+
+        total_trades = len(trades_df) // 2
+        winning_trades = trades_df[trades_df['pnl'] > 0]
+        losing_trades = trades_df[trades_df['pnl'] <= 0]
+
+        total_pnl = trades_df['pnl'].iloc[-1] - trades_df['pnl'].iloc[0] + self.starting_capital
+        average_pnl_per_trade = trades_df['pnl'].diff().mean()
+        max_drawdown = (trades_df['pnl'].cummax() - trades_df['pnl']).max()
+        win_rate = len(winning_trades) / total_trades * 100 if total_trades > 0 else 0
+
+        print("\nDetailed Trade Analysis:")
+        print(f"Total Trades: {total_trades}")
+        print(f"Winning Trades: {len(winning_trades)}")
+        print(f"Losing Trades: {len(losing_trades)}")
+        print(f"Win Rate: {win_rate:.2f}%")
+        print(f"Total PnL: {total_pnl:.2f}")
+        print(f"Average PnL per Trade: {average_pnl_per_trade:.2f}")
+        print(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+        print("\nTrade Log:")
+        print(trades_df)
+
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
     for date in tqdm(market_replay_data, desc="Backtesting"):
         df_ticks = load_data_for_date(date, brick_size, brick_threshold)
@@ -318,6 +345,9 @@ def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold)
         else:
             print(f"No data for {date}")
 
+    strategy.detailed_analysis()
+
+# Execute the strategy
 if __name__ == "__main__":
     available_dates = fetch_available_dates()
     
@@ -337,4 +367,3 @@ if __name__ == "__main__":
     delta2_strategy = Delta2Strategy(data=initial_data)
     
     backtest_strategy(delta2_strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
-    
