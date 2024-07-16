@@ -97,6 +97,7 @@ class Delta2Strategy:
         self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
+        self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)  # Cooldown period after a trade
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
@@ -111,6 +112,7 @@ class Delta2Strategy:
         self.acceleration = 0.02
         self.max_acceleration = 0.2
         self.acceleration_step = 0.02
+        self.cooldown_period = 10  # Number of bars to wait before considering a new trade
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -139,6 +141,9 @@ class Delta2Strategy:
         self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smoothing_simple_ma_period).mean()
 
     def _calculate_psar(self):
+        if self.data.empty:
+            return
+
         high = self.data['High']
         low = self.data['Low']
         close = self.data['Close']
@@ -221,19 +226,33 @@ class Delta2Strategy:
                 self.signals['buy_signal'][i] = True
             if self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['sell_signal'][i] = True
+        
+        # Log signal generation for debugging
+        if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
+            print(f"Index {i}: Buy Signal - {self.signals['buy_signal'][i]}, Sell Signal - {self.signals['sell_signal'][i]}")
 
     def _manage_positions(self, i):
+        # Log the current position and signal status for debugging
+        print(f"Index {i}: Current Position - {self.position}, Entry Price - {self.entry_price}")
+        
         if self.position == 0:
-            if self.signals['buy_signal'][i]:
-                self._enter_position(i, 'long')
-            elif self.signals['sell_signal'][i]:
-                self._enter_position(i, 'short')
+            if not self.cooldown.iloc[i]:
+                if self.signals['buy_signal'][i]:
+                    self._enter_position(i, 'long')
+                elif self.signals['sell_signal'][i]:
+                    self._enter_position(i, 'short')
         elif self.position > 0:
             if self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] >= self.take_profit.iloc[i]:
                 self._exit_position(i)
+                self.cooldown.iloc[i] = self.cooldown_period
         elif self.position < 0:
             if self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] <= self.take_profit.iloc[i]:
                 self._exit_position(i)
+                self.cooldown.iloc[i] = self.cooldown_period
+
+        # Update cooldown period
+        if self.cooldown.iloc[i] > 0:
+            self.cooldown.iloc[i + 1:i + self.cooldown_period + 1] = self.cooldown.iloc[i] - 1
 
     def _enter_position(self, index, direction):
         print(f"Entering {direction} position at index {index}")
@@ -285,6 +304,8 @@ class Delta2Strategy:
         self.trade_log.append(log_exit)
 
     def execute_strategy(self):
+        if self.data.empty:
+            return
         self._calculate_psar()
         print("DataFrame columns before executing strategy:")
         print(self.data.columns)
@@ -326,7 +347,7 @@ class Delta2Strategy:
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
     for date in tqdm(market_replay_data, desc="Backtesting"):
         df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None:
+        if df_ticks is not None and not df_ticks.empty:
             strategy.data = df_ticks
             print("Backtesting DataFrame before execution:")
             print(strategy.data.head())
