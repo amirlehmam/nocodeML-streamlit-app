@@ -140,6 +140,8 @@ class Delta2Strategy:
 
     def _initialize_psar(self):
         self.data['PSAR'] = self.calculate_psar()
+        print("PSAR Indicator Head:")
+        print(self.data[['PSAR']].head())
 
     def calculate_psar(self):
         high = self.data['High']
@@ -191,9 +193,7 @@ class Delta2Strategy:
                     if i > 2 and high.iloc[i - 2] > psar[i]:
                         psar[i] = high.iloc[i - 2]
 
-        print("PSAR Indicator Head:")
-        print(self.data[['PSAR']].head())
-        return psar
+        return pd.Series(psar, index=self.data.index)
 
     def _initialize_quantum_components(self):
         self.sampler = Sampler()
