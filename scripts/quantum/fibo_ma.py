@@ -4,6 +4,7 @@ import h5py
 import psycopg2
 import tempfile
 from datetime import datetime
+from concurrent.futures import ProcessPoolExecutor
 from qiskit_aer import Aer
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import ZZFeatureMap, TwoLocal
@@ -11,7 +12,7 @@ from qiskit_machine_learning.algorithms import QSVC
 from qiskit_algorithms import VQE
 from qiskit.primitives import Sampler, Estimator
 from qiskit_algorithms.optimizers import COBYLA
-from renkodf import Renko  # Ensure renkodf.py is in the same directory
+from renkodf import Renko
 from tqdm import tqdm
 
 # PostgreSQL database credentials
@@ -133,6 +134,12 @@ class Delta2Strategy:
         self.fib_weightings = self.fib_weightings[::-1]
         self.sum_of_fib_weights = np.sum(self.fib_weightings)
 
+    def _calculate_fib_weighted_ma(self):
+        weights = np.arange(1, self.fib_weight_ma_period + 1)
+        self.data['fib_weighted_ma'] = self.data['Close'].rolling(window=self.fib_weight_ma_period).apply(
+            lambda prices: np.dot(prices, weights) / weights.sum(), raw=True)
+        self.data['smoothed_fib_weighted_ma'] = self.data['fib_weighted_ma'].rolling(window=self.smoothing_simple_ma_period).mean()
+
     def calculate_zlema(self, period):
         return self.data['Close'].ewm(span=period).mean()
 
@@ -152,46 +159,46 @@ class Delta2Strategy:
         max_af = 0.2
         psar = np.zeros(len(close))
         bull = True
-        ep = low[0]
-        hp = high[0]
-        lp = low[0]
+        ep = low.iloc[0]
+        hp = high.iloc[0]
+        lp = low.iloc[0]
 
         for i in range(1, len(close)):
             psar[i] = psar[i - 1] + af * (hp if bull else lp - psar[i - 1])
             reverse = False
 
             if bull:
-                if low[i] < psar[i]:
+                if low.iloc[i] < psar[i]:
                     bull = False
                     psar[i] = hp
-                    lp = low[i]
+                    lp = low.iloc[i]
                     af = 0.02
                     reverse = True
             else:
-                if high[i] > psar[i]:
+                if high.iloc[i] > psar[i]:
                     bull = True
                     psar[i] = lp
-                    hp = high[i]
+                    hp = high.iloc[i]
                     af = 0.02
                     reverse = True
 
             if not reverse:
                 if bull:
-                    if high[i] > hp:
-                        hp = high[i]
+                    if high.iloc[i] > hp:
+                        hp = high.iloc[i]
                         af = min(af + 0.02, max_af)
-                    if i > 1 and low[i - 1] < psar[i]:
-                        psar[i] = low[i - 1]
-                    if i > 2 and low[i - 2] < psar[i]:
-                        psar[i] = low[i - 2]
+                    if i > 1 and low.iloc[i - 1] < psar[i]:
+                        psar[i] = low.iloc[i - 1]
+                    if i > 2 and low.iloc[i - 2] < psar[i]:
+                        psar[i] = low.iloc[i - 2]
                 else:
-                    if low[i] < lp:
-                        lp = low[i]
+                    if low.iloc[i] < lp:
+                        lp = low.iloc[i]
                         af = min(af + 0.02, max_af)
-                    if i > 1 and high[i - 1] > psar[i]:
-                        psar[i] = high[i - 1]
-                    if i > 2 and high[i - 2] > psar[i]:
-                        psar[i] = high[i - 2]
+                    if i > 1 and high.iloc[i - 1] > psar[i]:
+                        psar[i] = high.iloc[i - 1]
+                    if i > 2 and high.iloc[i - 2] > psar[i]:
+                        psar[i] = high.iloc[i - 2]
 
         self.data['PSAR'] = psar
         return psar
@@ -228,10 +235,10 @@ class Delta2Strategy:
             self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'], i)
 
     def _cross_above(self, series1, series2, i):
-        return series1[i-1] < series2[i-1] and series1[i] > series2[i]
+        return series1.iloc[i-1] < series2.iloc[i-1] and series1.iloc[i] > series2.iloc[i]
 
     def _cross_below(self, series1, series2, i):
-        return series1[i-1] > series2[i-1] and series1[i] < series2[i]
+        return series1.iloc[i-1] > series2.iloc[i-1] and series1.iloc[i] < series2.iloc[i]
 
     def _manage_positions(self, i):
         if self.position == 0:
@@ -240,34 +247,34 @@ class Delta2Strategy:
             elif self.signals['sell_signal'][i]:
                 self._enter_position(i, 'short')
         elif self.position > 0:
-            if self.signals['sell_signal'][i] or self.data['Close'][i] <= self.stop_loss[i] or self.data['Close'][i] >= self.take_profit[i]:
+            if self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] >= self.take_profit.iloc[i]:
                 self._exit_position(i)
         elif self.position < 0:
-            if self.signals['buy_signal'][i] or self.data['Close'][i] >= self.stop_loss[i] or self.data['Close'][i] <= self.take_profit[i]:
+            if self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] <= self.take_profit.iloc[i]:
                 self._exit_position(i)
 
     def _enter_position(self, index, direction):
         if direction == 'long':
             self.position = self.default_quantity
-            self.entry_price = self.data['Close'][index]
-            self.stop_loss[index] = self.data['PSAR'][index]
-            self.take_profit[index] = self.entry_price + 2 * self.data['atr'][index]
+            self.entry_price = self.data['Close'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.take_profit.iloc[index] = self.entry_price + 2 * self.data['atr'].iloc[index]
         elif direction == 'short':
             self.position = -self.default_quantity
-            self.entry_price = self.data['Close'][index]
-            self.stop_loss[index] = self.data['PSAR'][index]
-            self.take_profit[index] = self.entry_price - 2 * self.data['atr'][index]
+            self.entry_price = self.data['Close'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.take_profit.iloc[index] = self.entry_price - 2 * self.data['atr'].iloc[index]
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
         if self.position > 0:
-            self.pnl += (self.data['Close'][index] - self.entry_price) * self.default_quantity
+            self.pnl += (self.data['Close'].iloc[index] - self.entry_price) * self.default_quantity
         elif self.position < 0:
-            self.pnl += (self.entry_price - self.data['Close'][index]) * self.default_quantity
+            self.pnl += (self.entry_price - self.data['Close'].iloc[index]) * self.default_quantity
         self.position = 0
         self.entry_price = 0.0
-        self.stop_loss[index] = 0.0
-        self.take_profit[index] = 0.0
+        self.stop_loss.iloc[index] = 0.0
+        self.take_profit.iloc[index] = 0.0
         self._log_exit(index)
 
     def _log_entry(self, index, direction):
@@ -275,7 +282,7 @@ class Delta2Strategy:
             'timestamp': self.data.index[index],
             'action': 'enter',
             'direction': direction,
-            'price': self.data['Close'][index],
+            'price': self.data['Close'].iloc[index],
             'quantity': self.default_quantity,
             'position': self.position,
             'pnl': self.pnl
@@ -286,7 +293,7 @@ class Delta2Strategy:
         log_exit = {
             'timestamp': self.data.index[index],
             'action': 'exit',
-            'price': self.data['Close'][index],
+            'price': self.data['Close'].iloc[index],
             'quantity': self.default_quantity,
             'position': self.position,
             'pnl': self.pnl
@@ -301,14 +308,19 @@ class Delta2Strategy:
             self._bar_update(i)
 
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    for date in tqdm(market_replay_data, desc="Backtesting"):
-        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None:
-            strategy.data = df_ticks
-            strategy.execute_strategy()
-            print(f"PNL for {date}: {strategy.pnl}")
-        else:
-            print(f"No data for {date}")
+    with ProcessPoolExecutor() as executor:
+        futures = []
+        for date in market_replay_data:
+            futures.append(executor.submit(load_data_for_date, date, brick_size, brick_threshold))
+        
+        for future in tqdm(futures, desc="Backtesting"):
+            df_ticks = future.result()
+            if df_ticks is not None:
+                strategy.data = df_ticks
+                strategy.execute_strategy()
+                print(f"PNL for {df_ticks.index[0].date()}: {strategy.pnl}")
+            else:
+                print(f"No data for {df_ticks.index[0].date()}")
 
 if __name__ == "__main__":
     available_dates = fetch_available_dates()
