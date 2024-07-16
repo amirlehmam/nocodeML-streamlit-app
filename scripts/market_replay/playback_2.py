@@ -6,6 +6,7 @@ import h5py
 import psycopg2
 import tempfile
 from tqdm import tqdm
+from datetime import datetime, timedelta
 from qiskit_aer import Aer
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import ZZFeatureMap, TwoLocal
@@ -13,7 +14,6 @@ from qiskit_machine_learning.algorithms import QSVC
 from qiskit_algorithms import VQE
 from qiskit.primitives import Sampler, Estimator
 from qiskit_algorithms.optimizers import COBYLA
-from datetime import datetime, timedelta
 
 # Assuming renkodf.py is in the same directory
 from renkodf import RenkoWS
@@ -449,10 +449,10 @@ def main():
     delta2_strategy = Delta2Strategy(data=initial_data)
     
     data = data_generator(dates, step)
-    ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=100, repeat=False)
+    ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=500, repeat=False, cache_frame_data=False)  # Throttle the animation with interval=500
     
     print("Starting animation")
-    mpf.show()
+    plt.show()
     print("Animation done")
 
 if __name__ == "__main__":
