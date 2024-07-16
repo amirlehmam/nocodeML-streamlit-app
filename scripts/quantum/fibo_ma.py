@@ -337,3 +337,4 @@ if __name__ == "__main__":
     delta2_strategy = Delta2Strategy(data=initial_data)
     
     backtest_strategy(delta2_strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
+    
