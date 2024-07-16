@@ -118,7 +118,7 @@ class Delta2Strategy:
         self.zlema8 = self.calculate_zlema(8)
         self.zlema62 = self.calculate_zlema(62)
         self.atr = self.calculate_atr(14)
-        self.psar = self.calculate_psar()
+        self.data['PSAR'] = self.calculate_psar()
 
         # Print indicators to verify
         print("PSAR Indicator Head:")
@@ -204,7 +204,6 @@ class Delta2Strategy:
                     if i > 2 and high.iloc[i - 2] > psar[i]:
                         psar[i] = high.iloc[i - 2]
 
-        self.data['PSAR'] = psar
         return psar
 
     def _initialize_quantum_components(self):
