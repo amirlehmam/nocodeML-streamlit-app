@@ -129,6 +129,17 @@ class Delta2Strategy:
         self.fib_weightings = self.fib_weightings[::-1]
         self.sum_of_fib_weights = np.sum(self.fib_weightings)
 
+    def _calculate_fib_weighted_ma(self):
+        close = self.data['Close']
+        fib_ma = np.zeros(len(close))
+        
+        for i in range(len(close)):
+            if i >= self.fib_weight_ma_period - 1:
+                fib_ma[i] = np.dot(close.iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings) / self.sum_of_fib_weights
+        
+        self.data['fib_weighted_ma'] = fib_ma
+        self.data['smoothed_fib_weighted_ma'] = self.data['fib_weighted_ma'].rolling(window=self.smoothing_simple_ma_period).mean()
+
     def calculate_zlema(self, period):
         return self.data['Close'].ewm(span=period).mean()
 
@@ -208,22 +219,15 @@ class Delta2Strategy:
 
     def _initialize_vqe(self):
         optimizer = COBYLA()
-        self.vqe = VQE(self.variational_circuit, optimizer=optimizer, quantum_instance=self.estimator)
+        self.vqe = VQE(self.variational_circuit, self.estimator, optimizer=optimizer)
 
     def _bar_update(self, i):
-        if i < self.bars_required_to_trade:
-            return
-
-        if self.enable_fib_weight_ma_cross:
-            self._calculate_fib_weighted_ma()
-
         self._generate_signals(i)
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        if self.enable_fib_weight_ma_cross:
-            self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['Close'], i)
-            self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['Close'], i)
+        self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['Close'], i)
+        self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['Close'], i)
 
     def _cross_above(self, series1, series2, i):
         return series1.iloc[i-1] < series2.iloc[i-1] and series1.iloc[i] > series2.iloc[i]
