@@ -65,9 +65,20 @@ def process_h5(file_path, brick_size, brick_threshold):
         df = pd.DataFrame({"datetime": timestamps, "close": prices})
         df.dropna(subset=["datetime"], inplace=True)
         
+        # Print the structure of the initial DataFrame
+        print("Initial DataFrame:")
+        print(df.head())
+        
         # Generate High, Low, Close prices using Renko
         renko = Renko(df, brick_size, brick_threshold=brick_threshold)
         df_renko = renko.renko_df('wicks')
+        
+        # Rename columns to match the expected format
+        df_renko.rename(columns={"close": "Close", "open": "Open", "high": "High", "low": "Low", "volume": "Volume"}, inplace=True)
+        
+        # Print the structure of the Renko DataFrame
+        print("Renko DataFrame:")
+        print(df_renko.head())
         
         return df_renko
 
