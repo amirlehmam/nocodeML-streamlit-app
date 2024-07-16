@@ -4,7 +4,7 @@ import h5py
 import psycopg2
 import tempfile
 from datetime import datetime
-from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
 from qiskit_aer import Aer
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import ZZFeatureMap, TwoLocal
@@ -13,7 +13,6 @@ from qiskit_algorithms import VQE
 from qiskit.primitives import Sampler, Estimator
 from qiskit_algorithms.optimizers import COBYLA
 from renkodf import Renko
-from tqdm import tqdm
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -224,17 +223,12 @@ class Delta2Strategy:
         if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
             if self.fib_weighted_ma.iloc[i] > self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] <= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['buy_signal'][i] = True
-            if self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
+            elif self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['sell_signal'][i] = True
-        
-        # Log signal generation for debugging
-        if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
-            print(f"Index {i}: Buy Signal - {self.signals['buy_signal'][i]}, Sell Signal - {self.signals['sell_signal'][i]}")
+            else:
+                self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False  # No signal
 
     def _manage_positions(self, i):
-        # Log the current position and signal status for debugging
-        print(f"Index {i}: Current Position - {self.position}, Entry Price - {self.entry_price}")
-        
         if self.position == 0:
             if not self.cooldown.iloc[i]:
                 if self.signals['buy_signal'][i]:
@@ -259,12 +253,14 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            if 'PSAR' in self.data.columns:
+                self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
             self.take_profit.iloc[index] = self.entry_price + 20
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            if 'PSAR' in self.data.columns:
+                self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
             self.take_profit.iloc[index] = self.entry_price - 20
         self._log_entry(index, direction)
 
@@ -291,6 +287,7 @@ class Delta2Strategy:
             'pnl': self.pnl
         }
         self.trade_log.append(log_entry)
+        print(f"Trade Entered: {log_entry}")
 
     def _log_exit(self, index):
         log_exit = {
@@ -302,11 +299,11 @@ class Delta2Strategy:
             'pnl': self.pnl
         }
         self.trade_log.append(log_exit)
+        print(f"Trade Exited: {log_exit}")
 
     def execute_strategy(self):
         if self.data.empty:
             return
-        self._calculate_psar()
         print("DataFrame columns before executing strategy:")
         print(self.data.columns)
         self._calculate_fib_weighted_ma()  # Calculate the Fibonacci-weighted moving averages
@@ -319,9 +316,9 @@ class Delta2Strategy:
             print("No trades were made.")
             return
 
-        total_trades = len(trades_df) // 2
-        winning_trades = trades_df[trades_df['pnl'] > 0]
-        losing_trades = trades_df[trades_df['pnl'] <= 0]
+        total_trades = len(trades_df[trades_df['action'] == 'enter'])
+        winning_trades = trades_df[(trades_df['action'] == 'exit') & (trades_df['pnl'].diff() > 0)]
+        losing_trades = trades_df[(trades_df['action'] == 'exit') & (trades_df['pnl'].diff() <= 0)]
 
         total_pnl = trades_df['pnl'].iloc[-1] - trades_df['pnl'].iloc[0] + self.starting_capital
         average_pnl_per_trade = trades_df['pnl'].diff().mean()
