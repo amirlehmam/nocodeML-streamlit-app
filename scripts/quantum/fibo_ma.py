@@ -99,7 +99,7 @@ class Delta2Strategy:
         self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
-        self._initialize_psar()
+        self._calculate_psar()
         self._initialize_quantum_components()
 
     def _initialize_parameters(self):
@@ -138,12 +138,7 @@ class Delta2Strategy:
         self.fib_weighted_ma = pd.Series(fib_ma, index=self.data.index)
         self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smoothing_simple_ma_period).mean()
 
-    def _initialize_psar(self):
-        self.data['PSAR'] = self.calculate_psar()
-        print("PSAR Indicator Head:")
-        print(self.data[['PSAR']].head())
-
-    def calculate_psar(self):
+    def _calculate_psar(self):
         high = self.data['High']
         low = self.data['Low']
         close = self.data['Close']
@@ -193,7 +188,9 @@ class Delta2Strategy:
                     if i > 2 and high.iloc[i - 2] > psar[i]:
                         psar[i] = high.iloc[i - 2]
 
-        return pd.Series(psar, index=self.data.index)
+        self.data['PSAR'] = pd.Series(psar, index=self.data.index)
+        print("PSAR Indicator Head:")
+        print(self.data[['PSAR']].head())
 
     def _initialize_quantum_components(self):
         self.sampler = Sampler()
@@ -239,6 +236,7 @@ class Delta2Strategy:
                 self._exit_position(i)
 
     def _enter_position(self, index, direction):
+        print(f"Entering {direction} position at index {index}")
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
@@ -252,6 +250,7 @@ class Delta2Strategy:
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
+        print(f"Exiting position at index {index}")
         if self.position > 0:
             self.pnl += (self.data['Close'].iloc[index] - self.entry_price) * self.default_quantity
         elif self.position < 0:
@@ -286,6 +285,9 @@ class Delta2Strategy:
         self.trade_log.append(log_exit)
 
     def execute_strategy(self):
+        self._calculate_psar()
+        print("DataFrame columns before executing strategy:")
+        print(self.data.columns)
         for i in range(len(self.data)):
             self._bar_update(i)
 
