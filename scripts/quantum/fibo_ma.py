@@ -255,13 +255,13 @@ class Delta2Strategy:
             self.entry_price = self.data['Close'].iloc[index]
             if 'PSAR' in self.data.columns:
                 self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price + 20
+            self.take_profit.iloc[index] = self.entry_price + 88  # Adjust take profit level if needed
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
             if 'PSAR' in self.data.columns:
                 self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price - 20
+            self.take_profit.iloc[index] = self.entry_price - 88  # Adjust take profit level if needed
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
