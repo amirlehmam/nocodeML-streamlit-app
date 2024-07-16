@@ -78,10 +78,17 @@ def load_data_for_date(date):
         return df
     return None
 
+def add_high_low(df):
+    df['High'] = df['close'] + (np.random.rand(len(df)) * 10)  # Simulate 'High' as close + random value
+    df['Low'] = df['close'] - (np.random.rand(len(df)) * 10)   # Simulate 'Low' as close - random value
+    df['Close'] = df['close']  # Ensure 'Close' column is present and correctly named
+    return df
+
 def data_generator(dates, step):
     for date in dates:
         df_ticks = load_data_for_date(date)
         if df_ticks is not None:
+            df_ticks = add_high_low(df_ticks)  # Add 'High', 'Low', and 'Close' columns
             for start_idx in range(0, len(df_ticks), step):
                 yield df_ticks.iloc[start_idx:start_idx + step]
         else:
@@ -351,7 +358,7 @@ def animate(frame, renko_chart, ax1, ax2, start_date, end_date, my_style, strate
     
     for i in range(len(df_ticks)):
         timestamp = df_ticks['datetime'].iat[i]
-        price = df_ticks['close'].iat[i]
+        price = df_ticks['Close'].iat[i]  # Changed 'close' to 'Close'
         renko_chart.add_prices(timestamp.value // 10**6, price)  # Convert to milliseconds
         
         # Execute strategy on new data
@@ -418,8 +425,9 @@ def main():
         print(f"No data available for {dates[0].strftime('%Y-%m-%d')}")
         return
 
+    df_l2 = add_high_low(df_l2)  # Ensure 'High', 'Low', and 'Close' columns are present
     initial_timestamp = df_l2['datetime'].iat[0].value // 10**6  # Convert to milliseconds
-    initial_price = df_l2['close'].iat[0]
+    initial_price = df_l2['Close'].iat[0]  # Changed 'close' to 'Close'
 
     brick_size = 3  # Adjust based on NinjaTrader settings
     brick_threshold = 5  # Adjust based on NinjaTrader settings
@@ -437,7 +445,7 @@ def main():
     ax2 = axes[2]
 
     # Initialize the strategy
-    initial_data = load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d'))
+    initial_data = add_high_low(load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d')))
     delta2_strategy = Delta2Strategy(data=initial_data)
     
     data = data_generator(dates, step)
