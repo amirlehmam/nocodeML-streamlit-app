@@ -5,6 +5,13 @@ import psycopg2
 import tempfile
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
+from qiskit_aer import Aer
+from qiskit import QuantumCircuit
+from qiskit.circuit.library import ZZFeatureMap, TwoLocal
+from qiskit_machine_learning.algorithms import QSVC
+from qiskit_algorithms import VQE
+from qiskit.primitives import Sampler, Estimator
+from qiskit_algorithms.optimizers import COBYLA
 from renkodf import Renko
 from tqdm import tqdm
 
@@ -59,22 +66,17 @@ def process_h5(file_path, brick_size, brick_threshold):
         df = pd.DataFrame({"datetime": timestamps, "close": prices})
         df.dropna(subset=["datetime"], inplace=True)
         
-        # Print the structure of the initial DataFrame
         print("Initial DataFrame:")
         print(df.head())
-        
-        # Generate High, Low, Close prices using Renko
+
         renko = Renko(df, brick_size, brick_threshold=brick_threshold)
-        df_renko = renko.renko_df('wicks')
+        renko_df = renko.renko_df()
         
-        # Rename columns to match the expected format
-        df_renko.rename(columns={"close": "Close", "open": "Open", "high": "High", "low": "Low", "volume": "Volume"}, inplace=True)
-        
-        # Print the structure of the Renko DataFrame
+        renko_df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']  # Ensure correct column names
         print("Renko DataFrame:")
-        print(df_renko.head())
+        print(renko_df.head())
         
-        return df_renko
+        return renko_df
 
 def load_data_for_date(date, brick_size, brick_threshold):
     filename = date.strftime('%Y%m%d') + ".h5"
@@ -111,11 +113,7 @@ class Delta2Strategy:
         self.zlema8 = self.calculate_zlema(8)
         self.zlema62 = self.calculate_zlema(62)
         self.atr = self.calculate_atr(14)
-        self.data['PSAR'] = self.calculate_psar()
-
-        # Print indicators to verify
-        print("PSAR Indicator Head:")
-        print(self.data[['PSAR']].head())
+        self.psar = self.calculate_psar()
 
     def _initialize_fibonacci(self):
         self.fib_weightings = np.zeros(self.fib_weight_ma_period)
@@ -130,12 +128,6 @@ class Delta2Strategy:
             a, b = b, a + b
         self.fib_weightings = self.fib_weightings[::-1]
         self.sum_of_fib_weights = np.sum(self.fib_weightings)
-
-    def _calculate_fib_weighted_ma(self):
-        weights = np.arange(1, self.fib_weight_ma_period + 1)
-        self.data['fib_weighted_ma'] = self.data['Close'].rolling(window=self.fib_weight_ma_period).apply(
-            lambda prices: np.dot(prices, weights) / weights.sum(), raw=True)
-        self.data['smoothed_fib_weighted_ma'] = self.data['fib_weighted_ma'].rolling(window=self.smoothing_simple_ma_period).mean()
 
     def calculate_zlema(self, period):
         return self.data['Close'].ewm(span=period).mean()
@@ -197,6 +189,9 @@ class Delta2Strategy:
                     if i > 2 and high.iloc[i - 2] > psar[i]:
                         psar[i] = high.iloc[i - 2]
 
+        self.data['PSAR'] = psar
+        print("PSAR Indicator Head:")
+        print(self.data[['PSAR']].head())
         return psar
 
     def _initialize_quantum_components(self):
@@ -227,8 +222,8 @@ class Delta2Strategy:
 
     def _generate_signals(self, i):
         if self.enable_fib_weight_ma_cross:
-            self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'], i)
-            self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['smoothed_fib_weighted_ma'], i)
+            self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['Close'], i)
+            self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['Close'], i)
 
     def _cross_above(self, series1, series2, i):
         return series1.iloc[i-1] < series2.iloc[i-1] and series1.iloc[i] > series2.iloc[i]
@@ -300,23 +295,18 @@ class Delta2Strategy:
         if self.enable_fib_weight_ma_cross:
             self._calculate_fib_weighted_ma()
 
-        for i in tqdm(range(len(self.data)), desc="Executing Strategy"):
+        for i in range(len(self.data)):
             self._bar_update(i)
 
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    with ProcessPoolExecutor() as executor:
-        futures = []
-        for date in market_replay_data:
-            futures.append(executor.submit(load_data_for_date, date, brick_size, brick_threshold))
-        
-        for future in tqdm(futures, desc="Backtesting"):
-            df_ticks = future.result()
-            if df_ticks is not None:
-                strategy.data = df_ticks
-                strategy.execute_strategy()
-                print(f"PNL for {df_ticks.index[0].date()}: {strategy.pnl}")
-            else:
-                print(f"No data for {df_ticks.index[0].date()}")
+    for date in tqdm(market_replay_data, desc="Backtesting"):
+        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
+        if df_ticks is not None:
+            strategy.data = df_ticks
+            strategy.execute_strategy()
+            print(f"PNL for {date}: {strategy.pnl}")
+        else:
+            print(f"No data for {date}")
 
 if __name__ == "__main__":
     available_dates = fetch_available_dates()
@@ -327,13 +317,13 @@ if __name__ == "__main__":
     
     start_date = input("Enter the start date (YYYYMMDD): ")
     end_date = input("Enter the end date (YYYYMMDD): ")
+    
     brick_size = float(input("Enter the brick size: "))
     brick_threshold = int(input("Enter the brick threshold: "))
-
+    
     dates = pd.date_range(start=start_date, end=end_date, freq='D')
-
-    # Initialize strategy
-    delta2_strategy = Delta2Strategy(data=load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d'), brick_size, brick_threshold))
-
-    # Backtest strategy
+    
+    initial_data = load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d'), brick_size, brick_threshold)
+    delta2_strategy = Delta2Strategy(data=initial_data)
+    
     backtest_strategy(delta2_strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
