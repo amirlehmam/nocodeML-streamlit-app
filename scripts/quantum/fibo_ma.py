@@ -5,13 +5,6 @@ import psycopg2
 import tempfile
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
-from qiskit_aer import Aer
-from qiskit import QuantumCircuit
-from qiskit.circuit.library import ZZFeatureMap, TwoLocal
-from qiskit_machine_learning.algorithms import QSVC
-from qiskit_algorithms import VQE
-from qiskit.primitives import Sampler, Estimator
-from qiskit_algorithms.optimizers import COBYLA
 from renkodf import Renko
 from tqdm import tqdm
 
