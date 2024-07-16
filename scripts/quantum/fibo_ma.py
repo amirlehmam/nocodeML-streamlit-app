@@ -214,20 +214,18 @@ class Delta2Strategy:
         self.variational_circuit = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
 
     def _initialize_qsvc(self):
-        self.qsvc = QSVC(quantum_instance=self.sampler, feature_map=self.feature_map)
-        self.qsvc.fit(self.data['features'], self.data['labels'])
+        self.qsvc = QSVC(quantum_kernel=self.feature_map, estimator=self.estimator)
 
-    def _initialize_vqe(self):
-        optimizer = COBYLA()
-        self.vqe = VQE(self.variational_circuit, self.estimator, optimizer=optimizer)
+    def _initialize_vqe(self, optimizer=COBYLA()):
+        self.vqe = VQE(ansatz=self.variational_circuit, optimizer=optimizer)
 
     def _bar_update(self, i):
         self._generate_signals(i)
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        self.signals['buy_signal'][i] = self._cross_above(self.data['fib_weighted_ma'], self.data['Close'], i)
-        self.signals['sell_signal'][i] = self._cross_below(self.data['fib_weighted_ma'], self.data['Close'], i)
+        self.signals['buy_signal'][i] = self._cross_above(self.data['smoothed_fib_weighted_ma'], self.data['Close'], i)
+        self.signals['sell_signal'][i] = self._cross_below(self.data['smoothed_fib_weighted_ma'], self.data['Close'], i)
 
     def _cross_above(self, series1, series2, i):
         return series1.iloc[i-1] < series2.iloc[i-1] and series1.iloc[i] > series2.iloc[i]
@@ -252,12 +250,12 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price - 2 * self.data['atr'].iloc[index]
             self.take_profit.iloc[index] = self.entry_price + 2 * self.data['atr'].iloc[index]
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price + 2 * self.data['atr'].iloc[index]
             self.take_profit.iloc[index] = self.entry_price - 2 * self.data['atr'].iloc[index]
         self._log_entry(index, direction)
 
@@ -307,10 +305,14 @@ def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold)
         df_ticks = load_data_for_date(date, brick_size, brick_threshold)
         if df_ticks is not None:
             strategy.data = df_ticks
+            print("Backtesting DataFrame before execution:")
+            print(strategy.data.head())
+            print("DataFrame Columns:", strategy.data.columns)  # Check columns
             strategy.execute_strategy()
             print(f"PNL for {date}: {strategy.pnl}")
         else:
             print(f"No data for {date}")
+
 
 if __name__ == "__main__":
     available_dates = fetch_available_dates()
