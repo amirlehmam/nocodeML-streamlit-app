@@ -120,6 +120,10 @@ class Delta2Strategy:
         self.atr = self.calculate_atr(14)
         self.psar = self.calculate_psar()
 
+        # Print indicators to verify
+        print("PSAR Indicator Head:")
+        print(self.data[['PSAR']].head())
+
     def _initialize_fibonacci(self):
         self.fib_weightings = np.zeros(self.fib_weight_ma_period)
         self.fib_weighted_ma = np.zeros(len(self.data))
