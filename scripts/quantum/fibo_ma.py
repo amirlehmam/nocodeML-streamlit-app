@@ -332,6 +332,11 @@ class Delta2Strategy:
         print("\nTrade Log:")
         print(trades_df)
 
+    def save_trade_log(self, filename):
+        trades_df = pd.DataFrame(self.trade_log)
+        trades_df.to_csv(filename, index=False)
+        print(f"Trade log saved to {filename}")
+
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
     for date in tqdm(market_replay_data, desc="Backtesting"):
         df_ticks = load_data_for_date(date, brick_size, brick_threshold)
@@ -346,6 +351,7 @@ def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold)
             print(f"No data for {date}")
 
     strategy.detailed_analysis()
+    strategy.save_trade_log("trade_log.csv")
 
 # Execute the strategy
 if __name__ == "__main__":
