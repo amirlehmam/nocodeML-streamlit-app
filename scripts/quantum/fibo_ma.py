@@ -98,8 +98,8 @@ class Delta2Strategy:
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
         self._initialize_parameters()
-        self._initialize_indicators()
-        self._initialize_fibonacci()
+        self._initialize_fibonacci_weightings()
+        self._initialize_psar()
         self._initialize_quantum_components()
 
     def _initialize_parameters(self):
@@ -108,60 +108,46 @@ class Delta2Strategy:
         self.enable_fib_weight_ma_cross = True
         self.fib_weight_ma_period = 10
         self.smoothing_simple_ma_period = 20
+        self.acceleration = 0.02
+        self.max_acceleration = 0.2
+        self.acceleration_step = 0.02
 
-    def _initialize_indicators(self):
-        self.zlema8 = self.calculate_zlema(8)
-        self.zlema62 = self.calculate_zlema(62)
-        self.atr = self.calculate_atr(14)
-        self.psar = self.calculate_psar()
+    def _initialize_fibonacci_weightings(self):
+        self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
+        self.fib_weighted_ma = pd.Series(np.zeros(len(self.data)), index=self.data.index)
+        self.smoothed_fib_weighted_ma = pd.Series(np.zeros(len(self.data)), index=self.data.index)
 
-    def _initialize_fibonacci(self):
-        self.fib_weightings = np.zeros(self.fib_weight_ma_period)
-        self.fib_weighted_ma = np.zeros(len(self.data))
-        self.smoothed_fib_weighted_ma = np.zeros(len(self.data))
-        self._calculate_fibonacci_weights()
-
-    def _calculate_fibonacci_weights(self):
+    def _calculate_fibonacci_weights(self, period):
+        fib_weights = np.zeros(period)
         a, b = 1, 1
-        for i in range(self.fib_weight_ma_period):
-            self.fib_weightings[i] = a
+        for i in range(period):
+            fib_weights[i] = a
             a, b = b, a + b
-        self.fib_weightings = self.fib_weightings[::-1]
-        self.sum_of_fib_weights = np.sum(self.fib_weightings)
+        fib_weights = fib_weights[::-1]  # Reverse to apply the largest weight to the most recent bar
+        fib_weights /= np.sum(fib_weights)  # Normalize weights
+        return fib_weights
 
     def _calculate_fib_weighted_ma(self):
-        close = self.data['Close']
-        fib_ma = np.zeros(len(close))
+        close_prices = self.data['Close']
+        fib_ma = np.zeros(len(close_prices))
         
-        for i in range(len(close)):
+        for i in range(len(close_prices)):
             if i >= self.fib_weight_ma_period - 1:
-                fib_ma[i] = np.dot(close.iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings) / self.sum_of_fib_weights
+                fib_ma[i] = np.dot(close_prices.iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings)
         
-        self.data['fib_weighted_ma'] = fib_ma
-        self.data['smoothed_fib_weighted_ma'] = self.data['fib_weighted_ma'].rolling(window=self.smoothing_simple_ma_period).mean()
+        self.fib_weighted_ma = pd.Series(fib_ma, index=self.data.index)
+        self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smoothing_simple_ma_period).mean()
 
-    def calculate_zlema(self, period):
-        return self.data['Close'].ewm(span=period).mean()
-
-    def calculate_atr(self, period):
-        high = self.data['High']
-        low = self.data['Low']
-        close = self.data['Close']
-
-        tr = pd.Series(np.maximum.reduce([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()]))
-        atr = tr.rolling(window=period).mean()
-        self.data['atr'] = atr
-        print("ATR Indicator Head:")
-        print(self.data[['atr']].head())
-        return atr
+    def _initialize_psar(self):
+        self.data['PSAR'] = self.calculate_psar()
 
     def calculate_psar(self):
         high = self.data['High']
         low = self.data['Low']
         close = self.data['Close']
 
-        af = 0.02
-        max_af = 0.2
+        af = self.acceleration
+        max_af = self.max_acceleration
         psar = np.zeros(len(close))
         bull = True
         ep = low.iloc[0]
@@ -177,21 +163,21 @@ class Delta2Strategy:
                     bull = False
                     psar[i] = hp
                     lp = low.iloc[i]
-                    af = 0.02
+                    af = self.acceleration
                     reverse = True
             else:
                 if high.iloc[i] > psar[i]:
                     bull = True
                     psar[i] = lp
                     hp = high.iloc[i]
-                    af = 0.02
+                    af = self.acceleration
                     reverse = True
 
             if not reverse:
                 if bull:
                     if high.iloc[i] > hp:
                         hp = high.iloc[i]
-                        af = min(af + 0.02, max_af)
+                        af = min(af + self.acceleration_step, max_af)
                     if i > 1 and low.iloc[i - 1] < psar[i]:
                         psar[i] = low.iloc[i - 1]
                     if i > 2 and low.iloc[i - 2] < psar[i]:
@@ -199,13 +185,12 @@ class Delta2Strategy:
                 else:
                     if low.iloc[i] < lp:
                         lp = low.iloc[i]
-                        af = min(af + 0.02, max_af)
+                        af = min(af + self.acceleration_step, max_af)
                     if i > 1 and high.iloc[i - 1] > psar[i]:
                         psar[i] = high.iloc[i - 1]
                     if i > 2 and high.iloc[i - 2] > psar[i]:
                         psar[i] = high.iloc[i - 2]
 
-        self.data['PSAR'] = psar
         print("PSAR Indicator Head:")
         print(self.data[['PSAR']].head())
         return psar
@@ -229,14 +214,16 @@ class Delta2Strategy:
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        self.signals['buy_signal'][i] = self._cross_above(self.data['smoothed_fib_weighted_ma'], self.data['Close'], i)
-        self.signals['sell_signal'][i] = self._cross_below(self.data['smoothed_fib_weighted_ma'], self.data['Close'], i)
-
-    def _cross_above(self, series1, series2, i):
-        return series1.iloc[i-1] < series2.iloc[i-1] and series1.iloc[i] > series2.iloc[i]
-
-    def _cross_below(self, series1, series2, i):
-        return series1.iloc[i-1] > series2.iloc[i-1] and series1.iloc[i] < series2.iloc[i]
+        if i >= self.fib_weight_ma_period - 1:
+            self.fib_weighted_ma.iloc[i] = np.dot(self.data['Close'].iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings)
+            if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
+                self.smoothed_fib_weighted_ma.iloc[i] = self.fib_weighted_ma.iloc[i - self.smoothing_simple_ma_period + 1:i + 1].mean()
+        
+        if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
+            if self.fib_weighted_ma.iloc[i] > self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] <= self.smoothed_fib_weighted_ma.iloc[i - 1]:
+                self.signals['buy_signal'][i] = True
+            if self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
+                self.signals['sell_signal'][i] = True
 
     def _manage_positions(self, i):
         if self.position == 0:
@@ -255,13 +242,13 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price - 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
-            self.take_profit.iloc[index] = self.entry_price + 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.take_profit.iloc[index] = self.entry_price + 20
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price + 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
-            self.take_profit.iloc[index] = self.entry_price - 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]
+            self.take_profit.iloc[index] = self.entry_price - 20
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
@@ -299,9 +286,6 @@ class Delta2Strategy:
         self.trade_log.append(log_exit)
 
     def execute_strategy(self):
-        if self.enable_fib_weight_ma_cross:
-            self._calculate_fib_weighted_ma()
-
         for i in range(len(self.data)):
             self._bar_update(i)
 
