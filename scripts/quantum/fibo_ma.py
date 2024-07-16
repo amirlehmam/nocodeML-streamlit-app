@@ -144,11 +144,16 @@ class Delta2Strategy:
         return self.data['Close'].ewm(span=period).mean()
 
     def calculate_atr(self, period):
-        tr = pd.Series(np.maximum.reduce([self.data['High'] - self.data['Low'],
-                                          (self.data['High'] - self.data['Close'].shift()).abs(),
-                                          (self.data['Low'] - self.data['Close'].shift()).abs()]))
-        self.data['atr'] = tr.rolling(window=period).mean()
-        return self.data['atr']
+        high = self.data['High']
+        low = self.data['Low']
+        close = self.data['Close']
+
+        tr = pd.Series(np.maximum.reduce([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()]))
+        atr = tr.rolling(window=period).mean()
+        self.data['atr'] = atr
+        print("ATR Indicator Head:")
+        print(self.data[['atr']].head())
+        return atr
 
     def calculate_psar(self):
         high = self.data['High']
@@ -250,13 +255,13 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price - 2 * self.data['atr'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price + 2 * self.data['atr'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price - 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
+            self.take_profit.iloc[index] = self.entry_price + 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price + 2 * self.data['atr'].iloc[index]
-            self.take_profit.iloc[index] = self.entry_price - 2 * self.data['atr'].iloc[index]
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index] if 'PSAR' in self.data.columns else self.entry_price + 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
+            self.take_profit.iloc[index] = self.entry_price - 2 * (self.data['atr'].iloc[index] if 'atr' in self.data.columns else 0)
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
@@ -312,7 +317,6 @@ def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold)
             print(f"PNL for {date}: {strategy.pnl}")
         else:
             print(f"No data for {date}")
-
 
 if __name__ == "__main__":
     available_dates = fetch_available_dates()
