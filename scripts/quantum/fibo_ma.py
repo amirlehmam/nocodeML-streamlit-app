@@ -62,7 +62,7 @@ def process_h5(file_path, brick_size, brick_threshold):
         timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
         timestamps = pd.to_datetime(timestamps, errors='coerce')
         prices = f['L2/Price'][:].astype(float)
-        df = pd.DataFrame({"datetime": timestamps, "Close": prices})
+        df = pd.DataFrame({"datetime": timestamps, "close": prices})
         df.dropna(subset=["datetime"], inplace=True)
         
         # Generate High, Low, Close prices using Renko
