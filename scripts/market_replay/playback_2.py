@@ -5,6 +5,8 @@ import psycopg2
 import tempfile
 from datetime import datetime
 from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor
+import concurrent.futures
 from qiskit_aer import Aer
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import ZZFeatureMap, TwoLocal
@@ -25,25 +27,20 @@ db_credentials = {
 }
 
 def connect_db():
-    conn = psycopg2.connect(**db_credentials)
-    return conn
+    return psycopg2.connect(**db_credentials)
 
 def fetch_available_dates():
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT filename FROM h5_files;')
-    rows = cursor.fetchall()
-    conn.close()
-    
-    dates = [row[0].replace('.h5', '') for row in rows]
-    return sorted(dates)
+    with connect_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT filename FROM h5_files;')
+            rows = cursor.fetchall()
+    return sorted([row[0].replace('.h5', '') for row in rows])
 
 def load_h5_from_db(filename):
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT data FROM h5_files WHERE filename = %s;', (filename,))
-    result = cursor.fetchone()
-    conn.close()
+    with connect_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT data FROM h5_files WHERE filename = %s;', (filename,))
+            result = cursor.fetchone()
     
     if result is None:
         return None
@@ -59,21 +56,13 @@ def load_h5_from_db(filename):
 
 def process_h5(file_path, brick_size, brick_threshold):
     with h5py.File(file_path, "r") as f:
-        timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
-        timestamps = pd.to_datetime(timestamps, errors='coerce')
+        timestamps = pd.to_datetime([t.decode('utf-8') for t in f['L2/Timestamp'][:]], errors='coerce')
         prices = f['L2/Price'][:].astype(float)
-        df = pd.DataFrame({"datetime": timestamps, "close": prices})
-        df.dropna(subset=["datetime"], inplace=True)
+        df = pd.DataFrame({"datetime": timestamps, "close": prices}).dropna(subset=["datetime"])
         
-        print("Initial DataFrame:")
-        print(df.head())
-
         renko = Renko(df, brick_size, brick_threshold=brick_threshold)
         renko_df = renko.renko_df()
-        
-        renko_df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']  # Ensure correct column names
-        print("Renko DataFrame:")
-        print(renko_df.head())
+        renko_df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         
         return renko_df
 
@@ -81,9 +70,16 @@ def load_data_for_date(date, brick_size, brick_threshold):
     filename = date.strftime('%Y%m%d') + ".h5"
     file_path = load_h5_from_db(filename)
     if file_path:
-        df = process_h5(file_path, brick_size, brick_threshold)
-        return df
+        return process_h5(file_path, brick_size, brick_threshold)
     return None
+
+def process_date(date, strategy, brick_size, brick_threshold):
+    df_ticks = load_data_for_date(date, brick_size, brick_threshold)
+    if df_ticks is not None and not df_ticks.empty:
+        temp_strategy = Delta2Strategy(data=df_ticks, starting_capital=strategy.starting_capital)
+        temp_strategy.execute_strategy()
+        return temp_strategy.trade_log, temp_strategy.pnl
+    return [], 0.0
 
 class Delta2Strategy:
     def __init__(self, data, starting_capital=300000):
@@ -96,7 +92,7 @@ class Delta2Strategy:
         self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data), dtype=bool), 'sell_signal': np.zeros(len(data), dtype=bool)}
-        self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)  # Cooldown period after a trade
+        self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
@@ -111,7 +107,7 @@ class Delta2Strategy:
         self.acceleration = 0.02
         self.max_acceleration = 0.2
         self.acceleration_step = 0.02
-        self.cooldown_period = 10  # Number of bars to wait before considering a new trade
+        self.cooldown_period = 10
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -124,8 +120,8 @@ class Delta2Strategy:
         for i in range(period):
             fib_weights[i] = a
             a, b = b, a + b
-        fib_weights = fib_weights[::-1]  # Reverse to apply the largest weight to the most recent bar
-        fib_weights /= np.sum(fib_weights)  # Normalize weights
+        fib_weights = fib_weights[::-1]
+        fib_weights /= np.sum(fib_weights)
         return fib_weights
 
     def _calculate_fib_weighted_ma(self):
@@ -196,7 +192,6 @@ class Delta2Strategy:
         print("PSAR Indicator Head:")
         print(self.data[['PSAR']].head())
 
-
     def _initialize_quantum_components(self):
         self.sampler = Sampler()
         self.estimator = Estimator()
@@ -227,7 +222,7 @@ class Delta2Strategy:
             elif self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['sell_signal'][i] = True
             else:
-                self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False  # No signal
+                self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False
 
     def _manage_positions(self, i):
         if self.position == 0:
@@ -237,19 +232,16 @@ class Delta2Strategy:
                 elif self.signals['sell_signal'][i]:
                     self._enter_position(i, 'short')
         elif self.position > 0:
-            # Update SL with PSAR for long position
             self.stop_loss.iloc[i] = max(self.stop_loss.iloc[i-1], self.data['PSAR'].iloc[i] if 'PSAR' in self.data.columns else self.stop_loss.iloc[i-1])
             if self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] >= self.take_profit.iloc[i]:
                 self._exit_position(i)
                 self.cooldown.iloc[i] = self.cooldown_period
         elif self.position < 0:
-            # Update SL with PSAR for short position
             self.stop_loss.iloc[i] = min(self.stop_loss.iloc[i-1], self.data['PSAR'].iloc[i] if 'PSAR' in self.data.columns else self.stop_loss.iloc[i-1])
             if self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] <= self.take_profit.iloc[i]:
                 self._exit_position(i)
                 self.cooldown.iloc[i] = self.cooldown_period
 
-        # Update cooldown period
         if self.cooldown.iloc[i] > 0:
             self.cooldown.iloc[i + 1:i + self.cooldown_period + 1] = self.cooldown.iloc[i] - 1
 
@@ -270,7 +262,7 @@ class Delta2Strategy:
     def _exit_position(self, index):
         print(f"Exiting position at index {index}")
         price_move = (self.data['Close'].iloc[index] - self.entry_price) if self.position > 0 else (self.entry_price - self.data['Close'].iloc[index])
-        self.pnl += price_move * 20  # $20 per 1 point move
+        self.pnl += price_move * 20
         self.position = 0
         self.entry_price = 0.0
         self.stop_loss.iloc[index] = 0.0
@@ -307,8 +299,8 @@ class Delta2Strategy:
             return
         print("DataFrame columns before executing strategy:")
         print(self.data.columns)
-        self._reset_arrays()  # Reset signals, stop_loss, take_profit, and cooldown arrays
-        self._calculate_fib_weighted_ma()  # Calculate the Fibonacci-weighted moving averages
+        self._reset_arrays()
+        self._calculate_fib_weighted_ma()
         for i in range(len(self.data)):
             self._bar_update(i)
 
@@ -352,18 +344,18 @@ class Delta2Strategy:
         print(f"Trade log saved to {filename}")
 
 def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    for date in tqdm(market_replay_data, desc="Backtesting"):
-        df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-        if df_ticks is not None and not df_ticks.empty:
-            strategy.data = df_ticks
-            print("Backtesting DataFrame before execution:")
-            print(strategy.data.head())
-            print("DataFrame Columns:", strategy.data.columns)  # Check columns
-            strategy.execute_strategy()
-            print(f"PNL for {date}: {strategy.pnl}")
-        else:
-            print(f"No data for {date}")
+    combined_trade_logs = []
+    total_pnl = 0.0
 
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(process_date, date, strategy, brick_size, brick_threshold) for date in market_replay_data]
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Backtesting"):
+            trade_log, pnl = future.result()
+            combined_trade_logs.extend(trade_log)
+            total_pnl += pnl
+
+    strategy.trade_log = combined_trade_logs
+    strategy.pnl = total_pnl
     strategy.detailed_analysis()
     strategy.save_trade_log("trade_log.csv")
 
