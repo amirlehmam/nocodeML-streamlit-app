@@ -5,15 +5,7 @@ from matplotlib import animation
 import h5py
 import psycopg2
 import tempfile
-from tqdm import tqdm
 from datetime import datetime, timedelta
-from qiskit_aer import Aer
-from qiskit import QuantumCircuit
-from qiskit.circuit.library import ZZFeatureMap, TwoLocal
-from qiskit_machine_learning.algorithms import QSVC
-from qiskit_algorithms import VQE
-from qiskit.primitives import Sampler, Estimator
-from qiskit_algorithms.optimizers import COBYLA
 
 # Assuming renkodf.py is in the same directory
 from renkodf import RenkoWS
@@ -95,8 +87,9 @@ def data_generator(dates, step):
             print(f"No data for {date.strftime('%Y-%m-%d')}")
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000):
+    def __init__(self, data, trade_type="BOTH", starting_capital=300000):
         self.data = data
+        self.trade_type = trade_type
         self.trade_log = []
         self.pnl = 0.0
         self.starting_capital = starting_capital
@@ -106,10 +99,12 @@ class Delta2Strategy:
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data)), 'sell_signal': np.zeros(len(data))}
         self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)  # Cooldown period after a trade
+        self.min_holding_period = 5  # Minimum number of bars to hold a position
+        self.holding_period = pd.Series(np.zeros(len(data)), index=data.index)  # Tracks holding period of current position
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
-        self._initialize_quantum_components()
+        self._calculate_rsi()  # Calculate RSI
 
     def _initialize_parameters(self):
         self.bars_required_to_trade = 20
@@ -121,6 +116,8 @@ class Delta2Strategy:
         self.max_acceleration = 0.162
         self.acceleration_step = 0.0162
         self.cooldown_period = 1  # Number of bars to wait before considering a new trade
+        self.rsi_period = 14  # RSI period
+        self.rsi_buffer_zones = [(36.65, 38.22), (39.38, 42.94), (44.42, 45.36), (49.04, 51.30), (55.92, 56.84), (63, 102)]  # Buffer zones
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -205,53 +202,48 @@ class Delta2Strategy:
         print("PSAR Indicator Head:")
         print(self.data[['PSAR']].head())
 
-    def _initialize_quantum_components(self):
-        self.sampler = Sampler()
-        self.estimator = Estimator()
-        self.feature_map = ZZFeatureMap(feature_dimension=len(self.data.columns), reps=2)
-        self.qsvc = None
-        self.vqe = None
-        self.variational_circuit = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
-
-    def _initialize_qsvc(self):
-        self.qsvc = QSVC(quantum_kernel=self.feature_map, estimator=self.estimator)
-
-    def _initialize_vqe(self, optimizer=COBYLA()):
-        self.vqe = VQE(ansatz=self.variational_circuit, optimizer=optimizer)
+    def _calculate_rsi(self):
+        delta = self.data['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
+        rs = gain / loss
+        self.data['RSI'] = 100 - (100 / (1 + rs))
+        print("RSI Indicator Head:")
+        print(self.data[['RSI']].head())
 
     def _bar_update(self, i):
         self._generate_signals(i)
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        if i >= self.fib_weight_ma_period - 1:
-            self.fib_weighted_ma.iloc[i] = np.dot(self.data['Close'].iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings)
-            if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
-                self.smoothed_fib_weighted_ma.iloc[i] = self.fib_weighted_ma.iloc[i - self.smoothing_simple_ma_period + 1:i + 1].mean()
-        
-        if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
-            if self.fib_weighted_ma.iloc[i] > self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] <= self.smoothed_fib_weighted_ma.iloc[i - 1]:
-                self.signals['buy_signal'][i] = True
-                self.signals['sell_signal'][i] = False
-            elif self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
-                self.signals['sell_signal'][i] = True
-                self.signals['buy_signal'][i] = False
-            else:
-                self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False  # No signal
+        rsi = self.data['RSI'].iloc[i]
+
+        for (lower, upper) in self.rsi_buffer_zones:
+            if lower <= rsi <= upper:
+                if self.trade_type in ["BOTH", "LONG ONLY"]:
+                    self.signals['buy_signal'][i] = True
+                if self.trade_type in ["BOTH", "SHORT ONLY"]:
+                    self.signals['sell_signal'][i] = True
+                return
+
+        self.signals['buy_signal'][i] = False
+        self.signals['sell_signal'][i] = False
 
     def _manage_positions(self, i):
         if self.position == 0:
             if not self.cooldown.iloc[i]:
-                if self.signals['buy_signal'][i]:
+                if self.signals['buy_signal'][i] and self.trade_type in ["BOTH", "LONG ONLY"]:
                     self._enter_position(i, 'long')
-                elif self.signals['sell_signal'][i]:
+                elif self.signals['sell_signal'][i] and self.trade_type in ["BOTH", "SHORT ONLY"]:
                     self._enter_position(i, 'short')
         elif self.position > 0:
-            if self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] >= self.take_profit.iloc[i]:
+            self.holding_period.iloc[i] += 1
+            if self.holding_period.iloc[i] >= self.min_holding_period and (self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i]):
                 self._exit_position(i)
                 self.cooldown.iloc[i] = self.cooldown_period
         elif self.position < 0:
-            if self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] <= self.take_profit.iloc[i]:
+            self.holding_period.iloc[i] += 1
+            if self.holding_period.iloc[i] >= self.min_holding_period and (self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i]):
                 self._exit_position(i)
                 self.cooldown.iloc[i] = self.cooldown_period
 
@@ -264,13 +256,14 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price - 90
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]  # Use PSAR as stop loss
             self.take_profit.iloc[index] = self.entry_price + 90  # Adjust take profit level if needed
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price + 90
+            self.stop_loss.iloc[index] = self.data['PSAR'].iloc[index]  # Use PSAR as stop loss
             self.take_profit.iloc[index] = self.entry_price - 90  # Adjust take profit level if needed
+        self.holding_period.iloc[index] = 0
         self._log_entry(index, direction)
 
     def _exit_position(self, index):
@@ -283,6 +276,7 @@ class Delta2Strategy:
         self.entry_price = 0.0
         self.stop_loss.iloc[index] = 0.0
         self.take_profit.iloc[index] = 0.0
+        self.holding_period.iloc[index] = 0
         self._log_exit(index)
 
     def _log_entry(self, index, direction):
@@ -390,6 +384,17 @@ def main():
     
     start_date = input("Enter the start date (YYYYMMDD): ")
     end_date = input("Enter the end date (YYYYMMDD): ")
+
+    print("Choose trade type:")
+    trade_types = ["LONG ONLY", "SHORT ONLY", "BOTH"]
+    for i, trade_type in enumerate(trade_types, 1):
+        print(f"{i}. {trade_type}")
+    trade_choice = int(input("Enter the number of your choice: "))
+    if trade_choice not in range(1, 4):
+        print("Invalid choice. Defaulting to BOTH.")
+        trade_type = "BOTH"
+    else:
+        trade_type = trade_types[trade_choice - 1]
     
     speeds = {
         '1x': 1,
@@ -446,7 +451,7 @@ def main():
 
     # Initialize the strategy
     initial_data = add_high_low(load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d')))
-    delta2_strategy = Delta2Strategy(data=initial_data)
+    delta2_strategy = Delta2Strategy(data=initial_data, trade_type=trade_type)
     
     data = data_generator(dates, step)
     ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=500, repeat=False, cache_frame_data=False)  # Throttle the animation with interval=500
