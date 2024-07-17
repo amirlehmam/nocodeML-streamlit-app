@@ -73,16 +73,18 @@ def load_data_for_date(date, brick_size, brick_threshold):
         return process_h5(file_path, brick_size, brick_threshold)
     return None
 
-def process_date(date, strategy, brick_size, brick_threshold):
-    df_ticks = load_data_for_date(date, brick_size, brick_threshold)
-    if df_ticks is not None and not df_ticks.empty:
-        temp_strategy = Delta2Strategy(data=df_ticks, starting_capital=strategy.starting_capital)
-        temp_strategy.execute_strategy()
-        return temp_strategy.trade_log, temp_strategy.pnl
-    return [], 0.0
+def process_date(date, strategy_class, brick_size, brick_threshold):
+    print(f"Processing date: {date}")
+    data = load_data_for_date(date, brick_size, brick_threshold)  # Pass brick_size and brick_threshold
+    if data is not None:
+        temp_strategy = strategy_class(data)
+        trade_log, pnl = temp_strategy.backtest()  # Use the correct backtest method
+        return trade_log, pnl
+    else:
+        return None, None
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000):
+    def __init__(self, data, starting_capital=100000):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
@@ -93,21 +95,22 @@ class Delta2Strategy:
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data), dtype=bool), 'sell_signal': np.zeros(len(data), dtype=bool)}
         self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)
+        self.cooldown_period = 10  # Adjusted cooldown period to prevent rapid trades
+        self.last_trade_time = None  # Track the last trade time
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
         self._initialize_quantum_components()
 
     def _initialize_parameters(self):
-        self.bars_required_to_trade = 200
+        self.bars_required_to_trade = 20
         self.default_quantity = 1
         self.enable_fib_weight_ma_cross = True
-        self.fib_weight_ma_period = 10
+        self.fib_weight_ma_period = 9
         self.smoothing_simple_ma_period = 20
-        self.acceleration = 0.02
-        self.max_acceleration = 0.2
-        self.acceleration_step = 0.02
-        self.cooldown_period = 10
+        self.acceleration = 0.0162  
+        self.max_acceleration = 0.162
+        self.acceleration_step = 0.0162
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -189,8 +192,6 @@ class Delta2Strategy:
                         psar[i] = high.iloc[i - 2]
 
         self.data['PSAR'] = pd.Series(psar, index=self.data.index)
-        print("PSAR Indicator Head:")
-        print(self.data[['PSAR']].head())
 
     def _initialize_quantum_components(self):
         self.sampler = Sampler()
@@ -225,157 +226,79 @@ class Delta2Strategy:
                 self.signals['buy_signal'][i] = self.signals['sell_signal'][i] = False
 
     def _manage_positions(self, i):
+        current_time = self.data.index[i]
+        
+        if self.last_trade_time is not None and (current_time - self.last_trade_time).total_seconds() < self.cooldown_period:
+            return
+
         if self.position == 0:
-            if not self.cooldown.iloc[i]:
-                if self.signals['buy_signal'][i]:
-                    self._enter_position(i, 'long')
-                elif self.signals['sell_signal'][i]:
-                    self._enter_position(i, 'short')
+            if self.signals['buy_signal'][i]:
+                self._enter_position(i, 'long')
+                self.last_trade_time = current_time
+            elif self.signals['sell_signal'][i]:
+                self._enter_position(i, 'short')
+                self.last_trade_time = current_time
         elif self.position > 0:
             self.stop_loss.iloc[i] = max(self.stop_loss.iloc[i-1], self.data['PSAR'].iloc[i] if 'PSAR' in self.data.columns else self.stop_loss.iloc[i-1])
             if self.signals['sell_signal'][i] or self.data['Close'].iloc[i] <= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] >= self.take_profit.iloc[i]:
                 self._exit_position(i)
-                self.cooldown.iloc[i] = self.cooldown_period
+                self.last_trade_time = current_time
         elif self.position < 0:
             self.stop_loss.iloc[i] = min(self.stop_loss.iloc[i-1], self.data['PSAR'].iloc[i] if 'PSAR' in self.data.columns else self.stop_loss.iloc[i-1])
             if self.signals['buy_signal'][i] or self.data['Close'].iloc[i] >= self.stop_loss.iloc[i] or self.data['Close'].iloc[i] <= self.take_profit.iloc[i]:
                 self._exit_position(i)
-                self.cooldown.iloc[i] = self.cooldown_period
-
-        if self.cooldown.iloc[i] > 0:
-            self.cooldown.iloc[i + 1:i + self.cooldown_period + 1] = self.cooldown.iloc[i] - 1
+                self.last_trade_time = current_time
 
     def _enter_position(self, index, direction):
         print(f"Entering {direction} position at index {index}")
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price - 90
-            self.take_profit.iloc[index] = self.entry_price + 50
+            self.stop_loss.iloc[index] = self.entry_price - 90  # Example value for stop loss
+            self.take_profit.iloc[index] = self.entry_price + 180  # Example value for take profit
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price + 90
-            self.take_profit.iloc[index] = self.entry_price - 50
-        self._log_entry(index, direction)
+            self.stop_loss.iloc[index] = self.entry_price + 90  # Example value for stop loss
+            self.take_profit.iloc[index] = self.entry_price - 180  # Example value for take profit
+        self.trade_log.append((self.data.index[index], 'entry', direction, self.entry_price, self.position))
 
     def _exit_position(self, index):
-        print(f"Exiting position at index {index}")
-        price_move = (self.data['Close'].iloc[index] - self.entry_price) if self.position > 0 else (self.entry_price - self.data['Close'].iloc[index])
-        self.pnl += price_move * 20
+        exit_price = self.data['Close'].iloc[index]
+        self.pnl += (exit_price - self.entry_price) * self.position
+        self.trade_log.append((self.data.index[index], 'exit', 'long' if self.position > 0 else 'short', exit_price, self.position))
         self.position = 0
         self.entry_price = 0.0
-        self.stop_loss.iloc[index] = 0.0
-        self.take_profit.iloc[index] = 0.0
-        self._log_exit(index)
+        self.stop_loss.iloc[index] = self.take_profit.iloc[index] = 0.0
 
-    def _log_entry(self, index, direction):
-        log_entry = {
-            'timestamp': self.data.index[index],
-            'action': 'enter',
-            'direction': direction,
-            'price': self.data['Close'].iloc[index],
-            'quantity': self.default_quantity,
-            'position': self.position,
-            'pnl': self.pnl
-        }
-        self.trade_log.append(log_entry)
-        print(f"Trade Entered: {log_entry}")
-
-    def _log_exit(self, index):
-        log_exit = {
-            'timestamp': self.data.index[index],
-            'action': 'exit',
-            'price': self.data['Close'].iloc[index],
-            'quantity': self.default_quantity,
-            'position': self.position,
-            'pnl': self.pnl
-        }
-        self.trade_log.append(log_exit)
-        print(f"Trade Exited: {log_exit}")
-
-    def execute_strategy(self):
-        if self.data.empty:
-            return
-        print("DataFrame columns before executing strategy:")
-        print(self.data.columns)
-        self._reset_arrays()
-        self._calculate_fib_weighted_ma()
-        for i in range(len(self.data)):
+    def backtest(self):
+        for i in range(self.bars_required_to_trade, len(self.data)):
             self._bar_update(i)
 
-    def _reset_arrays(self):
-        data_len = len(self.data)
-        self.signals = {'buy_signal': np.zeros(data_len, dtype=bool), 'sell_signal': np.zeros(data_len, dtype=bool)}
-        self.stop_loss = pd.Series(np.zeros(data_len), index=self.data.index)
-        self.take_profit = pd.Series(np.zeros(data_len), index=self.data.index)
-        self.cooldown = pd.Series(np.zeros(data_len), index=self.data.index)
+        trade_df = pd.DataFrame(self.trade_log, columns=['timestamp', 'action', 'direction', 'price', 'quantity'])
+        pnl = self.starting_capital + self.pnl
+        return trade_df, pnl
 
-    def detailed_analysis(self):
-        trades_df = pd.DataFrame(self.trade_log)
-        if trades_df.empty:
-            print("No trades were made.")
-            return
+# Assuming the backtest_strategy function is calling process_date
+def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = []
+        for date in dates:
+            futures.append(executor.submit(process_date, date, strategy_class, brick_size, brick_threshold))
+        
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                trade_log, pnl = future.result()
+                if trade_log is not None and pnl is not None:
+                    print(f"Trade Log: {trade_log}, PnL: {pnl}")
+                else:
+                    print(f"No data returned for date: {future}")
+                # Here you can handle the results, e.g., appending to a master trade log or calculating overall PnL
+            except Exception as exc:
+                print(f"An error occurred: {exc}")
 
-        total_trades = len(trades_df[trades_df['action'] == 'enter'])
-        winning_trades = trades_df[(trades_df['action'] == 'exit') & (trades_df['pnl'].diff() > 0)]
-        losing_trades = trades_df[(trades_df['action'] == 'exit') & (trades_df['pnl'].diff() <= 0)]
-
-        total_pnl = trades_df['pnl'].iloc[-1] - trades_df['pnl'].iloc[0] + self.starting_capital
-        average_pnl_per_trade = trades_df['pnl'].diff().mean()
-        max_drawdown = (trades_df['pnl'].cummax() - trades_df['pnl']).max()
-        win_rate = len(winning_trades) / total_trades * 100 if total_trades > 0 else 0
-
-        print("\nDetailed Trade Analysis:")
-        print(f"Total Trades: {total_trades}")
-        print(f"Winning Trades: {len(winning_trades)}")
-        print(f"Losing Trades: {len(losing_trades)}")
-        print(f"Win Rate: {win_rate:.2f}%")
-        print(f"Total PnL: {total_pnl:.2f}")
-        print(f"Average PnL per Trade: {average_pnl_per_trade:.2f}")
-        print(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-        print("\nTrade Log:")
-        print(trades_df)
-
-    def save_trade_log(self, filename):
-        trades_df = pd.DataFrame(self.trade_log)
-        trades_df.to_csv(filename, index=False)
-        print(f"Trade log saved to {filename}")
-
-def backtest_strategy(strategy, market_replay_data, brick_size, brick_threshold):
-    combined_trade_logs = []
-    total_pnl = 0.0
-
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(process_date, date, strategy, brick_size, brick_threshold) for date in market_replay_data]
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Backtesting"):
-            trade_log, pnl = future.result()
-            combined_trade_logs.extend(trade_log)
-            total_pnl += pnl
-
-    strategy.trade_log = combined_trade_logs
-    strategy.pnl = total_pnl
-    strategy.detailed_analysis()
-    strategy.save_trade_log("trade_log.csv")
-
-# Execute the strategy
 if __name__ == "__main__":
-    available_dates = fetch_available_dates()
-    
-    print("Available dates:")
-    for date in available_dates:
-        print(date)
-    
-    start_date = input("Enter the start date (YYYYMMDD): ")
-    end_date = input("Enter the end date (YYYYMMDD): ")
-    
-    brick_size = float(input("Enter the brick size: "))
-    brick_threshold = int(input("Enter the brick threshold: "))
-    
-    dates = pd.date_range(start=start_date, end=end_date, freq='D')
-    
-    initial_data = load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d'), brick_size, brick_threshold)
-    delta2_strategy = Delta2Strategy(data=initial_data)
-    
-    backtest_strategy(delta2_strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
+    dates = ['20240513', '20240514', '20240515']  # Example dates
+    brick_size = 30  # Example brick size
+    brick_threshold = 5  # Example brick threshold
+    backtest_strategy(Delta2Strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
