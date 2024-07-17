@@ -6,6 +6,7 @@ import h5py
 import psycopg2
 import tempfile
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 
 # Assuming renkodf.py is in the same directory
 from renkodf import RenkoWS
@@ -64,6 +65,7 @@ def process_h5(file_path):
         prices = f['L2/Price'][:].astype(float)
         df = pd.DataFrame({"datetime": timestamps, "close": prices})
         df.dropna(subset=["datetime"], inplace=True)
+        df.set_index('datetime', inplace=True)  # Set datetime as index
         print(f"Processed H5 file: {file_path}")
         return df
 
@@ -339,7 +341,7 @@ def animate(frame, renko_chart, ax1, ax2, start_date, end_date, my_style, strate
         return
     
     for i in range(len(df_ticks)):
-        timestamp = df_ticks['datetime'].iat[i]
+        timestamp = df_ticks.index[i]
         price = df_ticks['Close'].iat[i]  # Changed 'close' to 'Close'
         renko_chart.add_prices(timestamp.value // 10**6, price)  # Convert to milliseconds
         
@@ -361,7 +363,7 @@ def animate(frame, renko_chart, ax1, ax2, start_date, end_date, my_style, strate
 
     title = f"NQ: {start_date} to {end_date}"
     mpf.plot(df_wicks, type='candle', ax=ax1, volume=ax2, axtitle='6AM to NY Close (10:30PM)', style=my_style)
-    print(f"Animating data from {df_ticks['datetime'].iat[0].strftime('%Y-%m-%d')}")
+    print(f"Animating data from {df_ticks.index[0].strftime('%Y-%m-%d')}")
 
 def main():
     conn = connect_db()
@@ -420,7 +422,7 @@ def main():
         return
 
     df_l2 = add_high_low(df_l2)  # Ensure 'High', 'Low', and 'Close' columns are present
-    initial_timestamp = df_l2['datetime'].iat[0].value // 10**6  # Convert to milliseconds
+    initial_timestamp = df_l2.index[0].value // 10**6  # Convert to milliseconds
     initial_price = df_l2['Close'].iat[0]  # Changed 'close' to 'Close'
 
     brick_size = 3  # Adjust based on NinjaTrader settings
@@ -445,7 +447,7 @@ def main():
     ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=500, repeat=False, cache_frame_data=False)  # Throttle the animation with interval=500
     
     print("Starting animation")
-    mpf.show()
+    plt.show()
     print("Animation done")
 
 if __name__ == "__main__":
