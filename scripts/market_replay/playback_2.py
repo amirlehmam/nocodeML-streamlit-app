@@ -6,6 +6,7 @@ import h5py
 import psycopg2
 import tempfile
 from datetime import datetime, timedelta
+import pandas_ta as ta
 
 # Assuming renkodf.py is in the same directory
 from renkodf import RenkoWS
@@ -203,11 +204,7 @@ class Delta2Strategy:
         print(self.data[['PSAR']].head())
 
     def _calculate_rsi(self):
-        delta = self.data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
-        rs = gain / loss
-        self.data['RSI'] = 100 - (100 / (1 + rs))
+        self.data['RSI'] = ta.rsi(self.data['Close'], length=self.rsi_period)
         print("RSI Indicator Head:")
         print(self.data[['RSI']].head())
 
@@ -216,6 +213,10 @@ class Delta2Strategy:
         self._manage_positions(i)
 
     def _generate_signals(self, i):
+        if 'RSI' not in self.data.columns or pd.isna(self.data['RSI'].iloc[i]):
+            print(f"RSI not found or is NaN in data at index {i}. Skipping signal generation.")
+            return
+
         rsi = self.data['RSI'].iloc[i]
 
         for (lower, upper) in self.rsi_buffer_zones:
