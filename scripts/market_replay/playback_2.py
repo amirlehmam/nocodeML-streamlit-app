@@ -446,5 +446,5 @@ def main():
     mpf.show()
     print("Animation done")
 
-if __name__name__ == "__main__":
+if __name__ == "__main__":
     main()
