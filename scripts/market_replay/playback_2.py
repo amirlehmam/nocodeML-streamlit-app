@@ -309,12 +309,12 @@ def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
     total_trades = len(combined_trade_log)
     winning_trades = combined_trade_log[combined_trade_log['direction'] == 'long']
     losing_trades = combined_trade_log[combined_trade_log['direction'] == 'short']
-    total_gross_profit = winning_trades['price'].sum() * 20
-    total_gross_loss = losing_trades['price'].sum() * 20
+    total_gross_profit = winning_trades[winning_trades['action'] == 'exit']['price'].sum() * 20
+    total_gross_loss = losing_trades[losing_trades['action'] == 'exit']['price'].sum() * 20
     net_profit_loss = sum(all_pnls)
     max_drawdown = combined_trade_log['price'].min() * 20
     percent_profitable = (len(winning_trades) / total_trades) * 100 if total_trades > 0 else 0
-    ratio_avg_win_loss = total_gross_profit / total_gross_loss if total_gross_loss != 0 else 0
+    ratio_avg_win_loss = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
     profit_factor = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
     sharpe_ratio = net_profit_loss / combined_trade_log['price'].std() if combined_trade_log['price'].std() != 0 else 0
     sortino_ratio = net_profit_loss / combined_trade_log['price'].min() if combined_trade_log['price'].min() != 0 else 0
