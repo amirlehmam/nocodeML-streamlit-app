@@ -204,6 +204,7 @@ class Delta2Strategy:
         self.data['PSAR'] = pd.Series(psar, index=self.data.index)
         print("PSAR Indicator Head:")
         print(self.data[['PSAR']].head())
+        print("PSAR column successfully calculated and assigned.")
 
     def _bar_update(self, i):
         self._generate_signals(i)
