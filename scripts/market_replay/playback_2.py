@@ -6,7 +6,6 @@ import h5py
 import psycopg2
 import tempfile
 from datetime import datetime, timedelta
-import pandas_ta as ta
 
 # Assuming renkodf.py is in the same directory
 from renkodf import RenkoWS
@@ -22,27 +21,29 @@ db_credentials = {
 }
 
 def connect_db():
+    print("Connecting to database...")
     conn = psycopg2.connect(**db_credentials)
+    print("Connected to database.")
     return conn
 
-def fetch_available_dates():
-    conn = connect_db()
+def fetch_available_dates(conn):
     cursor = conn.cursor()
+    print("Fetching available dates...")
     cursor.execute('SELECT filename FROM h5_files;')
     rows = cursor.fetchall()
-    conn.close()
     
     dates = [row[0].replace('.h5', '') for row in rows]
+    print("Fetched available dates.")
     return sorted(dates)
 
-def load_h5_from_db(filename):
-    conn = connect_db()
+def load_h5_from_db(conn, filename):
     cursor = conn.cursor()
+    print(f"Loading H5 file from database: {filename}")
     cursor.execute('SELECT data FROM h5_files WHERE filename = %s;', (filename,))
     result = cursor.fetchone()
-    conn.close()
     
     if result is None:
+        print(f"File {filename} not found in database.")
         return None
     
     binary_data = result[0]
@@ -52,20 +53,23 @@ def load_h5_from_db(filename):
     with open(file_path, "wb") as f:
         f.write(binary_data)
     
+    print(f"Loaded H5 file from database: {filename}")
     return file_path
 
 def process_h5(file_path):
+    print(f"Processing H5 file: {file_path}")
     with h5py.File(file_path, "r") as f:
         timestamps = [t.decode('utf-8') for t in f['L2/Timestamp'][:]]
         timestamps = pd.to_datetime(timestamps, errors='coerce')
         prices = f['L2/Price'][:].astype(float)
         df = pd.DataFrame({"datetime": timestamps, "close": prices})
         df.dropna(subset=["datetime"], inplace=True)
+        print(f"Processed H5 file: {file_path}")
         return df
 
-def load_data_for_date(date):
+def load_data_for_date(conn, date):
     filename = date.strftime('%Y%m%d') + ".h5"
-    file_path = load_h5_from_db(filename)
+    file_path = load_h5_from_db(conn, filename)
     if file_path:
         df = process_h5(file_path)
         return df
@@ -77,9 +81,10 @@ def add_high_low(df):
     df['Close'] = df['close']  # Ensure 'Close' column is present and correctly named
     return df
 
-def data_generator(dates, step):
+def data_generator(conn, dates, step):
     for date in dates:
-        df_ticks = load_data_for_date(date)
+        print(f"Loading data for date: {date.strftime('%Y-%m-%d')}")
+        df_ticks = load_data_for_date(conn, date)
         if df_ticks is not None:
             df_ticks = add_high_low(df_ticks)  # Add 'High', 'Low', and 'Close' columns
             for start_idx in range(0, len(df_ticks), step):
@@ -105,7 +110,6 @@ class Delta2Strategy:
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
-        self._calculate_rsi()  # Calculate RSI
 
     def _initialize_parameters(self):
         self.bars_required_to_trade = 20
@@ -117,8 +121,6 @@ class Delta2Strategy:
         self.max_acceleration = 0.162
         self.acceleration_step = 0.0162
         self.cooldown_period = 1  # Number of bars to wait before considering a new trade
-        self.rsi_period = 14  # RSI period
-        self.rsi_buffer_zones = [(36.65, 38.22), (39.38, 42.94), (44.42, 45.36), (49.04, 51.30), (55.92, 56.84), (63, 102)]  # Buffer zones
 
     def _initialize_fibonacci_weightings(self):
         self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
@@ -203,32 +205,15 @@ class Delta2Strategy:
         print("PSAR Indicator Head:")
         print(self.data[['PSAR']].head())
 
-    def _calculate_rsi(self):
-        self.data['RSI'] = ta.rsi(self.data['Close'], length=self.rsi_period)
-        print("RSI Indicator Head:")
-        print(self.data[['RSI']].head())
-
     def _bar_update(self, i):
         self._generate_signals(i)
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        if 'RSI' not in self.data.columns or pd.isna(self.data['RSI'].iloc[i]):
-            print(f"RSI not found or is NaN in data at index {i}. Skipping signal generation.")
-            return
-
-        rsi = self.data['RSI'].iloc[i]
-
-        for (lower, upper) in self.rsi_buffer_zones:
-            if lower <= rsi <= upper:
-                if self.trade_type in ["BOTH", "LONG ONLY"]:
-                    self.signals['buy_signal'][i] = True
-                if self.trade_type in ["BOTH", "SHORT ONLY"]:
-                    self.signals['sell_signal'][i] = True
-                return
-
-        self.signals['buy_signal'][i] = False
-        self.signals['sell_signal'][i] = False
+        if self.trade_type in ["BOTH", "LONG ONLY"]:
+            self.signals['buy_signal'][i] = True
+        if self.trade_type in ["BOTH", "SHORT ONLY"]:
+            self.signals['sell_signal'][i] = True
 
     def _manage_positions(self, i):
         if self.position == 0:
@@ -377,7 +362,8 @@ def animate(frame, renko_chart, ax1, ax2, start_date, end_date, my_style, strate
     print(f"Animating data from {df_ticks['datetime'].iat[0].strftime('%Y-%m-%d')}")
 
 def main():
-    available_dates = fetch_available_dates()
+    conn = connect_db()
+    available_dates = fetch_available_dates(conn)
     
     print("Available dates:")
     for date in available_dates:
@@ -426,7 +412,7 @@ def main():
     dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
     # Initializing Renko chart with first date's data
-    df_l2 = load_data_for_date(dates[0])
+    df_l2 = load_data_for_date(conn, dates[0])
     if df_l2 is None:
         print(f"No data available for {dates[0].strftime('%Y-%m-%d')}")
         return
@@ -451,15 +437,14 @@ def main():
     ax2 = axes[2]
 
     # Initialize the strategy
-    initial_data = add_high_low(load_data_for_date(pd.to_datetime(start_date, format='%Y%m%d')))
-    delta2_strategy = Delta2Strategy(data=initial_data, trade_type=trade_type)
+    delta2_strategy = Delta2Strategy(data=df_l2, trade_type=trade_type)
     
-    data = data_generator(dates, step)
+    data = data_generator(conn, dates, step)
     ani = animation.FuncAnimation(fig, animate, fargs=(renko_chart, ax1, ax2, start_date, end_date, my_style, delta2_strategy), frames=data, interval=500, repeat=False, cache_frame_data=False)  # Throttle the animation with interval=500
     
     print("Starting animation")
     mpf.show()
     print("Animation done")
 
-if __name__ == "__main__":
+if __name__name__ == "__main__":
     main()
