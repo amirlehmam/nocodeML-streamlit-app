@@ -297,6 +297,7 @@ class Delta2Strategy:
         print("DataFrame columns before executing strategy:")
         print(self.data.columns)
         self._calculate_fib_weighted_ma()  # Calculate the Fibonacci-weighted moving averages
+        self._calculate_psar()  # Calculate PSAR for the new data
         for i in range(len(self.data)):
             self._bar_update(i)
 
