@@ -84,7 +84,7 @@ def process_date(date, strategy_class, brick_size, brick_threshold):
         return None, None
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=100000):
+    def __init__(self, data, starting_capital=300000):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
@@ -255,17 +255,17 @@ class Delta2Strategy:
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
             self.stop_loss.iloc[index] = self.entry_price - 90  # Example value for stop loss
-            self.take_profit.iloc[index] = self.entry_price + 180  # Example value for take profit
+            self.take_profit.iloc[index] = self.entry_price + 350  # Example value for take profit
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
             self.stop_loss.iloc[index] = self.entry_price + 90  # Example value for stop loss
-            self.take_profit.iloc[index] = self.entry_price - 180  # Example value for take profit
+            self.take_profit.iloc[index] = self.entry_price - 350  # Example value for take profit
         self.trade_log.append((self.data.index[index], 'entry', direction, self.entry_price, self.position))
 
     def _exit_position(self, index):
         exit_price = self.data['Close'].iloc[index]
-        self.pnl += (exit_price - self.entry_price) * self.position
+        self.pnl += ((exit_price - self.entry_price) * self.position) * 20
         self.trade_log.append((self.data.index[index], 'exit', 'long' if self.position > 0 else 'short', exit_price, self.position))
         self.position = 0
         self.entry_price = 0.0
@@ -281,6 +281,8 @@ class Delta2Strategy:
 
 # Assuming the backtest_strategy function is calling process_date
 def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
+    all_trade_logs = []
+    all_pnls = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for date in dates:
@@ -291,14 +293,61 @@ def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
                 trade_log, pnl = future.result()
                 if trade_log is not None and pnl is not None:
                     print(f"Trade Log: {trade_log}, PnL: {pnl}")
+                    all_trade_logs.append(trade_log)
+                    all_pnls.append(pnl)
                 else:
                     print(f"No data returned for date: {future}")
-                # Here you can handle the results, e.g., appending to a master trade log or calculating overall PnL
             except Exception as exc:
                 print(f"An error occurred: {exc}")
+    
+    # Combine all trade logs and export to CSV
+    combined_trade_log = pd.concat(all_trade_logs, ignore_index=True)
+    combined_trade_log.to_csv("trade_log.csv", index=False)
+    print("Trade log exported to trade_log.csv")
+    
+    # Calculate and print summary metrics
+    total_trades = len(combined_trade_log)
+    winning_trades = combined_trade_log[combined_trade_log['direction'] == 'long']
+    losing_trades = combined_trade_log[combined_trade_log['direction'] == 'short']
+    total_gross_profit = winning_trades['price'].sum() * 20
+    total_gross_loss = losing_trades['price'].sum() * 20
+    net_profit_loss = sum(all_pnls)
+    max_drawdown = combined_trade_log['price'].min() * 20
+    percent_profitable = (len(winning_trades) / total_trades) * 100 if total_trades > 0 else 0
+    ratio_avg_win_loss = total_gross_profit / total_gross_loss if total_gross_loss != 0 else 0
+    profit_factor = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
+    sharpe_ratio = net_profit_loss / combined_trade_log['price'].std() if combined_trade_log['price'].std() != 0 else 0
+    sortino_ratio = net_profit_loss / combined_trade_log['price'].min() if combined_trade_log['price'].min() != 0 else 0
+    avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
+    avg_win_trade = total_gross_profit / len(winning_trades) if len(winning_trades) > 0 else 0
+    avg_lose_trade = total_gross_loss / len(losing_trades) if len(losing_trades) > 0 else 0
+
+    summary_metrics = {
+        'Gross Profit ($)': total_gross_profit,
+        'Gross Loss ($)': total_gross_loss,
+        'Net Profit/Loss ($)': net_profit_loss,
+        'Total Trades': total_trades,
+        'Winning Trades': len(winning_trades),
+        'Losing Trades': len(losing_trades),
+        'Max Drawdown ($)': max_drawdown,
+        'Percent Profitable (%)': percent_profitable,
+        'Ratio Avg Win / Avg Loss': ratio_avg_win_loss,
+        'Profit Factor': profit_factor,
+        'Sharpe Ratio': sharpe_ratio,
+        'Sortino Ratio': sortino_ratio,
+        'Average Trade ($)': avg_trade,
+        'Average Winning Trade ($)': avg_win_trade,
+        'Average Losing Trade ($)': avg_lose_trade
+    }
+
+    summary_df = pd.DataFrame(list(summary_metrics.items()), columns=['Metric', 'Value'])
+    print("Summary Metrics:")
+    print(summary_df)
+    
+    return combined_trade_log, all_pnls, summary_df
 
 if __name__ == "__main__":
     dates = ['20240513', '20240514', '20240515']  # Example dates
-    brick_size = 30  # Example brick size
+    brick_size = 3  # Example brick size
     brick_threshold = 5  # Example brick threshold
-    backtest_strategy(Delta2Strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
+    combined_trade_log, all_pnls, summary_df = backtest_strategy(Delta2Strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
