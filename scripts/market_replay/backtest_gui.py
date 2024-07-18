@@ -81,7 +81,7 @@ def process_date(date, strategy_class, brick_size, brick_threshold, **kwargs):
         return pd.DataFrame(), 0.0
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162, psar_step=0.02):
+    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162, psar_step=0.0162):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     
     root = tk.Tk()
     root.title("Backtest GUI")
-    root.geometry("800x600")
+    root.geometry("800x800")
 
     frame = ttk.Frame(root, padding="10")
     frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -435,7 +435,7 @@ if __name__ == "__main__":
 
     ttk.Label(frame, text="PSAR Step:").grid(row=11, column=0, sticky=tk.W)
     psar_step_entry = ttk.Entry(frame)
-    psar_step_entry.insert(0, "0.02")
+    psar_step_entry.insert(0, "0.0162")
     psar_step_entry.grid(row=11, column=1, sticky=(tk.W, tk.E))
 
     run_button = ttk.Button(frame, text="Run Backtest", command=run_backtest)

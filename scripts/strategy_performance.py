@@ -88,7 +88,7 @@ def process_date(date, strategy_class, brick_size, brick_threshold, **kwargs):
         return pd.DataFrame(), 0.0
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162, psar_step=162):
+    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162, psar_step=0.0162):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
@@ -312,7 +312,9 @@ def calculate_summary_metrics(trade_df):
         ]
     }
     
-    return pd.DataFrame(metrics)
+    metrics_df = pd.DataFrame(metrics)
+    metrics_df['Value'] = metrics_df['Value'].astype(float).round(2)
+    return metrics_df
 
 def backtest_strategy(strategy_class, dates, brick_size, brick_threshold, **kwargs):
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -352,9 +354,11 @@ def run_backtest():
             "psar_step": float(psar_step_entry.get())
         }
 
+        global combined_trade_log, summary_metrics
         combined_trade_log, summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
         display_trade_log(combined_trade_log)
         display_summary_metrics(summary_metrics)
+        create_visualization_frame()
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
@@ -371,6 +375,9 @@ def display_summary_metrics(summary_metrics):
 
 def create_visualization_frame():
     global combined_trade_log, summary_metrics
+
+    if 'viz_frame' in globals():
+        viz_frame.destroy()
 
     viz_frame = ttk.Frame(notebook)
     viz_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -397,7 +404,8 @@ def create_visualization_frame():
     summary_label.image = summary_img
     summary_label.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-    return viz_frame
+    notebook.add(viz_frame, text="Visualizations")
+    notebook.select(viz_frame)
 
 # Fetch available dates from the database
 available_dates = fetch_available_dates()
@@ -498,9 +506,5 @@ for widget in frame.winfo_children():
     widget.grid_configure(padx=5, pady=5)
 
 sv_ttk.set_theme("dark")
-
-# Create Visualization tab
-viz_frame = create_visualization_frame()
-notebook.add(viz_frame, text="Visualizations")
 
 root.mainloop()
