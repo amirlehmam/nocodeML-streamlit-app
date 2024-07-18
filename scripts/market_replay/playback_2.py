@@ -279,83 +279,67 @@ class Delta2Strategy:
         pnl = self.starting_capital + self.pnl
         return trade_df, pnl
 
-def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
-    all_trade_logs = []
-    all_pnls = []
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = []
-        for date in dates:
-            futures.append(executor.submit(process_date, date, strategy_class, brick_size, brick_threshold))
-        
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                trade_log, pnl = future.result()
-                if trade_log is not None and pnl is not None:
-                    print(f"Trade Log: {trade_log}, PnL: {pnl}")
-                    all_trade_logs.append(trade_log)
-                    all_pnls.append(pnl)
-                else:
-                    print(f"No data returned for date: {future}")
-            except Exception as exc:
-                print(f"An error occurred: {exc}")
-    
-    # Combine all trade logs and export to CSV
-    combined_trade_log = pd.concat(all_trade_logs, ignore_index=True)
-    combined_trade_log.to_csv("trade_log.csv", index=False)
-    print("Trade log exported to trade_log.csv")
-    
-    # Calculate and print summary metrics
-    total_trades = len(combined_trade_log) // 2  # Each trade has an entry and exit
-    winning_trades = combined_trade_log[(combined_trade_log['action'] == 'exit') & (combined_trade_log['direction'] == 'long')]
-    losing_trades = combined_trade_log[(combined_trade_log['action'] == 'exit') & (combined_trade_log['direction'] == 'short')]
-    
-    total_gross_profit = winning_trades['price'].sum() * 20
-    total_gross_loss = losing_trades['price'].sum() * 20
-    net_profit_loss = sum(all_pnls) - (total_gross_loss * 20)
-    
-    max_drawdown = combined_trade_log['price'].diff().min() * 20
-    percent_profitable = (len(winning_trades) / total_trades) * 100 if total_trades > 0 else 0
-    ratio_avg_win_loss = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
-    profit_factor = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
-    
-    if total_trades > 1:
-        pnl_series = pd.Series(all_pnls)
-        pnl_diff = pnl_series.diff().dropna()
-        sharpe_ratio = (pnl_diff.mean() / pnl_diff.std()) * np.sqrt(len(pnl_diff))
-        sortino_ratio = (pnl_diff.mean() / pnl_diff[pnl_diff < 0].std()) * np.sqrt(len(pnl_diff))
-    else:
-        sharpe_ratio = sortino_ratio = 0
-    
-    avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
-    avg_win_trade = total_gross_profit / len(winning_trades) if len(winning_trades) > 0 else 0
-    avg_lose_trade = total_gross_loss / len(losing_trades) if len(losing_trades) > 0 else 0
+def calculate_summary_metrics(trade_df):
+    gross_profit = trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] * trade_df['quantity'] > 0)]['price'] * 20 * trade_df['quantity'].abs()
+    gross_loss = trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] * trade_df['quantity'] < 0)]['price'] * 20 * trade_df['quantity'].abs()
 
-    summary_metrics = {
-        'Gross Profit ($)': total_gross_profit,
-        'Gross Loss ($)': total_gross_loss,
+    total_trades = len(trade_df) // 2  # Each trade consists of an entry and an exit
+    winning_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] * trade_df['quantity'] > 0)])
+    losing_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] * trade_df['quantity'] < 0)])
+    net_profit_loss = gross_profit.sum() - gross_loss.sum()
+
+    max_drawdown = ((trade_df['price'] * trade_df['quantity']).cumsum() * 20).min()  # Use drawdown calculation method suitable for cumulative PnL
+    percent_profitable = (winning_trades / total_trades) * 100 if total_trades > 0 else 0
+    avg_win_loss_ratio = gross_profit.mean() / gross_loss.mean() if not gross_loss.empty else 0
+    profit_factor = gross_profit.sum() / gross_loss.sum() if gross_loss.sum() != 0 else 0
+
+    sharpe_ratio = (trade_df['price'] * trade_df['quantity']).mean() / (trade_df['price'] * trade_df['quantity']).std() if (trade_df['price'] * trade_df['quantity']).std() != 0 else 0
+    sortino_ratio = sharpe_ratio  # Placeholder for Sortino ratio calculation
+
+    avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
+    avg_winning_trade = gross_profit.mean() if not gross_profit.empty else 0
+    avg_losing_trade = gross_loss.mean() if not gross_loss.empty else 0
+
+    metrics = {
+        'Gross Profit ($)': gross_profit.sum(),
+        'Gross Loss ($)': gross_loss.sum(),
         'Net Profit/Loss ($)': net_profit_loss,
         'Total Trades': total_trades,
-        'Winning Trades': len(winning_trades),
-        'Losing Trades': len(losing_trades),
+        'Winning Trades': winning_trades,
+        'Losing Trades': losing_trades,
         'Max Drawdown ($)': max_drawdown,
         'Percent Profitable (%)': percent_profitable,
-        'Ratio Avg Win / Avg Loss': ratio_avg_win_loss,
+        'Ratio Avg Win / Avg Loss': avg_win_loss_ratio,
         'Profit Factor': profit_factor,
         'Sharpe Ratio': sharpe_ratio,
         'Sortino Ratio': sortino_ratio,
         'Average Trade ($)': avg_trade,
-        'Average Winning Trade ($)': avg_win_trade,
-        'Average Losing Trade ($)': avg_lose_trade
+        'Average Winning Trade ($)': avg_winning_trade,
+        'Average Losing Trade ($)': avg_losing_trade
     }
 
-    summary_df = pd.DataFrame(list(summary_metrics.items()), columns=['Metric', 'Value'])
+    return pd.DataFrame(list(metrics.items()), columns=['Metric', 'Value'])
+
+def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
+    combined_trade_log = pd.DataFrame()
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = [executor.submit(process_date, date, strategy_class, brick_size, brick_threshold) for date in dates]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                trade_log, pnl = future.result()
+                if trade_log is not None and pnl is not None:
+                    combined_trade_log = pd.concat([combined_trade_log, trade_log])
+                    print(f"Trade Log: {trade_log}, PnL: {pnl}")
+            except Exception as exc:
+                print(f"An error occurred: {exc}")
+
+    combined_trade_log.to_csv('trade_log.csv', index=False)
+    summary_metrics = calculate_summary_metrics(combined_trade_log)
     print("Summary Metrics:")
-    print(summary_df)
-    
-    return combined_trade_log, all_pnls, summary_df
+    print(summary_metrics)
 
 if __name__ == "__main__":
     dates = ['20240513', '20240514', '20240515']  # Example dates
     brick_size = 3  # Example brick size
     brick_threshold = 5  # Example brick threshold
-    combined_trade_log, all_pnls, summary_df = backtest_strategy(Delta2Strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
+    backtest_strategy(Delta2Strategy, pd.to_datetime(dates, format='%Y%m%d'), brick_size, brick_threshold)
