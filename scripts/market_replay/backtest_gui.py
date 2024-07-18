@@ -69,37 +69,36 @@ def load_data_for_date(date, brick_size, brick_threshold):
         return process_h5(file_path, brick_size, brick_threshold)
     return None
 
-def process_date(date, strategy_class, **kwargs):
+def process_date(date, strategy_class, brick_size, brick_threshold, **kwargs):
     print(f"Processing date: {date}")
-    data = load_data_for_date(date, kwargs['brick_size'], kwargs['brick_threshold'])
+    data = load_data_for_date(date, brick_size, brick_threshold)
     if data is not None:
-        temp_strategy = strategy_class(data, **{k: v for k, v in kwargs.items() if k in ['tp', 'sl', 'fib_period', 'smooth_ma_period', 'psar_acceleration', 'psar_max_acceleration', 'psar_step']})
+        temp_strategy = strategy_class(data, **kwargs)
         trade_log, pnl = temp_strategy.backtest()
         return trade_log, pnl
     else:
         return None, None
 
 class Delta2Strategy:
-    def __init__(self, data, tp, sl, fib_period, smooth_ma_period, psar_acceleration, psar_max_acceleration, psar_step, starting_capital=300000):
+    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
         self.starting_capital = starting_capital
         self.position = 0
         self.entry_price = 0.0
+        self.tp = tp
+        self.sl = sl
+        self.fib_weight_ma_period = fib_ma_period
+        self.smoothing_simple_ma_period = smooth_ma_period
+        self.acceleration = psar_acceleration
+        self.max_acceleration = psar_max_acceleration
         self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data), dtype=bool), 'sell_signal': np.zeros(len(data), dtype=bool)}
-        self.cooldown = pd.Series(np.zeros(len(data)), index=self.data.index)
-        self.cooldown_period = 10
-        self.last_trade_time = None
-        self.tp = tp
-        self.sl = sl
-        self.fib_period = fib_period
-        self.smooth_ma_period = smooth_ma_period
-        self.psar_acceleration = psar_acceleration
-        self.psar_max_acceleration = psar_max_acceleration
-        self.psar_step = psar_step
+        self.cooldown = pd.Series(np.zeros(len(data)), index=data.index)
+        self.cooldown_period = 10  # Adjusted cooldown period to prevent rapid trades
+        self.last_trade_time = None  # Track the last trade time
         self._initialize_parameters()
         self._initialize_fibonacci_weightings()
         self._calculate_psar()
@@ -107,11 +106,17 @@ class Delta2Strategy:
     def _initialize_parameters(self):
         self.bars_required_to_trade = 20
         self.default_quantity = 1
+        self.enable_fib_weight_ma_cross = True
+        self.fib_weight_ma_period = 9
+        self.smoothing_simple_ma_period = 20
+        self.acceleration = 0.0162  
+        self.max_acceleration = 0.162
+        self.acceleration_step = 0.0162
 
     def _initialize_fibonacci_weightings(self):
-        self.fib_weightings = self._calculate_fibonacci_weights(self.fib_period)
+        self.fib_weightings = self._calculate_fibonacci_weights(self.fib_weight_ma_period)
         self.fib_weighted_ma = pd.Series(np.zeros(len(self.data)), index=self.data.index)
-        self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smooth_ma_period).mean()
+        self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smoothing_simple_ma_period).mean()
 
     def _calculate_fibonacci_weights(self, period):
         fib_weights = np.zeros(period)
@@ -128,11 +133,11 @@ class Delta2Strategy:
         fib_ma = np.zeros(len(close_prices))
         
         for i in range(len(close_prices)):
-            if i >= self.fib_period - 1:
-                fib_ma[i] = np.dot(close_prices.iloc[i - self.fib_period + 1:i + 1], self.fib_weightings)
+            if i >= self.fib_weight_ma_period - 1:
+                fib_ma[i] = np.dot(close_prices.iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings)
         
         self.fib_weighted_ma = pd.Series(fib_ma, index=self.data.index)
-        self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smooth_ma_period).mean()
+        self.smoothed_fib_weighted_ma = self.fib_weighted_ma.rolling(window=self.smoothing_simple_ma_period).mean()
 
     def _calculate_psar(self):
         if self.data.empty:
@@ -142,8 +147,8 @@ class Delta2Strategy:
         low = self.data['Low']
         close = self.data['Close']
 
-        af = self.psar_acceleration
-        max_af = self.psar_max_acceleration
+        af = self.acceleration
+        max_af = self.max_acceleration
         psar = np.zeros(len(close))
         bull = True
         ep = low.iloc[0]
@@ -159,21 +164,21 @@ class Delta2Strategy:
                     bull = False
                     psar[i] = hp
                     lp = low.iloc[i]
-                    af = self.psar_acceleration
+                    af = self.acceleration
                     reverse = True
             else:
                 if high.iloc[i] > psar[i]:
                     bull = True
                     psar[i] = lp
                     hp = high.iloc[i]
-                    af = self.psar_acceleration
+                    af = self.acceleration
                     reverse = True
 
             if not reverse:
                 if bull:
                     if high.iloc[i] > hp:
                         hp = high.iloc[i]
-                        af = min(af + self.psar_step, max_af)
+                        af = min(af + self.acceleration_step, max_af)
                     if i > 1 and low.iloc[i - 1] < psar[i]:
                         psar[i] = low.iloc[i - 1]
                     if i > 2 and low.iloc[i - 2] < psar[i]:
@@ -181,7 +186,7 @@ class Delta2Strategy:
                 else:
                     if low.iloc[i] < lp:
                         lp = low.iloc[i]
-                        af = min(af + self.psar_step, max_af)
+                        af = min(af + self.acceleration_step, max_af)
                     if i > 1 and high.iloc[i - 1] > psar[i]:
                         psar[i] = high.iloc[i - 1]
                     if i > 2 and high.iloc[i - 2] > psar[i]:
@@ -194,12 +199,12 @@ class Delta2Strategy:
         self._manage_positions(i)
 
     def _generate_signals(self, i):
-        if i >= self.fib_period - 1:
-            self.fib_weighted_ma.iloc[i] = np.dot(self.data['Close'].iloc[i - self.fib_period + 1:i + 1], self.fib_weightings)
-            if i >= self.fib_period + self.smooth_ma_period - 2:
-                self.smoothed_fib_weighted_ma.iloc[i] = self.fib_weighted_ma.iloc[i - self.smooth_ma_period + 1:i + 1].mean()
+        if i >= self.fib_weight_ma_period - 1:
+            self.fib_weighted_ma.iloc[i] = np.dot(self.data['Close'].iloc[i - self.fib_weight_ma_period + 1:i + 1], self.fib_weightings)
+            if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
+                self.smoothed_fib_weighted_ma.iloc[i] = self.fib_weighted_ma.iloc[i - self.smoothing_simple_ma_period + 1:i + 1].mean()
         
-        if i >= self.fib_period + self.smooth_ma_period - 2:
+        if i >= self.fib_weight_ma_period + self.smoothing_simple_ma_period - 2:
             if self.fib_weighted_ma.iloc[i] > self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] <= self.smoothed_fib_weighted_ma.iloc[i - 1]:
                 self.signals['buy_signal'][i] = True
             elif self.fib_weighted_ma.iloc[i] < self.smoothed_fib_weighted_ma.iloc[i] and self.fib_weighted_ma.iloc[i - 1] >= self.smoothed_fib_weighted_ma.iloc[i - 1]:
@@ -236,13 +241,13 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price - self.sl
-            self.take_profit.iloc[index] = self.entry_price + self.tp
+            self.stop_loss.iloc[index] = self.entry_price - 90  # Example value for stop loss
+            self.take_profit.iloc[index] = self.entry_price + 90  # Example value for take profit
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price + self.sl
-            self.take_profit.iloc[index] = self.entry_price - self.tp
+            self.stop_loss.iloc[index] = self.entry_price + 90  # Example value for stop loss
+            self.take_profit.iloc[index] = self.entry_price - 90  # Example value for take profit
         self.trade_log.append((self.data.index[index], 'entry', direction, self.entry_price, self.position))
 
     def _exit_position(self, index):
@@ -261,58 +266,59 @@ class Delta2Strategy:
         pnl = self.starting_capital + self.pnl
         return trade_df, pnl
 
-def backtest_strategy(strategy_class, dates, **kwargs):
+def calculate_summary_metrics(trade_df):
+    gross_profit = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'long')]['price'].diff().sum() * 20
+    gross_loss = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'short')]['price'].diff().sum() * 20
+    net_profit_loss = gross_profit - gross_loss
+    total_trades = len(trade_df)
+    winning_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'].diff() > 0)])
+    losing_trades = total_trades - winning_trades
+    max_drawdown = trade_df['price'].diff().min() * 20
+    percent_profitable = (winning_trades / total_trades) * 100 if total_trades > 0 else 0
+    avg_win = gross_profit / winning_trades if winning_trades > 0 else 0
+    avg_loss = gross_loss / losing_trades if losing_trades > 0 else 0
+    ratio_avg_win_loss = avg_win / abs(avg_loss) if avg_loss != 0 else 0
+    profit_factor = gross_profit / abs(gross_loss) if gross_loss != 0 else 0
+    sharpe_ratio = net_profit_loss / trade_df['price'].std() * np.sqrt(len(trade_df)) if trade_df['price'].std() != 0 else 0
+    sortino_ratio = sharpe_ratio  # This is a simplification
+    avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
+
+    metrics = {
+        'Metric': [
+            'Gross Profit ($)', 'Gross Loss ($)', 'Net Profit/Loss ($)', 'Total Trades',
+            'Winning Trades', 'Losing Trades', 'Max Drawdown ($)', 'Percent Profitable (%)',
+            'Ratio Avg Win / Avg Loss', 'Profit Factor', 'Sharpe Ratio', 'Sortino Ratio',
+            'Average Trade ($)', 'Average Winning Trade ($)', 'Average Losing Trade ($)'
+        ],
+        'Value': [
+            gross_profit, gross_loss, net_profit_loss, total_trades,
+            winning_trades, losing_trades, max_drawdown, percent_profitable,
+            ratio_avg_win_loss, profit_factor, sharpe_ratio, sortino_ratio,
+            avg_trade, avg_win, avg_loss
+        ]
+    }
+    
+    return pd.DataFrame(metrics)
+
+def backtest_strategy(strategy_class, dates, brick_size, brick_threshold, **kwargs):
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for date in dates:
-            futures.append(executor.submit(process_date, date, strategy_class, **kwargs))
+            futures.append(executor.submit(process_date, date, strategy_class, brick_size, brick_threshold, **kwargs))
         
         combined_trade_log = pd.DataFrame()
         for future in concurrent.futures.as_completed(futures):
             try:
                 trade_log, pnl = future.result()
                 if trade_log is not None and pnl is not None:
-                    combined_trade_log = pd.concat([combined_trade_log, trade_log])
-                else:
-                    print(f"No data returned for date: {future}")
+                    combined_trade_log = pd.concat([combined_trade_log, trade_log], ignore_index=True)
             except Exception as exc:
                 print(f"An error occurred: {exc}")
-    
-    combined_trade_log.to_csv("trade_log.csv", index=False)
-    print("Trade log exported to trade_log.csv")
 
-    # Calculate and print summary metrics
+    combined_trade_log.to_csv("trade_log.csv", index=False)
     summary_metrics = calculate_summary_metrics(combined_trade_log)
     summary_metrics.to_csv("summary_metrics.csv", index=False)
-    print("Summary metrics exported to summary_metrics.csv")
-    return summary_metrics
-
-def calculate_summary_metrics(trade_df):
-    gross_profit = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'long')]['price'].sum() * 20
-    gross_loss = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'short')]['price'].sum() * 20
-    net_profit_loss = gross_profit - gross_loss
-    total_trades = len(trade_df)
-    winning_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] > 0)])
-    losing_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] < 0)])
-    max_drawdown = trade_df['price'].min() * 20 if 'price' in trade_df.columns else 0
-    percent_profitable = (winning_trades / total_trades) * 100 if total_trades > 0 else 0
-    avg_win_loss_ratio = (gross_profit / winning_trades) / (gross_loss / losing_trades) if losing_trades > 0 else 0
-    profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0
-    sharpe_ratio = (trade_df['price'].mean() / trade_df['price'].std()) * np.sqrt(total_trades) if trade_df['price'].std() != 0 else 0
-    sortino_ratio = sharpe_ratio  # Simplified, you can replace it with a more precise calculation if needed
-    avg_trade = trade_df['price'].mean() if 'price' in trade_df.columns else 0
-    avg_winning_trade = trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] > 0)]['price'].mean() * 20 if 'price' in trade_df.columns else 0
-    avg_losing_trade = trade_df[(trade_df['action'] == 'exit') & (trade_df['price'] < 0)]['price'].mean() * 20 if 'price' in trade_df.columns else 0
-
-    summary_data = {
-        "Metric": ["Gross Profit ($)", "Gross Loss ($)", "Net Profit/Loss ($)", "Total Trades", "Winning Trades", "Losing Trades", "Max Drawdown ($)", 
-                   "Percent Profitable (%)", "Ratio Avg Win / Avg Loss", "Profit Factor", "Sharpe Ratio", "Sortino Ratio", "Average Trade ($)", 
-                   "Average Winning Trade ($)", "Average Losing Trade ($)"],
-        "Value": [gross_profit, gross_loss, net_profit_loss, total_trades, winning_trades, losing_trades, max_drawdown, 
-                  percent_profitable, avg_win_loss_ratio, profit_factor, sharpe_ratio, sortino_ratio, avg_trade, avg_winning_trade, avg_losing_trade]
-    }
-    summary_df = pd.DataFrame(summary_data)
-    return summary_df
+    return combined_trade_log, summary_metrics
 
 def run_backtest():
     try:
@@ -325,14 +331,12 @@ def run_backtest():
             "brick_threshold": int(brick_threshold_entry.get()),
             "tp": int(take_profit_entry.get()),
             "sl": int(stop_loss_entry.get()),
-            "fib_period": int(fib_ma_period_entry.get()),
+            "fib_ma_period": int(fib_ma_period_entry.get()),
             "smooth_ma_period": int(smoothed_ma_period_entry.get()),
             "psar_acceleration": float(psar_acceleration_entry.get()),
-            "psar_max_acceleration": float(psar_max_acceleration_entry.get()),
-            "psar_step": float(psar_step_entry.get())
+            "psar_max_acceleration": float(psar_max_acceleration_entry.get())
         }
 
-        # Execute the backtest directly
         summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
         display_summary_metrics(summary_metrics)
 
