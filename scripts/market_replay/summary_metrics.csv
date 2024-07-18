@@ -1,16 +1,16 @@
 Metric,Value
 Gross Profit ($),7740.0
-Gross Loss ($),7920.0
-Net Profit/Loss ($),-180.0
-Total Trades,61.0
-Winning Trades,30.0
-Losing Trades,31.0
+Gross Loss ($),7440.0
+Net Profit/Loss ($),300.0
+Total Trades,110.0
+Winning Trades,46.0
+Losing Trades,64.0
 Max Drawdown ($),-1320.0
-Percent Profitable (%),49.18032786885246
-Ratio Avg Win / Avg Loss,1.009848484848485
-Profit Factor,0.9772727272727273
-Sharpe Ratio,-12.929071720441158
-Sortino Ratio,-12.929071720441158
-Average Trade ($),-2.9508196721311477
-Average Winning Trade ($),258.0
-Average Losing Trade ($),255.48387096774192
+Percent Profitable (%),41.81818181818181
+Ratio Avg Win / Avg Loss,1.447405329593268
+Profit Factor,1.0403225806451613
+Sharpe Ratio,24.246922909496423
+Sortino Ratio,24.246922909496423
+Average Trade ($),2.727272727272727
+Average Winning Trade ($),168.2608695652174
+Average Losing Trade ($),116.25

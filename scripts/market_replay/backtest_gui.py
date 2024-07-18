@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
 from renkodf import Renko
+import multiprocessing
 
 # PostgreSQL database credentials
 db_credentials = {
@@ -276,7 +277,7 @@ def calculate_summary_metrics(trade_df):
     gross_profit = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'long')]['price'].diff().sum() * 20
     gross_loss = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'short')]['price'].diff().sum() * 20
     net_profit_loss = gross_profit - gross_loss
-    total_trades = len(trade_df)
+    total_trades = len(trade_df[trade_df['action'] == 'exit'])
     winning_trades = len(trade_df[(trade_df['action'] == 'exit') & (trade_df['price'].diff() > 0)])
     losing_trades = total_trades - winning_trades
     max_drawdown = trade_df['price'].diff().min() * 20
@@ -345,102 +346,117 @@ def run_backtest():
         }
 
         combined_trade_log, summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
+        display_trade_log(combined_trade_log)
         display_summary_metrics(summary_metrics)
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
+def display_trade_log(trade_log):
+    trade_log_listbox.delete(0, tk.END)  # Clear previous results
+    for idx, row in trade_log.iterrows():
+        trade_log_listbox.insert(tk.END, f"{row['timestamp']}, {row['action']}, {row['direction']}, {row['price']}, {row['quantity']}")
+
 def display_summary_metrics(summary_metrics):
     summary_listbox.delete(0, tk.END)  # Clear previous results
     for idx, row in summary_metrics.iterrows():
-        summary_listbox.insert(tk.END, f"{row['Metric']}: {row['Value']}")
+        formatted_value = f"{row['Value']:.2f}"
+        summary_listbox.insert(tk.END, f"{row['Metric']}: {formatted_value}")
 
 # Fetch available dates from the database
 available_dates = fetch_available_dates()
 
-root = tk.Tk()
-root.title("Backtest GUI")
-root.geometry("1000x700")
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    
+    root = tk.Tk()
+    root.title("Backtest GUI")
+    root.geometry("800x600")
 
-frame = ttk.Frame(root, padding="10")
-frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    frame = ttk.Frame(root, padding="10")
+    frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
 
-ttk.Label(frame, text="Algorithm Parameters", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=2, pady=10)
+    ttk.Label(frame, text="Algorithm Parameters", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=2, pady=10)
 
-# Date selection using Combobox
-ttk.Label(frame, text="Start Date:").grid(row=1, column=0, sticky=tk.W)
-start_date_var = tk.StringVar()
-start_date_combobox = ttk.Combobox(frame, textvariable=start_date_var, values=available_dates)
-start_date_combobox.grid(row=1, column=1, sticky=(tk.W, tk.E))
+    # Date selection using Combobox
+    ttk.Label(frame, text="Start Date:").grid(row=1, column=0, sticky=tk.W)
+    start_date_var = tk.StringVar()
+    start_date_combobox = ttk.Combobox(frame, textvariable=start_date_var, values=available_dates)
+    start_date_combobox.grid(row=1, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="End Date:").grid(row=2, column=0, sticky=tk.W)
-end_date_var = tk.StringVar()
-end_date_combobox = ttk.Combobox(frame, textvariable=end_date_var, values=available_dates)
-end_date_combobox.grid(row=2, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="End Date:").grid(row=2, column=0, sticky=tk.W)
+    end_date_var = tk.StringVar()
+    end_date_combobox = ttk.Combobox(frame, textvariable=end_date_var, values=available_dates)
+    end_date_combobox.grid(row=2, column=1, sticky=(tk.W, tk.E))
 
-# Other parameters with default values
-ttk.Label(frame, text="Renko Brick Size:").grid(row=3, column=0, sticky=tk.W)
-brick_size_entry = ttk.Entry(frame)
-brick_size_entry.insert(0, "3")
-brick_size_entry.grid(row=3, column=1, sticky=(tk.W, tk.E))
+    # Other parameters with default values
+    ttk.Label(frame, text="Renko Brick Size:").grid(row=3, column=0, sticky=tk.W)
+    brick_size_entry = ttk.Entry(frame)
+    brick_size_entry.insert(0, "3")
+    brick_size_entry.grid(row=3, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Renko Brick Threshold:").grid(row=4, column=0, sticky=tk.W)
-brick_threshold_entry = ttk.Entry(frame)
-brick_threshold_entry.insert(0, "5")
-brick_threshold_entry.grid(row=4, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Renko Brick Threshold:").grid(row=4, column=0, sticky=tk.W)
+    brick_threshold_entry = ttk.Entry(frame)
+    brick_threshold_entry.insert(0, "5")
+    brick_threshold_entry.grid(row=4, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Take Profit:").grid(row=5, column=0, sticky=tk.W)
-take_profit_entry = ttk.Entry(frame)
-take_profit_entry.insert(0, "90")
-take_profit_entry.grid(row=5, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Take Profit:").grid(row=5, column=0, sticky=tk.W)
+    take_profit_entry = ttk.Entry(frame)
+    take_profit_entry.insert(0, "90")
+    take_profit_entry.grid(row=5, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Stop Loss:").grid(row=6, column=0, sticky=tk.W)
-stop_loss_entry = ttk.Entry(frame)
-stop_loss_entry.insert(0, "90")
-stop_loss_entry.grid(row=6, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Stop Loss:").grid(row=6, column=0, sticky=tk.W)
+    stop_loss_entry = ttk.Entry(frame)
+    stop_loss_entry.insert(0, "90")
+    stop_loss_entry.grid(row=6, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Fibonacci MA Period:").grid(row=7, column=0, sticky=tk.W)
-fib_ma_period_entry = ttk.Entry(frame)
-fib_ma_period_entry.insert(0, "9")
-fib_ma_period_entry.grid(row=7, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Fibonacci MA Period:").grid(row=7, column=0, sticky=tk.W)
+    fib_ma_period_entry = ttk.Entry(frame)
+    fib_ma_period_entry.insert(0, "9")
+    fib_ma_period_entry.grid(row=7, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Smoothed MA Period:").grid(row=8, column=0, sticky=tk.W)
-smoothed_ma_period_entry = ttk.Entry(frame)
-smoothed_ma_period_entry.insert(0, "20")
-smoothed_ma_period_entry.grid(row=8, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Smoothed MA Period:").grid(row=8, column=0, sticky=tk.W)
+    smoothed_ma_period_entry = ttk.Entry(frame)
+    smoothed_ma_period_entry.insert(0, "20")
+    smoothed_ma_period_entry.grid(row=8, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="PSAR Acceleration:").grid(row=9, column=0, sticky=tk.W)
-psar_acceleration_entry = ttk.Entry(frame)
-psar_acceleration_entry.insert(0, "0.0162")
-psar_acceleration_entry.grid(row=9, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="PSAR Acceleration:").grid(row=9, column=0, sticky=tk.W)
+    psar_acceleration_entry = ttk.Entry(frame)
+    psar_acceleration_entry.insert(0, "0.0162")
+    psar_acceleration_entry.grid(row=9, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="PSAR Max Acceleration:").grid(row=10, column=0, sticky=tk.W)
-psar_max_acceleration_entry = ttk.Entry(frame)
-psar_max_acceleration_entry.insert(0, "0.162")
-psar_max_acceleration_entry.grid(row=10, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="PSAR Max Acceleration:").grid(row=10, column=0, sticky=tk.W)
+    psar_max_acceleration_entry = ttk.Entry(frame)
+    psar_max_acceleration_entry.insert(0, "0.162")
+    psar_max_acceleration_entry.grid(row=10, column=1, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="PSAR Step:").grid(row=11, column=0, sticky=tk.W)
-psar_step_entry = ttk.Entry(frame)
-psar_step_entry.insert(0, "0.02")
-psar_step_entry.grid(row=11, column=1, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="PSAR Step:").grid(row=11, column=0, sticky=tk.W)
+    psar_step_entry = ttk.Entry(frame)
+    psar_step_entry.insert(0, "0.02")
+    psar_step_entry.grid(row=11, column=1, sticky=(tk.W, tk.E))
 
-run_button = ttk.Button(frame, text="Run Backtest", command=run_backtest)
-run_button.grid(row=12, column=0, columnspan=2, pady=10)
+    run_button = ttk.Button(frame, text="Run Backtest", command=run_backtest)
+    run_button.grid(row=12, column=0, columnspan=2, pady=10)
 
-ttk.Label(frame, text="Trade Log", font=("Helvetica", 14)).grid(row=13, column=0, columnspan=2, pady=10)
-trade_log_listbox = tk.Listbox(frame, height=10, width=50)
-trade_log_listbox.grid(row=14, column=0, columnspan=2, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Trade Log", font=("Helvetica", 14)).grid(row=13, column=0, pady=10, sticky=tk.W)
+    trade_log_listbox = tk.Listbox(frame, height=10, width=50)
+    trade_log_listbox.grid(row=14, column=0, pady=5, sticky=(tk.W, tk.E))
 
-ttk.Label(frame, text="Summary Metrics", font=("Helvetica", 14)).grid(row=15, column=0, columnspan=2, pady=10)
-summary_listbox = tk.Listbox(frame, height=10, width=50)
-summary_listbox.grid(row=16, column=0, columnspan=2, sticky=(tk.W, tk.E))
+    ttk.Label(frame, text="Summary Metrics", font=("Helvetica", 14)).grid(row=13, column=1, pady=10, sticky=tk.W)
+    summary_listbox = tk.Listbox(frame, height=10, width=50)
+    summary_listbox.grid(row=14, column=1, pady=5, sticky=(tk.W, tk.E))
 
-for widget in frame.winfo_children():
-    widget.grid_configure(padx=5, pady=5)
+    # Adjust grid configurations to fit the new layout
+    frame.grid_columnconfigure(0, weight=1)
+    frame.grid_columnconfigure(1, weight=1)
+    frame.grid_rowconfigure(14, weight=1)
 
-sv_ttk.set_theme("dark")
+    for widget in frame.winfo_children():
+        widget.grid_configure(padx=5, pady=5)
 
-root.mainloop()
+    sv_ttk.set_theme("dark")
+
+    root.mainloop()
