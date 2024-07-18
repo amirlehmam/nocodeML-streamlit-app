@@ -77,10 +77,10 @@ def process_date(date, strategy_class, brick_size, brick_threshold, **kwargs):
         trade_log, pnl = temp_strategy.backtest()
         return trade_log, pnl
     else:
-        return None, None
+        return pd.DataFrame(), 0.0
 
 class Delta2Strategy:
-    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162):
+    def __init__(self, data, starting_capital=300000, tp=90, sl=90, fib_ma_period=9, smooth_ma_period=20, psar_acceleration=0.0162, psar_max_acceleration=0.162, psar_step=0.02):
         self.data = data
         self.trade_log = []
         self.pnl = 0.0
@@ -93,6 +93,7 @@ class Delta2Strategy:
         self.smoothing_simple_ma_period = smooth_ma_period
         self.acceleration = psar_acceleration
         self.max_acceleration = psar_max_acceleration
+        self.psar_step = psar_step
         self.stop_loss = pd.Series(np.zeros(len(data)), index=data.index)
         self.take_profit = pd.Series(np.zeros(len(data)), index=data.index)
         self.signals = {'buy_signal': np.zeros(len(data), dtype=bool), 'sell_signal': np.zeros(len(data), dtype=bool)}
@@ -178,7 +179,7 @@ class Delta2Strategy:
                 if bull:
                     if high.iloc[i] > hp:
                         hp = high.iloc[i]
-                        af = min(af + self.acceleration_step, max_af)
+                        af = min(af + self.psar_step, max_af)
                     if i > 1 and low.iloc[i - 1] < psar[i]:
                         psar[i] = low.iloc[i - 1]
                     if i > 2 and low.iloc[i - 2] < psar[i]:
@@ -186,7 +187,7 @@ class Delta2Strategy:
                 else:
                     if low.iloc[i] < lp:
                         lp = low.iloc[i]
-                        af = min(af + self.acceleration_step, max_af)
+                        af = min(af + self.psar_step, max_af)
                     if i > 1 and high.iloc[i - 1] > psar[i]:
                         psar[i] = high.iloc[i - 1]
                     if i > 2 and high.iloc[i - 2] > psar[i]:
@@ -241,13 +242,13 @@ class Delta2Strategy:
         if direction == 'long':
             self.position = self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price - 90  # Example value for stop loss
-            self.take_profit.iloc[index] = self.entry_price + 90  # Example value for take profit
+            self.stop_loss.iloc[index] = self.entry_price - self.sl
+            self.take_profit.iloc[index] = self.entry_price + self.tp
         elif direction == 'short':
             self.position = -self.default_quantity
             self.entry_price = self.data['Close'].iloc[index]
-            self.stop_loss.iloc[index] = self.entry_price + 90  # Example value for stop loss
-            self.take_profit.iloc[index] = self.entry_price - 90  # Example value for take profit
+            self.stop_loss.iloc[index] = self.entry_price + self.sl
+            self.take_profit.iloc[index] = self.entry_price - self.tp
         self.trade_log.append((self.data.index[index], 'entry', direction, self.entry_price, self.position))
 
     def _exit_position(self, index):
@@ -267,6 +268,11 @@ class Delta2Strategy:
         return trade_df, pnl
 
 def calculate_summary_metrics(trade_df):
+    if trade_df.empty:
+        return pd.DataFrame({
+            'Metric': [], 'Value': []
+        })
+
     gross_profit = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'long')]['price'].diff().sum() * 20
     gross_loss = trade_df[(trade_df['action'] == 'exit') & (trade_df['direction'] == 'short')]['price'].diff().sum() * 20
     net_profit_loss = gross_profit - gross_loss
@@ -310,7 +316,7 @@ def backtest_strategy(strategy_class, dates, brick_size, brick_threshold, **kwar
         for future in concurrent.futures.as_completed(futures):
             try:
                 trade_log, pnl = future.result()
-                if trade_log is not None and pnl is not None:
+                if not trade_log.empty:
                     combined_trade_log = pd.concat([combined_trade_log, trade_log], ignore_index=True)
             except Exception as exc:
                 print(f"An error occurred: {exc}")
@@ -334,16 +340,18 @@ def run_backtest():
             "fib_ma_period": int(fib_ma_period_entry.get()),
             "smooth_ma_period": int(smoothed_ma_period_entry.get()),
             "psar_acceleration": float(psar_acceleration_entry.get()),
-            "psar_max_acceleration": float(psar_max_acceleration_entry.get())
+            "psar_max_acceleration": float(psar_max_acceleration_entry.get()),
+            "psar_step": float(psar_step_entry.get())
         }
 
-        summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
+        combined_trade_log, summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
         display_summary_metrics(summary_metrics)
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
 def display_summary_metrics(summary_metrics):
+    summary_listbox.delete(0, tk.END)  # Clear previous results
     for idx, row in summary_metrics.iterrows():
         summary_listbox.insert(tk.END, f"{row['Metric']}: {row['Value']}")
 
