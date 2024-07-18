@@ -279,7 +279,6 @@ class Delta2Strategy:
         pnl = self.starting_capital + self.pnl
         return trade_df, pnl
 
-# Assuming the backtest_strategy function is calling process_date
 def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
     all_trade_logs = []
     all_pnls = []
@@ -306,18 +305,27 @@ def backtest_strategy(strategy_class, dates, brick_size, brick_threshold):
     print("Trade log exported to trade_log.csv")
     
     # Calculate and print summary metrics
-    total_trades = len(combined_trade_log)
-    winning_trades = combined_trade_log[combined_trade_log['direction'] == 'long']
-    losing_trades = combined_trade_log[combined_trade_log['direction'] == 'short']
-    total_gross_profit = winning_trades[winning_trades['action'] == 'exit']['price'].sum() * 20
-    total_gross_loss = losing_trades[losing_trades['action'] == 'exit']['price'].sum() * 20
-    net_profit_loss = sum(all_pnls)
-    max_drawdown = combined_trade_log['price'].min() * 20
+    total_trades = len(combined_trade_log) // 2  # Each trade has an entry and exit
+    winning_trades = combined_trade_log[(combined_trade_log['action'] == 'exit') & (combined_trade_log['direction'] == 'long')]
+    losing_trades = combined_trade_log[(combined_trade_log['action'] == 'exit') & (combined_trade_log['direction'] == 'short')]
+    
+    total_gross_profit = winning_trades['price'].sum() * 20
+    total_gross_loss = losing_trades['price'].sum() * 20
+    net_profit_loss = sum(all_pnls) - (total_gross_loss * 20)
+    
+    max_drawdown = combined_trade_log['price'].diff().min() * 20
     percent_profitable = (len(winning_trades) / total_trades) * 100 if total_trades > 0 else 0
     ratio_avg_win_loss = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
     profit_factor = total_gross_profit / abs(total_gross_loss) if total_gross_loss != 0 else 0
-    sharpe_ratio = net_profit_loss / combined_trade_log['price'].std() if combined_trade_log['price'].std() != 0 else 0
-    sortino_ratio = net_profit_loss / combined_trade_log['price'].min() if combined_trade_log['price'].min() != 0 else 0
+    
+    if total_trades > 1:
+        pnl_series = pd.Series(all_pnls)
+        pnl_diff = pnl_series.diff().dropna()
+        sharpe_ratio = (pnl_diff.mean() / pnl_diff.std()) * np.sqrt(len(pnl_diff))
+        sortino_ratio = (pnl_diff.mean() / pnl_diff[pnl_diff < 0].std()) * np.sqrt(len(pnl_diff))
+    else:
+        sharpe_ratio = sortino_ratio = 0
+    
     avg_trade = net_profit_loss / total_trades if total_trades > 0 else 0
     avg_win_trade = total_gross_profit / len(winning_trades) if len(winning_trades) > 0 else 0
     avg_lose_trade = total_gross_loss / len(losing_trades) if len(losing_trades) > 0 else 0
