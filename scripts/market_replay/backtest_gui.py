@@ -352,6 +352,50 @@ def run_backtest():
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
+def run_optimization():
+    try:
+        start_date = pd.to_datetime(start_date_var.get())
+        end_date = pd.to_datetime(end_date_var.get())
+        dates = pd.date_range(start_date, end_date, freq='D')
+
+        # Get optimization ranges and increments
+        fast_min = int(fast_min_entry.get())
+        fast_max = int(fast_max_entry.get())
+        fast_increment = int(fast_increment_entry.get())
+        slow_min = int(slow_min_entry.get())
+        slow_max = int(slow_max_entry.get())
+        slow_increment = int(slow_increment_entry.get())
+
+        best_result = None
+        best_trade_log = None
+        best_metrics = None
+        for fast in range(fast_min, fast_max + 1, fast_increment):
+            for slow in range(slow_min, slow_max + 1, slow_increment):
+                kwargs = {
+                    "brick_size": int(brick_size_entry.get()),
+                    "brick_threshold": int(brick_threshold_entry.get()),
+                    "tp": int(take_profit_entry.get()),
+                    "sl": int(stop_loss_entry.get()),
+                    "fib_ma_period": fast,
+                    "smooth_ma_period": slow,
+                    "psar_acceleration": float(psar_acceleration_entry.get()),
+                    "psar_max_acceleration": float(psar_max_acceleration_entry.get()),
+                    "psar_step": float(psar_step_entry.get())
+                }
+                combined_trade_log, summary_metrics = backtest_strategy(Delta2Strategy, dates, **kwargs)
+                # Assuming the first metric is Net Profit/Loss ($)
+                net_profit = summary_metrics.iloc[2]['Value']
+                if best_result is None or net_profit > best_result:
+                    best_result = net_profit
+                    best_trade_log = combined_trade_log
+                    best_metrics = summary_metrics
+
+        display_trade_log(best_trade_log)
+        display_summary_metrics(best_metrics)
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+
 def display_trade_log(trade_log):
     trade_log_listbox.delete(0, tk.END)  # Clear previous results
     for idx, row in trade_log.iterrows():
@@ -438,21 +482,65 @@ if __name__ == "__main__":
     psar_step_entry.insert(0, "0.0162")
     psar_step_entry.grid(row=11, column=1, sticky=(tk.W, tk.E))
 
+    ttk.Label(frame, text="Optimization Parameters", font=("Helvetica", 16)).grid(row=12, column=0, columnspan=2, pady=10)
+
+    # Fast parameter optimization settings
+    ttk.Label(frame, text="Fast:").grid(row=13, column=0, sticky=tk.W)
+    fast_min_entry = ttk.Entry(frame)
+    fast_min_entry.insert(0, "10")
+    fast_min_entry.grid(row=13, column=1, sticky=(tk.W, tk.E))
+
+    fast_max_entry = ttk.Entry(frame)
+    fast_max_entry.insert(0, "30")
+    fast_max_entry.grid(row=14, column=1, sticky=(tk.W, tk.E))
+
+    fast_increment_entry = ttk.Entry(frame)
+    fast_increment_entry.insert(0, "1")
+    fast_increment_entry.grid(row=15, column=1, sticky=(tk.W, tk.E))
+
+    # Slow parameter optimization settings
+    ttk.Label(frame, text="Slow:").grid(row=16, column=0, sticky=tk.W)
+    slow_min_entry = ttk.Entry(frame)
+    slow_min_entry.insert(0, "6")
+    slow_min_entry.grid(row=16, column=1, sticky=(tk.W, tk.E))
+
+    slow_max_entry = ttk.Entry(frame)
+    slow_max_entry.insert(0, "16")
+    slow_max_entry.grid(row=17, column=1, sticky=(tk.W, tk.E))
+
+    slow_increment_entry = ttk.Entry(frame)
+    slow_increment_entry.insert(0, "1")
+    slow_increment_entry.grid(row=18, column=1, sticky=(tk.W, tk.E))
+
+    ttk.Label(frame, text="Start Date:").grid(row=19, column=0, sticky=tk.W)
+    start_date_var = tk.StringVar()
+    start_date_combobox = ttk.Combobox(frame, textvariable=start_date_var, values=available_dates)
+    start_date_combobox.grid(row=19, column=1, sticky=(tk.W, tk.E))
+
+    ttk.Label(frame, text="End Date:").grid(row=20, column=0, sticky=tk.W)
+    end_date_var = tk.StringVar()
+    end_date_combobox = ttk.Combobox(frame, textvariable=end_date_var, values=available_dates)
+    end_date_combobox.grid(row=20, column=1, sticky=(tk.W, tk.E))
+
+    # Run buttons
     run_button = ttk.Button(frame, text="Run Backtest", command=run_backtest)
-    run_button.grid(row=12, column=0, columnspan=2, pady=10)
+    run_button.grid(row=21, column=0, columnspan=2, pady=10)
 
-    ttk.Label(frame, text="Trade Log", font=("Helvetica", 14)).grid(row=13, column=0, pady=10, sticky=tk.W)
+    optimize_button = ttk.Button(frame, text="Run Optimization", command=run_optimization)
+    optimize_button.grid(row=22, column=0, columnspan=2, pady=10)
+
+    ttk.Label(frame, text="Trade Log", font=("Helvetica", 14)).grid(row=23, column=0, pady=10, sticky=tk.W)
     trade_log_listbox = tk.Listbox(frame, height=10, width=50)
-    trade_log_listbox.grid(row=14, column=0, pady=5, sticky=(tk.W, tk.E))
+    trade_log_listbox.grid(row=24, column=0, pady=5, sticky=(tk.W, tk.E))
 
-    ttk.Label(frame, text="Summary Metrics", font=("Helvetica", 14)).grid(row=13, column=1, pady=10, sticky=tk.W)
+    ttk.Label(frame, text="Summary Metrics", font=("Helvetica", 14)).grid(row=23, column=1, pady=10, sticky=tk.W)
     summary_listbox = tk.Listbox(frame, height=10, width=50)
-    summary_listbox.grid(row=14, column=1, pady=5, sticky=(tk.W, tk.E))
+    summary_listbox.grid(row=24, column=1, pady=5, sticky=(tk.W, tk.E))
 
     # Adjust grid configurations to fit the new layout
     frame.grid_columnconfigure(0, weight=1)
     frame.grid_columnconfigure(1, weight=1)
-    frame.grid_rowconfigure(14, weight=1)
+    frame.grid_rowconfigure(24, weight=1)
 
     for widget in frame.winfo_children():
         widget.grid_configure(padx=5, pady=5)

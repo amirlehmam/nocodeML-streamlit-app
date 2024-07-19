@@ -157,10 +157,10 @@ def process_file(file_path, output_directory):
 
 def main():
     # Directory containing the CSV files
-    input_directory = 'C:/Users/Administrator/Documents/NinjaTrader 8/db/replay/temp_preprocessed/'
+    input_directory = 'C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-15/'
 
     # Output directory for temporary HDF5 files
-    output_directory = 'C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/temp/'
+    output_directory = 'C:/Users/Administrator/Desktop/market_replay_data/temp/'
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
