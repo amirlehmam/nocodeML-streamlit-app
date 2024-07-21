@@ -157,7 +157,7 @@ def process_file(file_path, output_directory):
 
 def main():
     # Directory containing the CSV files
-    input_directory = 'C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-15/'
+    input_directory = 'C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-23/'
 
     # Output directory for temporary HDF5 files
     output_directory = 'C:/Users/Administrator/Desktop/market_replay_data/temp/'
