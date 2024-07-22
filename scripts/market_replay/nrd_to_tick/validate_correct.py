@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from datetime import datetime, timedelta
 from joblib import Parallel, delayed
@@ -52,7 +53,7 @@ def process_chunk(chunk):
     return formatted_records
 
 # Function to process the entire file
-def process_file(file_path, output_prefix):
+def process_file(file_path, output_dir, output_prefix):
     # Read file in chunks
     chunks = []
     with open(file_path, 'r') as file:
@@ -73,16 +74,24 @@ def process_file(file_path, output_prefix):
     flat_results = [item for sublist in results for item in sublist]
     
     # Write to output file
-    output_file = f"{output_prefix}.Last.txt"
+    output_file = os.path.join(output_dir, f"{output_prefix}.Last.txt")
     
     with open(output_file, 'w') as file:
         file.write('\n'.join(flat_results))
     
     print(f"Data processed and saved to {output_file}")
 
-# Define input file and output prefix
-input_file = "20221024.csv"
-output_prefix = "NQ 12-22"
+# Create output directory if not exists
+output_dir = "C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/nrd_to_tick/tick_data_txt"
+os.makedirs(output_dir, exist_ok=True)
 
-# Process the file
-process_file(input_file, output_prefix)
+# Assuming the directory structure based on the screenshot and modifying the path accordingly
+input_dir = "C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-23"
+
+# Process all files in the raw data directory
+for file_name in os.listdir(input_dir):
+    if file_name.endswith('.csv'):
+        file_path = os.path.join(input_dir, file_name)
+        date_str = file_name.split('.')[0]  # Assuming file name is like 'YYYYMMDD.csv'
+        output_prefix = f"NQ 03-23 {date_str}"
+        process_file(file_path, output_dir, output_prefix)

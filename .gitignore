@@ -172,3 +172,4 @@ scripts/market_replay/data/20240311.h5
 scripts/market_replay/data/20240308.h5
 scripts/market_replay/data/old/market_replay_data.h5
 *.h5
+*.txt
