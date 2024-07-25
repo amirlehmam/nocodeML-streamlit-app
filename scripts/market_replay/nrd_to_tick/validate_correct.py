@@ -49,7 +49,9 @@ def format_record(record):
 def process_chunk(chunk):
     records = chunk.split('\n')
     parsed_records = [parse_and_format(record) for record in records if record.strip()]
-    formatted_records = [format_record(record) for record in parsed_records]
+    # Filter out malformed records
+    cleaned_records = [record for record in parsed_records if record['price'] != 0.0 and record['volume'] <= 100]
+    formatted_records = [format_record(record) for record in cleaned_records]
     return formatted_records
 
 # Function to process the entire file
