@@ -103,6 +103,10 @@ def advanced_model_exploration():
     from scripts.advanced_model_exploration import run_advanced_model_exploration
     run_advanced_model_exploration()
 
+def statistical_analysis():
+    from scripts.statistical_analysis import statistical_analysis
+    statistical_analysis()
+
 def strategy_performance():
     from scripts.strategy_performance import run_strategy_performance
     run_strategy_performance()
@@ -117,6 +121,7 @@ page_dict = {
     'Data Ingestion': data_ingestion,
     'Trading Dashboard': advanced_trading_dashboard,
     'Model Exploration': advanced_model_exploration,
+    'Statistical Analysis': statistical_analysis,
     'Strategy Performance': strategy_performance,
     'Trading Hours': trading_hours
 }
@@ -305,7 +310,7 @@ def main():
         )
 
         # Navigation bar
-        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'Strategy Performance', 'Trading Hours']
+        pages = ['Overview', 'Data Ingestion', 'Trading Dashboard', 'Model Exploration', 'Statistical Analysis', 'Strategy Performance', 'Trading Hours']
         selected = st_navbar(
             pages,
             styles={

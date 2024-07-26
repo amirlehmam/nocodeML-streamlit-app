@@ -50,7 +50,7 @@ def process_chunk(chunk):
     records = chunk.split('\n')
     parsed_records = [parse_and_format(record) for record in records if record.strip()]
     # Filter out malformed records
-    cleaned_records = [record for record in parsed_records if record['price'] != 0.0 and record['volume'] <= 100]
+    cleaned_records = [record for record in parsed_records if record['price'] != 0.0 and record['volume'] <= 168]
     formatted_records = [format_record(record) for record in cleaned_records]
     return formatted_records
 
@@ -84,16 +84,16 @@ def process_file(file_path, output_dir, output_prefix):
     print(f"Data processed and saved to {output_file}")
 
 # Create output directory if not exists
-output_dir = "C:/Users/Administrator/Desktop/nocodeML-streamlit-app/scripts/market_replay/nrd_to_tick/tick_data_txt"
+output_dir = "C:/Users/SyncthingServiceAcct/QuantuM DistillerY Sync/tick_data_txt/NQ 03-24/"
 os.makedirs(output_dir, exist_ok=True)
 
 # Assuming the directory structure based on the screenshot and modifying the path accordingly
-input_dir = "C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-23"
+input_dir = "C:/Users/Administrator/Desktop/market_replay_data/raw_csv/NQ 03-24/NQ 03-24/"
 
 # Process all files in the raw data directory
 for file_name in os.listdir(input_dir):
     if file_name.endswith('.csv'):
         file_path = os.path.join(input_dir, file_name)
         date_str = file_name.split('.')[0]  # Assuming file name is like 'YYYYMMDD.csv'
-        output_prefix = f"NQ 03-23 {date_str}"
+        output_prefix = f"NQ 03-24 {date_str}"
         process_file(file_path, output_dir, output_prefix)
