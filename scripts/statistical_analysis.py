@@ -35,11 +35,10 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(data):
-    try:
-        data['time'] = pd.to_datetime(data['time'], errors='coerce')
-    except Exception as e:
-        st.error(f"Error converting time: {e}")
-
+    # Convert the 'time' column to datetime
+    data['time'] = pd.to_datetime(data['time'], errors='coerce')
+    
+    # Ensure all data is numeric and fill NaNs with 0
     data = data.apply(pd.to_numeric, errors='coerce')
     data.fillna(0, inplace=True)
     return data
@@ -69,8 +68,8 @@ def statistical_analysis():
     target_variable = st.sidebar.selectbox("Select Target Variable", non_indicator_columns)
 
     if date_range and len(date_range) == 2:
-        start_date, end_date = date_range
-        df = df[(df['time'] >= pd.to_datetime(start_date)) & (df['time'] <= pd.to_datetime(end_date))]
+        start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+        df = df[(df['time'] >= start_date) & (df['time'] <= end_date)]
 
     st.header("Data Overview")
     st.write(df.head())
