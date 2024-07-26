@@ -3,15 +3,13 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from sqlalchemy import create_engine
-import matplotlib.pyplot as plt
-import seaborn as sns
-import statsmodels.api as sm
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly.graph_objects as go
 from scipy.stats import ttest_ind, gaussian_kde
 from tqdm import tqdm
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 # Database connection details
 DB_CONFIG = {
@@ -229,19 +227,18 @@ def statistical_analysis():
         start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
         df = df[(df['time'] >= start_date) & (df['time'] <= end_date)]
 
-    st.header("Data Overview")
+    st.header("Data Overview", help="This section provides a quick glance at the first few rows of your dataset to understand its structure and contents.")
     st.write(df.head())
 
-    st.header("Statistical Analysis")
+    st.header("Statistical Analysis", help="Perform various statistical analyses to understand the relationships between indicators and the target variable, which is the trading result (win or loss).")
 
     if selected_indicators:
-        st.subheader("Correlation Analysis")
+        st.subheader("Correlation Analysis", help="Analyze the correlation between different indicators to see how they are related to each other. A high correlation between indicators might indicate redundancy.")
         correlation_matrix = df[selected_indicators].corr()
-        fig, ax = plt.subplots(figsize=(16, 12))
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
+        fig = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
+        st.plotly_chart(fig)
 
-        st.subheader("Regression Analysis")
+        st.subheader("Regression Analysis", help="Use regression analysis to identify the impact of different indicators on the target variable. This helps in understanding which indicators are most influential in predicting trading results.")
         X = df[selected_indicators]
         y = df[target_variable]
 
@@ -253,16 +250,7 @@ def statistical_analysis():
         model = sm.OLS(y, X).fit()
         st.write(model.summary())
 
-        st.subheader("Hypothesis Testing")
-        for indicator in selected_indicators:
-            if df[indicator].dtype in [np.float64, np.int64] and df[target_variable].dtype in [np.float64, np.int64]:
-                group1 = df[df[indicator] == 1][target_variable]
-                group2 = df[df[indicator] == 0][target_variable]
-                if len(group1) > 0 and len(group2) > 0:
-                    t_stat, p_value = ttest_ind(group1, group2)
-                    st.write(f"T-Statistic for {indicator}: {t_stat}, P-Value: {p_value}")
-
-        st.subheader("Principal Component Analysis (PCA)")
+        st.subheader("Principal Component Analysis (PCA)", help="Use PCA to reduce the dimensionality of the dataset while preserving as much variability as possible. This helps in visualizing the data in a lower-dimensional space and identifying key patterns.")
         numeric_indicators = [indicator for indicator in selected_indicators if df[indicator].dtype in [np.float64, np.int64]]
         scaler = StandardScaler()
         df_scaled = pd.DataFrame(scaler.fit_transform(df[numeric_indicators]), columns=numeric_indicators)
@@ -273,7 +261,7 @@ def statistical_analysis():
         fig = px.scatter(pca_df, x='PC1', y='PC2', color=df[target_variable].astype(str), title='PCA of Selected Indicators')
         st.plotly_chart(fig)
 
-    st.header("Visualizations")
+    st.header("Visualizations", help="Visualize the data using different plots to gain insights into the distribution and behavior of various indicators.")
 
     if selected_indicators:
         # Calculate optimal win ranges for long, short, and both trades
@@ -282,7 +270,7 @@ def statistical_analysis():
         optimal_ranges_both = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators)
 
         # Plot KDE distributions for Long, Short, and Both trades
-        st.subheader("KDE Distribution for Long, Short, and Both Trades")
+        st.subheader("KDE Distribution for Long, Short, and Both Trades", help="Kernel Density Estimation (KDE) plots show the distribution of indicators for winning and losing trades. This helps in identifying optimal ranges for indicators that maximize winning trades.")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -315,33 +303,28 @@ def statistical_analysis():
         st.write("Optimal Win Ranges Summary for Both Long and Short Trades")
         st.dataframe(optimal_win_ranges_summary_both)
 
-        st.subheader("Heatmap: Correlation Matrix")
-        fig, ax = plt.subplots(figsize=(16, 12))
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
+        st.header("Additional Visualizations", help="Explore additional visualizations to gain deeper insights into the data and indicators.")
 
-        st.header("Additional Visualizations")
-
-        st.subheader("Indicator Trends Over Time")
+        st.subheader("Indicator Trends Over Time", help="Plot the trends of selected indicators over time to understand how they evolve and interact with trading results.")
         selected_time_indicators = st.multiselect("Select Time-based Indicators", selected_indicators, default=selected_indicators[:2])
         if selected_time_indicators:
             for indicator in selected_time_indicators:
                 fig = px.line(df, x='time', y=indicator, title=f"{indicator} Over Time")
                 st.plotly_chart(fig)
 
-        st.subheader("Pairplot of Selected Indicators")
+        st.subheader("Pairplot of Selected Indicators", help="Create a pairplot to visualize relationships between selected indicators. This helps in identifying potential correlations and interactions.")
         pairplot_indicators = st.multiselect("Select Indicators for Pairplot", selected_indicators, default=selected_indicators[:5])
         if pairplot_indicators:
             fig = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
             st.plotly_chart(fig)
 
-        st.subheader("Boxplot of Indicators")
+        st.subheader("Boxplot of Indicators", help="Use boxplots to visualize the distribution of selected indicators. This helps in identifying outliers and understanding the spread of indicator values.")
         boxplot_indicators = st.multiselect("Select Indicators for Boxplot", selected_indicators, default=selected_indicators[:5])
         if boxplot_indicators:
             fig = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
             st.plotly_chart(fig)
 
-    st.header("Download Data")
+    st.header("Download Data", help="Download the filtered and processed data as a CSV file for further analysis.")
     csv = df.to_csv(index=False)
     st.download_button(
         label="Download data as CSV",
