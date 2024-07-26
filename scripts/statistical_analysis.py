@@ -206,7 +206,7 @@ def statistical_analysis():
                                                     help="Choose the types of indicators you want to analyze. You can select multiple feature types.")
 
     # Indicator selection based on feature types
-    non_indicator_columns = ["time", "event", "qty", "price", "event_event", "amount", "result"]
+    non_indicator_columns = ["time", "event", "qty", "price", "event_event", "amount", "result", "strategy_amount", "account_amount"]
     all_indicators = [col for col in df.columns if col not in non_indicator_columns and df[col].dtype in [np.float64, np.int64]]
 
     indicator_columns = []
@@ -270,9 +270,8 @@ def statistical_analysis():
         principal_components = pca.fit_transform(df_scaled)
         pca_df = pd.DataFrame(data=principal_components, columns=['PC1', 'PC2'])
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(x='PC1', y='PC2', data=pca_df, hue=df[target_variable], ax=ax)
-        st.pyplot(fig)
+        fig = px.scatter(pca_df, x='PC1', y='PC2', color=df[target_variable].astype(str), title='PCA of Selected Indicators')
+        st.plotly_chart(fig)
 
     st.header("Visualizations")
 
@@ -333,15 +332,14 @@ def statistical_analysis():
         st.subheader("Pairplot of Selected Indicators")
         pairplot_indicators = st.multiselect("Select Indicators for Pairplot", selected_indicators, default=selected_indicators[:5])
         if pairplot_indicators:
-            sns.pairplot(df[pairplot_indicators])
-            st.pyplot()
+            fig = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
+            st.plotly_chart(fig)
 
         st.subheader("Boxplot of Indicators")
         boxplot_indicators = st.multiselect("Select Indicators for Boxplot", selected_indicators, default=selected_indicators[:5])
         if boxplot_indicators:
-            fig, ax = plt.subplots(figsize=(12, 8))
-            sns.boxplot(data=df[boxplot_indicators], ax=ax)
-            st.pyplot(fig)
+            fig = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
+            st.plotly_chart(fig)
 
     st.header("Download Data")
     csv = df.to_csv(index=False)
