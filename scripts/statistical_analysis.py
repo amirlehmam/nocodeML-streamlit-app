@@ -1,6 +1,4 @@
 # statistical_analysis.py
-
-import os
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -12,11 +10,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import plotly.express as px
 from scipy.stats import ttest_ind
-
-# Constants
-BASE_DIR = "./data/processed/"
-MODEL_SAVE_PATH = os.path.join(BASE_DIR, "models")
-PDF_SAVE_PATH = os.path.join(BASE_DIR, "docs/ml_analysis")
 
 # Database connection details
 DB_CONFIG = {
@@ -42,7 +35,6 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(data):
-    # Convert large integer timestamps to datetime
     try:
         data['time'] = pd.to_datetime(data['time'], errors='coerce')
     except Exception as e:
@@ -167,3 +159,6 @@ def statistical_analysis():
         file_name='filtered_data.csv',
         mime='text/csv',
     )
+
+if __name__ == "__main__":
+    statistical_analysis()
