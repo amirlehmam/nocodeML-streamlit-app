@@ -35,8 +35,8 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(data):
-    # Convert the 'time' column to datetime
-    data['time'] = pd.to_datetime(data['time'], errors='coerce')
+    # Convert the 'time' column to datetime (handling large integers)
+    data['time'] = pd.to_datetime(data['time'], unit='ns', errors='coerce')
     
     # Ensure all data is numeric and fill NaNs with 0
     data = data.apply(pd.to_numeric, errors='coerce')
