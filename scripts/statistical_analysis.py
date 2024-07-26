@@ -35,7 +35,7 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(data):
-    # Handling large integer timestamps
+    # Convert the 'time' column to datetime (handling large integers)
     def convert_large_int_to_datetime(x):
         try:
             return pd.to_datetime(x, unit='ns')
