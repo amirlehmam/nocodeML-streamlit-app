@@ -10,6 +10,8 @@ from tqdm import tqdm
 import statsmodels.api as sm
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.inspection import permutation_importance
 
 # Database connection details
 DB_CONFIG = {
@@ -185,6 +187,27 @@ def summarize_optimal_win_ranges(optimal_ranges, trade_type):
             })
     return pd.DataFrame(summary)
 
+def feature_importance_analysis(df, selected_indicators, target_variable):
+    X = df[selected_indicators]
+    y = df[target_variable]
+
+    # Ensure X and y are numeric
+    X = X.select_dtypes(include=[np.number])
+    y = pd.to_numeric(y, errors='coerce')
+
+    model = DecisionTreeClassifier(random_state=42)
+    model.fit(X, y)
+
+    importances = model.feature_importances_
+    importance_df = pd.DataFrame({'feature': selected_indicators, 'importance': importances})
+    importance_df.sort_values(by='importance', ascending=False, inplace=True)
+
+    return importance_df
+
+def calculate_descriptive_statistics(df, selected_indicators):
+    desc_stats = df[selected_indicators].describe().transpose()
+    return desc_stats
+
 def statistical_analysis():
     df = load_data()
     df = preprocess_data(df)
@@ -230,47 +253,39 @@ def statistical_analysis():
     st.header("Data Overview", help="This section provides a quick glance at the first few rows of your dataset to understand its structure and contents.")
     st.write(df.head())
 
-    st.header("Statistical Analysis", help="Perform various statistical analyses to understand the relationships between indicators and the target variable, which is the trading result (win or loss).")
-
     if selected_indicators:
-        st.subheader("Correlation Analysis", help="Analyze the correlation between different indicators to see how they are related to each other. A high correlation between indicators might indicate redundancy.")
+        st.subheader("Descriptive Statistics", help="Begin with basic descriptive statistics to understand the distribution and central tendency of each indicator.")
+        desc_stats = calculate_descriptive_statistics(df, selected_indicators)
+        st.write(desc_stats)
+
+        st.subheader("Visualizations", help="Visualize the distribution and relationships of indicators using different plots.")
+
+        st.markdown("### Histograms and Box Plots", help="Visualize the distribution of each indicator to spot patterns or outliers.")
+        for indicator in selected_indicators:
+            fig = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
+            st.plotly_chart(fig)
+            fig = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
+            st.plotly_chart(fig)
+
+        st.markdown("### Scatter Plots", help="Plot indicators against performance metrics to visually assess relationships.")
+        for indicator in selected_indicators:
+            fig = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
+            st.plotly_chart(fig)
+
+        st.markdown("### Correlation Heatmaps", help="Use correlation heatmaps to identify strongly correlated indicators.")
         correlation_matrix = df[selected_indicators].corr()
         fig = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
         st.plotly_chart(fig)
 
-        st.subheader("Regression Analysis", help="Use regression analysis to identify the impact of different indicators on the target variable. This helps in understanding which indicators are most influential in predicting trading results.")
-        X = df[selected_indicators]
-        y = df[target_variable]
+        st.subheader("Feature Importance Analysis", help="Use a simple model to rank indicators by their potential impact on the target variable. This helps in identifying the most influential indicators.")
+        importance_df = feature_importance_analysis(df, selected_indicators, target_variable)
+        st.write(importance_df)
 
-        # Ensure X and y are numeric
-        X = X.select_dtypes(include=[np.number])
-        y = pd.to_numeric(y, errors='coerce')
-
-        X = sm.add_constant(X)
-        model = sm.OLS(y, X).fit()
-        st.write(model.summary())
-
-        st.subheader("Principal Component Analysis (PCA)", help="Use PCA to reduce the dimensionality of the dataset while preserving as much variability as possible. This helps in visualizing the data in a lower-dimensional space and identifying key patterns.")
-        numeric_indicators = [indicator for indicator in selected_indicators if df[indicator].dtype in [np.float64, np.int64]]
-        scaler = StandardScaler()
-        df_scaled = pd.DataFrame(scaler.fit_transform(df[numeric_indicators]), columns=numeric_indicators)
-        pca = PCA(n_components=2)
-        principal_components = pca.fit_transform(df_scaled)
-        pca_df = pd.DataFrame(data=principal_components, columns=['PC1', 'PC2'])
-
-        fig = px.scatter(pca_df, x='PC1', y='PC2', color=df[target_variable].astype(str), title='PCA of Selected Indicators')
-        st.plotly_chart(fig)
-
-    st.header("Visualizations", help="Visualize the data using different plots to gain insights into the distribution and behavior of various indicators.")
-
-    if selected_indicators:
-        # Calculate optimal win ranges for long, short, and both trades
+        st.header("Optimal Win Ranges and KDE Distribution", help="Calculate and visualize the optimal win ranges for each indicator.")
         optimal_ranges_long = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators, trade_type='LE')
         optimal_ranges_short = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators, trade_type='SE')
         optimal_ranges_both = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators)
 
-        # Plot KDE distributions for Long, Short, and Both trades
-        st.subheader("KDE Distribution for Long, Short, and Both Trades", help="Kernel Density Estimation (KDE) plots show the distribution of indicators for winning and losing trades. This helps in identifying optimal ranges for indicators that maximize winning trades.")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -291,7 +306,6 @@ def statistical_analysis():
             for fig in both_plots:
                 st.plotly_chart(fig)
 
-        # Summarize optimal win ranges for each trade type
         optimal_win_ranges_summary_long = summarize_optimal_win_ranges(optimal_ranges_long, 'LE')
         optimal_win_ranges_summary_short = summarize_optimal_win_ranges(optimal_ranges_short, 'SE')
         optimal_win_ranges_summary_both = summarize_optimal_win_ranges(optimal_ranges_both, '')
@@ -303,22 +317,20 @@ def statistical_analysis():
         st.write("Optimal Win Ranges Summary for Both Long and Short Trades")
         st.dataframe(optimal_win_ranges_summary_both)
 
-        st.header("Additional Visualizations", help="Explore additional visualizations to gain deeper insights into the data and indicators.")
-
-        st.subheader("Indicator Trends Over Time", help="Plot the trends of selected indicators over time to understand how they evolve and interact with trading results.")
+        st.header("Indicator Trends Over Time", help="Plot the trends of selected indicators over time to understand how they evolve and interact with trading results.")
         selected_time_indicators = st.multiselect("Select Time-based Indicators", selected_indicators, default=selected_indicators[:2])
         if selected_time_indicators:
             for indicator in selected_time_indicators:
                 fig = px.line(df, x='time', y=indicator, title=f"{indicator} Over Time")
                 st.plotly_chart(fig)
 
-        st.subheader("Pairplot of Selected Indicators", help="Create a pairplot to visualize relationships between selected indicators. This helps in identifying potential correlations and interactions.")
+        st.header("Pairplot of Selected Indicators", help="Create a pairplot to visualize relationships between selected indicators. This helps in identifying potential correlations and interactions.")
         pairplot_indicators = st.multiselect("Select Indicators for Pairplot", selected_indicators, default=selected_indicators[:5])
         if pairplot_indicators:
             fig = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
             st.plotly_chart(fig)
 
-        st.subheader("Boxplot of Indicators", help="Use boxplots to visualize the distribution of selected indicators. This helps in identifying outliers and understanding the spread of indicator values.")
+        st.header("Boxplot of Indicators", help="Use boxplots to visualize the distribution of selected indicators. This helps in identifying outliers and understanding the spread of indicator values.")
         boxplot_indicators = st.multiselect("Select Indicators for Boxplot", selected_indicators, default=selected_indicators[:5])
         if boxplot_indicators:
             fig = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
