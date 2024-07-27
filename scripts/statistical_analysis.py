@@ -12,6 +12,12 @@ from sklearn.decomposition import PCA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.inspection import permutation_importance
 from tqdm import tqdm
+import joblib
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+import io
+import matplotlib.pyplot as plt
 
 # Database connection details
 DB_CONFIG = {
@@ -71,7 +77,8 @@ def calculate_optimal_win_ranges(data, target='result', features=None, trade_typ
             continue
 
         # Check if the data is binary
-        if np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1]) and np.unique(loss_values).size == 2 and np.array_equal(np.unique(loss_values), [0, 1]):
+        if np.unique(win_values).size == 2 and np.array_equal(np.unique(win_values), [0, 1]) and \
+           np.unique(loss_values).size == 2 and np.array_equal(np.unique(loss_values), [0, 1]):
             optimal_ranges.append({
                 'feature': feature,
                 'optimal_win_ranges': [(0, 1)]
@@ -241,6 +248,68 @@ def explain_feature_importance(df, feature_importance_df, method_name, win_or_lo
             explanation.append(f"The feature '{feature}' has a low {method_name} score of {score:.2f} for {win_or_loss} trades, indicating a weaker relationship with the target variable. '{feature}' might not be very influential in determining {win_or_loss} outcomes. However, do not discard it outright; it may still provide value in combination with other indicators.")
     return explanation
 
+def fig_to_img_buffer(fig):
+    buf = io.BytesIO()
+    fig.write_image(buf, format='png')
+    buf.seek(0)
+    return buf
+
+def df_to_img_buffer(df):
+    buf = io.BytesIO()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.axis('tight')
+    ax.axis('off')
+    the_table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc='center', loc='center')
+    fig.tight_layout()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+def text_to_img_buffer(text):
+    buf = io.BytesIO()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.text(0.5, 0.5, text, fontsize=12, ha='center', va='center', wrap=True)
+    ax.axis('off')
+    fig.tight_layout()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+def generate_pdf(plots, dataframes, texts, descriptions, output_path='report.pdf'):
+    pdf = canvas.Canvas(output_path, pagesize=letter)
+    width, height = letter
+
+    for i, (fig, description) in enumerate(zip(plots, descriptions)):
+        # Save the plot as an image in a buffer
+        img_buffer = fig_to_img_buffer(fig)
+        image = ImageReader(img_buffer)
+        
+        # Draw the plot image on the PDF
+        pdf.drawImage(image, 0, height / 2, width=width, height=height / 2)
+        pdf.setFont("Helvetica", 12)
+        pdf.drawString(30, height / 2 - 30, description)
+        pdf.showPage()
+
+    for df in dataframes:
+        img_buffer = df_to_img_buffer(df)
+        image = ImageReader(img_buffer)
+        
+        # Draw the dataframe image on the PDF
+        pdf.drawImage(image, 0, height / 2, width=width, height=height / 2)
+        pdf.showPage()
+
+    for text in texts:
+        img_buffer = text_to_img_buffer(text)
+        image = ImageReader(img_buffer)
+        
+        # Draw the text image on the PDF
+        pdf.drawImage(image, 0, height / 2, width=width, height=height / 2)
+        pdf.showPage()
+
+    pdf.save()
+
 def statistical_analysis():
     df = load_data()
     df = preprocess_data(df)
@@ -286,10 +355,16 @@ def statistical_analysis():
     st.header("Data Overview", help="This section provides a quick glance at the first few rows of your dataset to understand its structure and contents.")
     st.write(df.head())
 
+    plots = []
+    dataframes = []
+    texts = []
+    descriptions = []
+
     if selected_indicators:
         st.subheader("Descriptive Statistics", help="Begin with basic descriptive statistics to understand the distribution and central tendency of each indicator.")
         desc_stats = calculate_descriptive_statistics(df, selected_indicators)
         st.write(desc_stats)
+        dataframes.append(desc_stats)
 
         st.subheader("Visualizations", help="Visualize the distribution and relationships of indicators using different plots.")
 
@@ -301,19 +376,28 @@ def statistical_analysis():
                 st.markdown(f"#### {indicator}")
                 fig_hist = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
                 st.plotly_chart(fig_hist)
+                plots.append(fig_hist)
+                descriptions.append(f'Histogram of {indicator}')
+                
                 fig_box = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
                 st.plotly_chart(fig_box)
+                plots.append(fig_box)
+                descriptions.append(f'Box Plot of {indicator}')
 
         st.markdown("### Scatter Plots", help="Plot indicators against performance metrics to visually assess relationships.")
         for idx, indicator in enumerate(selected_indicators):
             with [col1, col2, col3][idx % 3]:
                 fig_scatter = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
                 st.plotly_chart(fig_scatter)
+                plots.append(fig_scatter)
+                descriptions.append(f'Scatter Plot of {indicator} vs {target_variable}')
 
         st.markdown("### Correlation Heatmaps", help="Use correlation heatmaps to identify strongly correlated indicators.")
         correlation_matrix = df[selected_indicators].corr()
         fig_heatmap = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
         st.plotly_chart(fig_heatmap)
+        plots.append(fig_heatmap)
+        descriptions.append("Correlation Matrix")
 
         st.subheader("Feature Importance Analysis", help="Use various statistical techniques to rank indicators by their potential impact on the target variable.")
 
@@ -322,48 +406,70 @@ def statistical_analysis():
 
         st.markdown("### Correlation with Target Variable (All Trades)", help="Correlation scores of each indicator with the target variable.")
         st.write(correlation_with_target)
+        dataframes.append(correlation_with_target.to_frame('Correlation'))
+
         with st.expander("Correlation Analysis Explanation (All Trades)"):
             explanations_corr = explain_feature_importance(df, correlation_with_target, "correlation", "all")
             for explanation in explanations_corr:
                 st.write(explanation)
+                texts.append(explanation)
 
         st.markdown("### ANOVA F-Test Scores (All Trades)", help="ANOVA F-test scores for each indicator.")
         st.write(anova_df)
+        dataframes.append(anova_df)
+
         with st.expander("ANOVA F-Test Explanation (All Trades)"):
             explanations_anova = explain_feature_importance(df, anova_df.set_index('feature')['F-value'], "ANOVA F-Test", "all")
             for explanation in explanations_anova:
                 st.write(explanation)
+                texts.append(explanation)
 
         st.markdown("### Mutual Information Scores (All Trades)", help="Mutual Information scores for each indicator.")
         st.write(mi_df)
+        dataframes.append(mi_df)
+
         with st.expander("Mutual Information Explanation (All Trades)"):
             explanations_mi = explain_feature_importance(df, mi_df.set_index('feature')['MI'], "Mutual Information", "all")
             for explanation in explanations_mi:
                 st.write(explanation)
+                texts.append(explanation)
 
         st.markdown("### Permutation Importance Scores (All Trades)", help="Permutation importance scores for each indicator.")
         st.write(perm_importance_df)
+        dataframes.append(perm_importance_df)
+
         with st.expander("Permutation Importance Explanation (All Trades)"):
             explanations_perm = explain_feature_importance(df, perm_importance_df.set_index('feature')['Importance'], "Permutation Importance", "all")
             for explanation in explanations_perm:
                 st.write(explanation)
+                texts.append(explanation)
 
         st.markdown("### Feature Importance Bar Plots (All Trades)", help="Bar plots displaying the importance of each feature.")
         col1, col2 = st.columns(2)
         with col1:
             fig_corr = px.bar(correlation_with_target, title="Correlation with Target Variable (All Trades)")
             st.plotly_chart(fig_corr)
+            plots.append(fig_corr)
+            descriptions.append("Correlation with Target Variable (All Trades)")
+
         with col2:
             fig_anova = px.bar(anova_df, x='feature', y='F-value', title="ANOVA F-Test Scores (All Trades)")
             st.plotly_chart(fig_anova)
+            plots.append(fig_anova)
+            descriptions.append("ANOVA F-Test Scores (All Trades)")
 
         col1, col2 = st.columns(2)
         with col1:
             fig_mi = px.bar(mi_df, x='feature', y='MI', title="Mutual Information Scores (All Trades)")
             st.plotly_chart(fig_mi)
+            plots.append(fig_mi)
+            descriptions.append("Mutual Information Scores (All Trades)")
+
         with col2:
             fig_perm = px.bar(perm_importance_df, x='feature', y='Importance', title="Permutation Importance Scores (All Trades)")
             st.plotly_chart(fig_perm)
+            plots.append(fig_perm)
+            descriptions.append("Permutation Importance Scores (All Trades)")
 
         st.header("Optimal Win Ranges and KDE Distribution", help="Calculate and visualize the optimal win ranges for each indicator.")
         optimal_ranges_long = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators, trade_type='LE')
@@ -377,18 +483,24 @@ def statistical_analysis():
             long_plots, long_descriptions, long_feature_info = plot_kde_distribution(df, 'LE', optimal_ranges_long)
             for fig in long_plots:
                 st.plotly_chart(fig)
-        
+                plots.append(fig)
+                descriptions.append(f'KDE Plot with Optimal Win Ranges for {fig["data"][0]["name"]} (LE)')
+
         with col2:
             st.markdown("### Short Trades")
             short_plots, short_descriptions, short_feature_info = plot_kde_distribution(df, 'SE', optimal_ranges_short)
             for fig in short_plots:
                 st.plotly_chart(fig)
+                plots.append(fig)
+                descriptions.append(f'KDE Plot with Optimal Win Ranges for {fig["data"][0]["name"]} (SE)')
 
         with col3:
             st.markdown("### Both Long and Short Trades")
             both_plots, both_descriptions, both_feature_info = plot_kde_distribution(df, '', optimal_ranges_both)
             for fig in both_plots:
                 st.plotly_chart(fig)
+                plots.append(fig)
+                descriptions.append(f'KDE Plot with Optimal Win Ranges for {fig["data"][0]["name"]} (Both)')
 
         optimal_win_ranges_summary_long = summarize_optimal_win_ranges(optimal_ranges_long, 'LE')
         optimal_win_ranges_summary_short = summarize_optimal_win_ranges(optimal_ranges_short, 'SE')
@@ -396,10 +508,15 @@ def statistical_analysis():
 
         st.write("Optimal Win Ranges Summary for Long Trades")
         st.dataframe(optimal_win_ranges_summary_long)
+        dataframes.append(optimal_win_ranges_summary_long)
+
         st.write("Optimal Win Ranges Summary for Short Trades")
         st.dataframe(optimal_win_ranges_summary_short)
+        dataframes.append(optimal_win_ranges_summary_short)
+
         st.write("Optimal Win Ranges Summary for Both Long and Short Trades")
         st.dataframe(optimal_win_ranges_summary_both)
+        dataframes.append(optimal_win_ranges_summary_both)
 
         st.header("Indicator Trends Over Time", help="Plot the trends of selected indicators over time to understand how they evolve and interact with trading results.")
         selected_time_indicators = st.multiselect("Select Time-based Indicators", selected_indicators, default=selected_indicators[:2])
@@ -408,27 +525,50 @@ def statistical_analysis():
                 with [col1, col2, col3][idx % 3]:
                     fig_time = px.line(df, x='time', y=indicator, title=f"{indicator} Over Time")
                     st.plotly_chart(fig_time)
+                    plots.append(fig_time)
+                    descriptions.append(f"{indicator} Over Time")
 
         st.header("Pairplot of Selected Indicators", help="Create a pairplot to visualize relationships between selected indicators. This helps in identifying potential correlations and interactions.")
         pairplot_indicators = st.multiselect("Select Indicators for Pairplot", selected_indicators, default=selected_indicators[:5])
         if pairplot_indicators:
             fig_pairplot = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
             st.plotly_chart(fig_pairplot)
+            plots.append(fig_pairplot)
+            descriptions.append("Pairplot of Selected Indicators")
 
         st.header("Boxplot of Indicators", help="Use boxplots to visualize the distribution of selected indicators. This helps in identifying outliers and understanding the spread of indicator values.")
         boxplot_indicators = st.multiselect("Select Indicators for Boxplot", selected_indicators, default=selected_indicators[:5])
         if boxplot_indicators:
             fig_boxplot = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
             st.plotly_chart(fig_boxplot)
+            plots.append(fig_boxplot)
+            descriptions.append("Boxplot of Selected Indicators")
 
-    st.header("Download Data", help="Download the filtered and processed data as a CSV file for further analysis.")
-    csv = df.to_csv(index=False)
-    st.download_button(
-        label="Download data as CSV",
-        data=csv,
-        file_name='filtered_data.csv',
-        mime='text/csv',
-    )
+        # Save plots, dataframes, and text to a joblib file
+        analysis_results = {
+            'plots': plots,
+            'dataframes': dataframes,
+            'texts': texts,
+            'descriptions': descriptions
+        }
+        joblib.dump(analysis_results, 'analysis_results.joblib')
+
+        # Generate PDF report
+        generate_pdf(
+            analysis_results['plots'],
+            analysis_results['dataframes'],
+            analysis_results['texts'],
+            analysis_results['descriptions']
+        )
+
+        # Provide download link for the PDF
+        with open('report.pdf', 'rb') as pdf_file:
+            st.download_button(
+                label="Download Analysis Report as PDF",
+                data=pdf_file,
+                file_name="analysis_report.pdf",
+                mime="application/pdf"
+            )
 
 if __name__ == "__main__":
     statistical_analysis()
