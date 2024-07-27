@@ -633,6 +633,7 @@ def statistical_analysis():
                 file_name="analysis_report.pdf",
                 mime="application/pdf"
             )
+            
 
 if __name__ == "__main__":
     statistical_analysis()
