@@ -1,4 +1,3 @@
-# statistical_analysis.py
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -50,9 +49,6 @@ def preprocess_data(data):
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].apply(pd.to_numeric, errors='coerce')
     data.fillna(0, inplace=True)
-    
-    # Log the number of rows and columns after preprocessing
-    st.write(f"Data after preprocessing: {data.shape[0]} rows, {data.shape[1]} columns")
     
     return data
 
@@ -370,37 +366,42 @@ def statistical_analysis():
         dataframes.append(desc_stats)
 
         st.subheader("Visualizations", help="Visualize the distribution and relationships of indicators using different plots.")
+        tabs = st.tabs(["Histograms and Box Plots", "Scatter Plots", "Correlation Heatmaps"])
 
-        st.markdown("### Histograms and Box Plots", help="Visualize the distribution of each indicator to spot patterns or outliers.")
-        
-        col1, col2, col3 = st.columns(3)
-        for idx, indicator in enumerate(selected_indicators):
-            with [col1, col2, col3][idx % 3]:
-                st.markdown(f"#### {indicator}")
-                fig_hist = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
-                st.plotly_chart(fig_hist)
-                plots.append(fig_hist)
-                descriptions.append(f'Histogram of {indicator}')
-                
-                fig_box = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
-                st.plotly_chart(fig_box)
-                plots.append(fig_box)
-                descriptions.append(f'Box Plot of {indicator}')
+        with tabs[0]:
+            st.markdown("### Histograms and Box Plots", help="Visualize the distribution of each indicator to spot patterns or outliers.")
+            
+            col1, col2, col3 = st.columns(3)
+            for idx, indicator in enumerate(selected_indicators):
+                with [col1, col2, col3][idx % 3]:
+                    st.markdown(f"#### {indicator}")
+                    fig_hist = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
+                    st.plotly_chart(fig_hist)
+                    plots.append(fig_hist)
+                    descriptions.append(f'Histogram of {indicator}')
+                    
+                    fig_box = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
+                    st.plotly_chart(fig_box)
+                    plots.append(fig_box)
+                    descriptions.append(f'Box Plot of {indicator}')
 
-        st.markdown("### Scatter Plots", help="Plot indicators against performance metrics to visually assess relationships.")
-        for idx, indicator in enumerate(selected_indicators):
-            with [col1, col2, col3][idx % 3]:
-                fig_scatter = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
-                st.plotly_chart(fig_scatter)
-                plots.append(fig_scatter)
-                descriptions.append(f'Scatter Plot of {indicator} vs {target_variable}')
+        with tabs[1]:
+            st.markdown("### Scatter Plots", help="Plot indicators against performance metrics to visually assess relationships.")
+            col1, col2, col3 = st.columns(3)
+            for idx, indicator in enumerate(selected_indicators):
+                with [col1, col2, col3][idx % 3]:
+                    fig_scatter = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
+                    st.plotly_chart(fig_scatter)
+                    plots.append(fig_scatter)
+                    descriptions.append(f'Scatter Plot of {indicator} vs {target_variable}')
 
-        st.markdown("### Correlation Heatmaps", help="Use correlation heatmaps to identify strongly correlated indicators.")
-        correlation_matrix = df[selected_indicators].corr()
-        fig_heatmap = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
-        st.plotly_chart(fig_heatmap)
-        plots.append(fig_heatmap)
-        descriptions.append("Correlation Matrix")
+        with tabs[2]:
+            st.markdown("### Correlation Heatmaps", help="Use correlation heatmaps to identify strongly correlated indicators.")
+            correlation_matrix = df[selected_indicators].corr()
+            fig_heatmap = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
+            st.plotly_chart(fig_heatmap)
+            plots.append(fig_heatmap)
+            descriptions.append("Correlation Matrix")
 
         st.subheader("Feature Importance Analysis - Long Trades", help="Analyze the importance of indicators specifically for Long trades.")
         correlation_with_target_long, anova_df_long, mi_df_long, perm_importance_df_long = feature_importance_analysis(df, selected_indicators, target_variable, trade_type='LE')
@@ -633,7 +634,6 @@ def statistical_analysis():
                 file_name="analysis_report.pdf",
                 mime="application/pdf"
             )
-            
 
 if __name__ == "__main__":
     statistical_analysis()
