@@ -202,7 +202,10 @@ def calculate_descriptive_statistics(df, selected_indicators):
     desc_stats = df[selected_indicators].describe().transpose()
     return desc_stats
 
-def feature_importance_analysis(df, selected_indicators, target_variable):
+def feature_importance_analysis(df, selected_indicators, target_variable, trade_type=None):
+    if trade_type:
+        df = df[df['event'].str.startswith(trade_type)]
+    
     X = df[selected_indicators]
     y = df[target_variable]
 
@@ -215,7 +218,7 @@ def feature_importance_analysis(df, selected_indicators, target_variable):
     y = y[~y.isna()]
 
     if X.shape[0] == 0 or y.shape[0] == 0:
-        st.error("No samples available for feature importance analysis.")
+        st.error(f"No samples available for feature importance analysis for {trade_type} trades.")
         return pd.Series(dtype=float), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     # Correlation with the target variable
@@ -399,77 +402,138 @@ def statistical_analysis():
         plots.append(fig_heatmap)
         descriptions.append("Correlation Matrix")
 
-        st.subheader("Feature Importance Analysis", help="Use various statistical techniques to rank indicators by their potential impact on the target variable.")
+        st.subheader("Feature Importance Analysis - Long Trades", help="Analyze the importance of indicators specifically for Long trades.")
+        correlation_with_target_long, anova_df_long, mi_df_long, perm_importance_df_long = feature_importance_analysis(df, selected_indicators, target_variable, trade_type='LE')
 
-        # Feature importance analysis for all trades
-        correlation_with_target, anova_df, mi_df, perm_importance_df = feature_importance_analysis(df, selected_indicators, target_variable)
+        st.markdown("### Correlation with Target Variable (Long Trades)", help="Correlation scores of each indicator with the target variable for Long trades.")
+        st.write(correlation_with_target_long)
+        dataframes.append(correlation_with_target_long.to_frame('Correlation (Long Trades)'))
 
-        st.markdown("### Correlation with Target Variable (All Trades)", help="Correlation scores of each indicator with the target variable.")
-        st.write(correlation_with_target)
-        dataframes.append(correlation_with_target.to_frame('Correlation'))
-
-        with st.expander("Correlation Analysis Explanation (All Trades)"):
-            explanations_corr = explain_feature_importance(df, correlation_with_target, "correlation", "all")
-            for explanation in explanations_corr:
+        with st.expander("Correlation Analysis Explanation (Long Trades)"):
+            explanations_corr_long = explain_feature_importance(df, correlation_with_target_long, "correlation", "Long")
+            for explanation in explanations_corr_long:
                 st.write(explanation)
                 texts.append(explanation)
 
-        st.markdown("### ANOVA F-Test Scores (All Trades)", help="ANOVA F-test scores for each indicator.")
-        st.write(anova_df)
-        dataframes.append(anova_df)
+        st.markdown("### ANOVA F-Test Scores (Long Trades)", help="ANOVA F-test scores for each indicator for Long trades.")
+        st.write(anova_df_long)
+        dataframes.append(anova_df_long)
 
-        with st.expander("ANOVA F-Test Explanation (All Trades)"):
-            explanations_anova = explain_feature_importance(df, anova_df.set_index('feature')['F-value'], "ANOVA F-Test", "all")
-            for explanation in explanations_anova:
+        with st.expander("ANOVA F-Test Explanation (Long Trades)"):
+            explanations_anova_long = explain_feature_importance(df, anova_df_long.set_index('feature')['F-value'], "ANOVA F-Test", "Long")
+            for explanation in explanations_anova_long:
                 st.write(explanation)
                 texts.append(explanation)
 
-        st.markdown("### Mutual Information Scores (All Trades)", help="Mutual Information scores for each indicator.")
-        st.write(mi_df)
-        dataframes.append(mi_df)
+        st.markdown("### Mutual Information Scores (Long Trades)", help="Mutual Information scores for each indicator for Long trades.")
+        st.write(mi_df_long)
+        dataframes.append(mi_df_long)
 
-        with st.expander("Mutual Information Explanation (All Trades)"):
-            explanations_mi = explain_feature_importance(df, mi_df.set_index('feature')['MI'], "Mutual Information", "all")
-            for explanation in explanations_mi:
+        with st.expander("Mutual Information Explanation (Long Trades)"):
+            explanations_mi_long = explain_feature_importance(df, mi_df_long.set_index('feature')['MI'], "Mutual Information", "Long")
+            for explanation in explanations_mi_long:
                 st.write(explanation)
                 texts.append(explanation)
 
-        st.markdown("### Permutation Importance Scores (All Trades)", help="Permutation importance scores for each indicator.")
-        st.write(perm_importance_df)
-        dataframes.append(perm_importance_df)
+        st.markdown("### Permutation Importance Scores (Long Trades)", help="Permutation importance scores for each indicator for Long trades.")
+        st.write(perm_importance_df_long)
+        dataframes.append(perm_importance_df_long)
 
-        with st.expander("Permutation Importance Explanation (All Trades)"):
-            explanations_perm = explain_feature_importance(df, perm_importance_df.set_index('feature')['Importance'], "Permutation Importance", "all")
-            for explanation in explanations_perm:
+        with st.expander("Permutation Importance Explanation (Long Trades)"):
+            explanations_perm_long = explain_feature_importance(df, perm_importance_df_long.set_index('feature')['Importance'], "Permutation Importance", "Long")
+            for explanation in explanations_perm_long:
                 st.write(explanation)
                 texts.append(explanation)
 
-        st.markdown("### Feature Importance Bar Plots (All Trades)", help="Bar plots displaying the importance of each feature.")
+        st.subheader("Feature Importance Analysis - Short Trades", help="Analyze the importance of indicators specifically for Short trades.")
+        correlation_with_target_short, anova_df_short, mi_df_short, perm_importance_df_short = feature_importance_analysis(df, selected_indicators, target_variable, trade_type='SE')
+
+        st.markdown("### Correlation with Target Variable (Short Trades)", help="Correlation scores of each indicator with the target variable for Short trades.")
+        st.write(correlation_with_target_short)
+        dataframes.append(correlation_with_target_short.to_frame('Correlation (Short Trades)'))
+
+        with st.expander("Correlation Analysis Explanation (Short Trades)"):
+            explanations_corr_short = explain_feature_importance(df, correlation_with_target_short, "correlation", "Short")
+            for explanation in explanations_corr_short:
+                st.write(explanation)
+                texts.append(explanation)
+
+        st.markdown("### ANOVA F-Test Scores (Short Trades)", help="ANOVA F-test scores for each indicator for Short trades.")
+        st.write(anova_df_short)
+        dataframes.append(anova_df_short)
+
+        with st.expander("ANOVA F-Test Explanation (Short Trades)"):
+            explanations_anova_short = explain_feature_importance(df, anova_df_short.set_index('feature')['F-value'], "ANOVA F-Test", "Short")
+            for explanation in explanations_anova_short:
+                st.write(explanation)
+                texts.append(explanation)
+
+        st.markdown("### Mutual Information Scores (Short Trades)", help="Mutual Information scores for each indicator for Short trades.")
+        st.write(mi_df_short)
+        dataframes.append(mi_df_short)
+
+        with st.expander("Mutual Information Explanation (Short Trades)"):
+            explanations_mi_short = explain_feature_importance(df, mi_df_short.set_index('feature')['MI'], "Mutual Information", "Short")
+            for explanation in explanations_mi_short:
+                st.write(explanation)
+                texts.append(explanation)
+
+        st.markdown("### Permutation Importance Scores (Short Trades)", help="Permutation importance scores for each indicator for Short trades.")
+        st.write(perm_importance_df_short)
+        dataframes.append(perm_importance_df_short)
+
+        with st.expander("Permutation Importance Explanation (Short Trades)"):
+            explanations_perm_short = explain_feature_importance(df, perm_importance_df_short.set_index('feature')['Importance'], "Permutation Importance", "Short")
+            for explanation in explanations_perm_short:
+                st.write(explanation)
+                texts.append(explanation)
+
+        st.markdown("### Feature Importance Bar Plots", help="Bar plots displaying the importance of each feature for Long and Short trades.")
         col1, col2 = st.columns(2)
         with col1:
-            fig_corr = px.bar(correlation_with_target, title="Correlation with Target Variable (All Trades)")
-            st.plotly_chart(fig_corr)
-            plots.append(fig_corr)
-            descriptions.append("Correlation with Target Variable (All Trades)")
+            fig_corr_long = px.bar(correlation_with_target_long, title="Correlation with Target Variable (Long Trades)")
+            st.plotly_chart(fig_corr_long)
+            plots.append(fig_corr_long)
+            descriptions.append("Correlation with Target Variable (Long Trades)")
+
+            fig_corr_short = px.bar(correlation_with_target_short, title="Correlation with Target Variable (Short Trades)")
+            st.plotly_chart(fig_corr_short)
+            plots.append(fig_corr_short)
+            descriptions.append("Correlation with Target Variable (Short Trades)")
 
         with col2:
-            fig_anova = px.bar(anova_df, x='feature', y='F-value', title="ANOVA F-Test Scores (All Trades)")
-            st.plotly_chart(fig_anova)
-            plots.append(fig_anova)
-            descriptions.append("ANOVA F-Test Scores (All Trades)")
+            fig_anova_long = px.bar(anova_df_long, x='feature', y='F-value', title="ANOVA F-Test Scores (Long Trades)")
+            st.plotly_chart(fig_anova_long)
+            plots.append(fig_anova_long)
+            descriptions.append("ANOVA F-Test Scores (Long Trades)")
+
+            fig_anova_short = px.bar(anova_df_short, x='feature', y='F-value', title="ANOVA F-Test Scores (Short Trades)")
+            st.plotly_chart(fig_anova_short)
+            plots.append(fig_anova_short)
+            descriptions.append("ANOVA F-Test Scores (Short Trades)")
 
         col1, col2 = st.columns(2)
         with col1:
-            fig_mi = px.bar(mi_df, x='feature', y='MI', title="Mutual Information Scores (All Trades)")
-            st.plotly_chart(fig_mi)
-            plots.append(fig_mi)
-            descriptions.append("Mutual Information Scores (All Trades)")
+            fig_mi_long = px.bar(mi_df_long, x='feature', y='MI', title="Mutual Information Scores (Long Trades)")
+            st.plotly_chart(fig_mi_long)
+            plots.append(fig_mi_long)
+            descriptions.append("Mutual Information Scores (Long Trades)")
+
+            fig_mi_short = px.bar(mi_df_short, x='feature', y='MI', title="Mutual Information Scores (Short Trades)")
+            st.plotly_chart(fig_mi_short)
+            plots.append(fig_mi_short)
+            descriptions.append("Mutual Information Scores (Short Trades)")
 
         with col2:
-            fig_perm = px.bar(perm_importance_df, x='feature', y='Importance', title="Permutation Importance Scores (All Trades)")
-            st.plotly_chart(fig_perm)
-            plots.append(fig_perm)
-            descriptions.append("Permutation Importance Scores (All Trades)")
+            fig_perm_long = px.bar(perm_importance_df_long, x='feature', y='Importance', title="Permutation Importance Scores (Long Trades)")
+            st.plotly_chart(fig_perm_long)
+            plots.append(fig_perm_long)
+            descriptions.append("Permutation Importance Scores (Long Trades)")
+
+            fig_perm_short = px.bar(perm_importance_df_short, x='feature', y='Importance', title="Permutation Importance Scores (Short Trades)")
+            st.plotly_chart(fig_perm_short)
+            plots.append(fig_perm_short)
+            descriptions.append("Permutation Importance Scores (Short Trades)")
 
         st.header("Optimal Win Ranges and KDE Distribution", help="Calculate and visualize the optimal win ranges for each indicator.")
         optimal_ranges_long = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators, trade_type='LE')
