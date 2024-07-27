@@ -3,15 +3,15 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from sqlalchemy import create_engine
+from scipy.stats import ttest_ind, gaussian_kde
 import plotly.express as px
 import plotly.graph_objects as go
-from scipy.stats import ttest_ind, gaussian_kde
-from tqdm import tqdm
-import statsmodels.api as sm
+from sklearn.feature_selection import f_classif, mutual_info_classif
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.inspection import permutation_importance
+from tqdm import tqdm
 
 # Database connection details
 DB_CONFIG = {
@@ -37,13 +37,17 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(data):
-    # Convert 'result' column to numeric: 0 for 'loss' and 1 for 'win'
-    data['result'] = data['result'].map({'loss': 0, 'win': 1})
+    # Convert 'result' column to numeric: 0 for 'Loss' and 1 for 'Profit'
+    data['result'] = data['event_event'].map({'Loss': 0, 'Profit': 1})
     
     # Ensure all other data is numeric and fill NaNs with 0
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].apply(pd.to_numeric, errors='coerce')
     data.fillna(0, inplace=True)
+    
+    # Log the number of rows and columns after preprocessing
+    st.write(f"Data after preprocessing: {data.shape[0]} rows, {data.shape[1]} columns")
+    
     return data
 
 def calculate_optimal_win_ranges(data, target='result', features=None, trade_type=None):
@@ -187,6 +191,10 @@ def summarize_optimal_win_ranges(optimal_ranges, trade_type):
             })
     return pd.DataFrame(summary)
 
+def calculate_descriptive_statistics(df, selected_indicators):
+    desc_stats = df[selected_indicators].describe().transpose()
+    return desc_stats
+
 def feature_importance_analysis(df, selected_indicators, target_variable):
     X = df[selected_indicators]
     y = df[target_variable]
@@ -195,18 +203,43 @@ def feature_importance_analysis(df, selected_indicators, target_variable):
     X = X.select_dtypes(include=[np.number])
     y = pd.to_numeric(y, errors='coerce')
 
+    # Filter out rows where y is NaN
+    X = X[~y.isna()]
+    y = y[~y.isna()]
+
+    if X.shape[0] == 0 or y.shape[0] == 0:
+        st.error("No samples available for feature importance analysis.")
+        return pd.Series(dtype=float), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    # Correlation with the target variable
+    correlation_with_target = X.corrwith(y).sort_values(ascending=False)
+
+    # ANOVA F-test
+    f_values, p_values = f_classif(X, y)
+    anova_df = pd.DataFrame({'feature': X.columns, 'F-value': f_values, 'p-value': p_values}).sort_values(by='F-value', ascending=False)
+
+    # Mutual Information
+    mi = mutual_info_classif(X, y)
+    mi_df = pd.DataFrame({'feature': X.columns, 'MI': mi}).sort_values(by='MI', ascending=False)
+
+    # Permutation Importance
     model = DecisionTreeClassifier(random_state=42)
     model.fit(X, y)
+    perm_importance = permutation_importance(model, X, y, n_repeats=30, random_state=42, n_jobs=2)
+    perm_importance_df = pd.DataFrame({'feature': X.columns, 'Importance': perm_importance.importances_mean}).sort_values(by='Importance', ascending=False)
 
-    importances = model.feature_importances_
-    importance_df = pd.DataFrame({'feature': selected_indicators, 'importance': importances})
-    importance_df.sort_values(by='importance', ascending=False, inplace=True)
+    return correlation_with_target, anova_df, mi_df, perm_importance_df
 
-    return importance_df
-
-def calculate_descriptive_statistics(df, selected_indicators):
-    desc_stats = df[selected_indicators].describe().transpose()
-    return desc_stats
+def explain_feature_importance(df, feature_importance_df, method_name, win_or_loss):
+    explanation = []
+    for feature, score in feature_importance_df.items():
+        if score > 0.7:
+            explanation.append(f"The feature '{feature}' has a high {method_name} score of {score:.2f} for {win_or_loss} trades, indicating a strong influence on the target variable. This means changes in '{feature}' are strongly associated with {win_or_loss} outcomes. Consider using this feature for developing strategies or setting thresholds.")
+        elif score > 0.4:
+            explanation.append(f"The feature '{feature}' has a moderate {method_name} score of {score:.2f} for {win_or_loss} trades, suggesting a notable impact on the target variable. It is worth considering '{feature}' when analyzing your trading strategy. Look at how this feature interacts with others for a combined effect.")
+        else:
+            explanation.append(f"The feature '{feature}' has a low {method_name} score of {score:.2f} for {win_or_loss} trades, indicating a weaker relationship with the target variable. '{feature}' might not be very influential in determining {win_or_loss} outcomes. However, do not discard it outright; it may still provide value in combination with other indicators.")
+    return explanation
 
 def statistical_analysis():
     df = load_data()
@@ -282,9 +315,55 @@ def statistical_analysis():
         fig_heatmap = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
         st.plotly_chart(fig_heatmap)
 
-        st.subheader("Feature Importance Analysis", help="Use a simple model to rank indicators by their potential impact on the target variable. This helps in identifying the most influential indicators.")
-        importance_df = feature_importance_analysis(df, selected_indicators, target_variable)
-        st.write(importance_df)
+        st.subheader("Feature Importance Analysis", help="Use various statistical techniques to rank indicators by their potential impact on the target variable.")
+
+        # Feature importance analysis for all trades
+        correlation_with_target, anova_df, mi_df, perm_importance_df = feature_importance_analysis(df, selected_indicators, target_variable)
+
+        st.markdown("### Correlation with Target Variable (All Trades)", help="Correlation scores of each indicator with the target variable.")
+        st.write(correlation_with_target)
+        with st.expander("Correlation Analysis Explanation (All Trades)"):
+            explanations_corr = explain_feature_importance(df, correlation_with_target, "correlation", "all")
+            for explanation in explanations_corr:
+                st.write(explanation)
+
+        st.markdown("### ANOVA F-Test Scores (All Trades)", help="ANOVA F-test scores for each indicator.")
+        st.write(anova_df)
+        with st.expander("ANOVA F-Test Explanation (All Trades)"):
+            explanations_anova = explain_feature_importance(df, anova_df.set_index('feature')['F-value'], "ANOVA F-Test", "all")
+            for explanation in explanations_anova:
+                st.write(explanation)
+
+        st.markdown("### Mutual Information Scores (All Trades)", help="Mutual Information scores for each indicator.")
+        st.write(mi_df)
+        with st.expander("Mutual Information Explanation (All Trades)"):
+            explanations_mi = explain_feature_importance(df, mi_df.set_index('feature')['MI'], "Mutual Information", "all")
+            for explanation in explanations_mi:
+                st.write(explanation)
+
+        st.markdown("### Permutation Importance Scores (All Trades)", help="Permutation importance scores for each indicator.")
+        st.write(perm_importance_df)
+        with st.expander("Permutation Importance Explanation (All Trades)"):
+            explanations_perm = explain_feature_importance(df, perm_importance_df.set_index('feature')['Importance'], "Permutation Importance", "all")
+            for explanation in explanations_perm:
+                st.write(explanation)
+
+        st.markdown("### Feature Importance Bar Plots (All Trades)", help="Bar plots displaying the importance of each feature.")
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_corr = px.bar(correlation_with_target, title="Correlation with Target Variable (All Trades)")
+            st.plotly_chart(fig_corr)
+        with col2:
+            fig_anova = px.bar(anova_df, x='feature', y='F-value', title="ANOVA F-Test Scores (All Trades)")
+            st.plotly_chart(fig_anova)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_mi = px.bar(mi_df, x='feature', y='MI', title="Mutual Information Scores (All Trades)")
+            st.plotly_chart(fig_mi)
+        with col2:
+            fig_perm = px.bar(perm_importance_df, x='feature', y='Importance', title="Permutation Importance Scores (All Trades)")
+            st.plotly_chart(fig_perm)
 
         st.header("Optimal Win Ranges and KDE Distribution", help="Calculate and visualize the optimal win ranges for each indicator.")
         optimal_ranges_long = calculate_optimal_win_ranges(df, target=target_variable, features=selected_indicators, trade_type='LE')
