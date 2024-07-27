@@ -261,21 +261,26 @@ def statistical_analysis():
         st.subheader("Visualizations", help="Visualize the distribution and relationships of indicators using different plots.")
 
         st.markdown("### Histograms and Box Plots", help="Visualize the distribution of each indicator to spot patterns or outliers.")
-        for indicator in selected_indicators:
-            fig = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
-            st.plotly_chart(fig)
-            fig = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
-            st.plotly_chart(fig)
+        
+        col1, col2, col3 = st.columns(3)
+        for idx, indicator in enumerate(selected_indicators):
+            with [col1, col2, col3][idx % 3]:
+                st.markdown(f"#### {indicator}")
+                fig_hist = px.histogram(df, x=indicator, nbins=50, title=f'Histogram of {indicator}')
+                st.plotly_chart(fig_hist)
+                fig_box = px.box(df, y=indicator, title=f'Box Plot of {indicator}')
+                st.plotly_chart(fig_box)
 
         st.markdown("### Scatter Plots", help="Plot indicators against performance metrics to visually assess relationships.")
-        for indicator in selected_indicators:
-            fig = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
-            st.plotly_chart(fig)
+        for idx, indicator in enumerate(selected_indicators):
+            with [col1, col2, col3][idx % 3]:
+                fig_scatter = px.scatter(df, x=indicator, y=target_variable, title=f'Scatter Plot of {indicator} vs {target_variable}')
+                st.plotly_chart(fig_scatter)
 
         st.markdown("### Correlation Heatmaps", help="Use correlation heatmaps to identify strongly correlated indicators.")
         correlation_matrix = df[selected_indicators].corr()
-        fig = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
-        st.plotly_chart(fig)
+        fig_heatmap = px.imshow(correlation_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
+        st.plotly_chart(fig_heatmap)
 
         st.subheader("Feature Importance Analysis", help="Use a simple model to rank indicators by their potential impact on the target variable. This helps in identifying the most influential indicators.")
         importance_df = feature_importance_analysis(df, selected_indicators, target_variable)
@@ -320,21 +325,22 @@ def statistical_analysis():
         st.header("Indicator Trends Over Time", help="Plot the trends of selected indicators over time to understand how they evolve and interact with trading results.")
         selected_time_indicators = st.multiselect("Select Time-based Indicators", selected_indicators, default=selected_indicators[:2])
         if selected_time_indicators:
-            for indicator in selected_time_indicators:
-                fig = px.line(df, x='time', y=indicator, title=f"{indicator} Over Time")
-                st.plotly_chart(fig)
+            for idx, indicator in enumerate(selected_time_indicators):
+                with [col1, col2, col3][idx % 3]:
+                    fig_time = px.line(df, x='time', y=indicator, title=f"{indicator} Over Time")
+                    st.plotly_chart(fig_time)
 
         st.header("Pairplot of Selected Indicators", help="Create a pairplot to visualize relationships between selected indicators. This helps in identifying potential correlations and interactions.")
         pairplot_indicators = st.multiselect("Select Indicators for Pairplot", selected_indicators, default=selected_indicators[:5])
         if pairplot_indicators:
-            fig = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
-            st.plotly_chart(fig)
+            fig_pairplot = px.scatter_matrix(df, dimensions=pairplot_indicators, title="Pairplot of Selected Indicators")
+            st.plotly_chart(fig_pairplot)
 
         st.header("Boxplot of Indicators", help="Use boxplots to visualize the distribution of selected indicators. This helps in identifying outliers and understanding the spread of indicator values.")
         boxplot_indicators = st.multiselect("Select Indicators for Boxplot", selected_indicators, default=selected_indicators[:5])
         if boxplot_indicators:
-            fig = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
-            st.plotly_chart(fig)
+            fig_boxplot = px.box(df, y=boxplot_indicators, title="Boxplot of Selected Indicators")
+            st.plotly_chart(fig_boxplot)
 
     st.header("Download Data", help="Download the filtered and processed data as a CSV file for further analysis.")
     csv = df.to_csv(index=False)
