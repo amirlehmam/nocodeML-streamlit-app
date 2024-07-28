@@ -33,6 +33,17 @@ def get_db_connection():
     engine = create_engine(connection_str)
     return engine
 
+def get_file_name():
+    engine = get_db_connection()
+    query = """
+    SELECT file_name
+    FROM raw_files
+    ORDER BY created_at DESC
+    LIMIT 1
+    """
+    file_name = pd.read_sql(query, engine).iloc[0, 0]
+    return file_name
+
 @st.cache_data
 def load_data():
     engine = get_db_connection()
@@ -310,9 +321,11 @@ def generate_pdf(plots, dataframes, texts, descriptions, output_path='report.pdf
     pdf.save()
 
 def statistical_analysis():
+    file_name = get_file_name()
     df = load_data()
     df = preprocess_data(df)
 
+    st.sidebar.markdown(f"<h3 style='color: red;'>name of the data used :<br>{file_name}</h3>", unsafe_allow_html=True)
     st.title("Trade Indicator Analysis Dashboard")
 
     st.sidebar.header("Filter Options")
@@ -333,13 +346,22 @@ def statistical_analysis():
 
     indicator_columns = []
     if "Non-Market Value Data" in selected_feature_types:
-        indicator_columns.extend([col for col in all_indicators if "_percent_away" not in col and "_binary" not in col])
+        non_market_indicators = [col for col in all_indicators if "_percent_away" not in col and "_binary" not in col]
+        indicator_columns.extend(non_market_indicators)
+        st.sidebar.checkbox("Select All Non-Market Value Indicators", value=False, key="all_non_market", 
+                            on_change=lambda: st.session_state.update({"selected_indicators": non_market_indicators}))
     if "Percent Away Indicators" in selected_feature_types:
-        indicator_columns.extend([col for col in all_indicators if "_percent_away" in col])
+        percent_away_indicators = [col for col in all_indicators if "_percent_away" in col]
+        indicator_columns.extend(percent_away_indicators)
+        st.sidebar.checkbox("Select All Percent Away Indicators", value=False, key="all_percent_away", 
+                            on_change=lambda: st.session_state.update({"selected_indicators": percent_away_indicators}))
     if "Binary Indicators" in selected_feature_types:
-        indicator_columns.extend([col for col in all_indicators if "_binary" in col])
+        binary_indicators = [col for col in all_indicators if "_binary" in col]
+        indicator_columns.extend(binary_indicators)
+        st.sidebar.checkbox("Select All Binary Indicators", value=False, key="all_binary", 
+                            on_change=lambda: st.session_state.update({"selected_indicators": binary_indicators}))
 
-    selected_indicators = st.sidebar.multiselect("Select Indicators", indicator_columns, help="Choose specific indicators from the selected feature types for a detailed analysis.")
+    selected_indicators = st.sidebar.multiselect("Select Indicators", indicator_columns, help="Choose specific indicators from the selected feature types for a detailed analysis.", default=st.session_state.get("selected_indicators", []))
 
     # Set 'result' as the only target variable
     target_variable = 'result'
