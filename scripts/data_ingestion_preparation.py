@@ -284,7 +284,7 @@ def truncate_tables(table_names):
         logging.info(f"Truncating table: {table}")
         truncate_table_batch(table)
 
-def save_merged_data_to_db(merged_data):
+def save_merged_data_to_db(merged_data, file_name):
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -400,6 +400,25 @@ def merge_with_indicators(trade_event_data, indicator_data):
                 market_value_indicators.at[ind, 'binary_indicator'] = 1 if trade_price > ind_val else 0
                 market_value_indicators.at[ind, 'percent_away'] = ((trade_price - ind_val) / ind_val) * 100
 
+    # Include DIV_BULL and DIV_BEAR in binary calculations
+    binary_columns = ['DIV_BULL', 'DIV_BEAR']
+    for col in binary_columns:
+        market_value_indicators[f'{col}_binary'] = np.nan
+        for time in market_value_indicators['time'].unique():
+            trade_price = trade_event_data.loc[trade_event_data['time'] == time, 'price'].values
+            if len(trade_price) > 0:
+                trade_price = trade_price[0]
+                for ind in market_value_indicators.loc[market_value_indicators['time'] == time].index:
+                    ind_val = market_value_indicators.at[ind, 'indicator_value']
+                    if pd.isna(trade_price) or pd.isna(ind_val):
+                        continue
+                    try:
+                        trade_price = float(trade_price)
+                        ind_val = float(ind_val)
+                    except ValueError:
+                        continue
+                    market_value_indicators.at[ind, f'{col}_binary'] = 1 if trade_price > ind_val else 0
+
     indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='indicator_value').reset_index()
     binary_indicator_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='binary_indicator').reset_index()
     percent_away_pivot = market_value_indicators.pivot(index='time', columns='indicator_name', values='percent_away').reset_index()
@@ -418,7 +437,7 @@ def merge_with_indicators(trade_event_data, indicator_data):
 
     return merged_data
 
-def verify_trade_parsing(file_path, output_dir):
+def verify_trade_parsing(file_path, output_dir, file_name):
     logging.info("Starting trade parsing verification")
     data = clean_and_parse_data(file_path)
     trade_data = data['trade_data']
@@ -445,7 +464,7 @@ def verify_trade_parsing(file_path, output_dir):
     merged_data.to_csv(output_file, index=False)
 
     # Save merged data directly to the database
-    save_merged_data_to_db(merged_data)
+    save_merged_data_to_db(merged_data, file_name)
     st.success("Merged data successfully saved to the database.")
 
 def run_data_ingestion_preparation():
@@ -509,7 +528,7 @@ def run_data_ingestion_preparation():
         st.success("Parameters successfully parsed and saved.")
 
     if st.button("Verify Trade Parsing"):
-        verify_trade_parsing(file_path, data_output_dir)
+        verify_trade_parsing(file_path, data_output_dir, selected_db_file)
 
 if __name__ == "__main__":
     run_data_ingestion_preparation()

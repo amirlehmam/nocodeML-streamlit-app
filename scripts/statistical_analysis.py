@@ -33,17 +33,6 @@ def get_db_connection():
     engine = create_engine(connection_str)
     return engine
 
-def get_file_name():
-    engine = get_db_connection()
-    query = """
-    SELECT file_name
-    FROM raw_files
-    ORDER BY created_at DESC
-    LIMIT 1
-    """
-    file_name = pd.read_sql(query, engine).iloc[0, 0]
-    return file_name
-
 @st.cache_data
 def load_data():
     engine = get_db_connection()
@@ -321,11 +310,9 @@ def generate_pdf(plots, dataframes, texts, descriptions, output_path='report.pdf
     pdf.save()
 
 def statistical_analysis():
-    file_name = get_file_name()
     df = load_data()
     df = preprocess_data(df)
 
-    st.sidebar.markdown(f"<h3 style='color: red;'>name of the data used :<br>{file_name}</h3>", unsafe_allow_html=True)
     st.title("Trade Indicator Analysis Dashboard")
 
     st.sidebar.header("Filter Options")
