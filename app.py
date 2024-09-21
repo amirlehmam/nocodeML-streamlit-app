@@ -92,8 +92,8 @@ def overview():
     """)
 
 def data_ingestion():
-    from scripts.data_ingestion_preparation import run_data_ingestion_preparation
-    run_data_ingestion_preparation()
+    from scripts.data_ingestion_preparation import run_advanced_data_ingestion
+    run_advanced_data_ingestion()
 
 def advanced_trading_dashboard():
     from scripts.model_dashboard import run_model_dashboard

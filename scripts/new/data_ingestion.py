@@ -41,7 +41,7 @@ def parse_data(lines):
 
         if event_type == 'Indicator':
             # Parse indicators
-            indicators = parts[9:]  # Adjust the index if needed
+            indicators = parts[9:]  # Assuming indicators start from the 10th column
             for i in range(0, len(indicators), 2):
                 if i + 1 < len(indicators):
                     indicator_name = indicators[i]
@@ -53,7 +53,7 @@ def parse_data(lines):
                     indicator_data.append([timestamp, indicator_name, indicator_value])
         elif event_type == 'Signal':
             # Parse signals if any
-            signals = parts[9:]  # Adjust the index if needed
+            signals = parts[9:]
             signal_data.append([timestamp] + signals)
         elif event_type in ('LE1', 'LE2', 'LE3', 'LE4', 'LE5', 'LX', 'SE1', 'SE2', 'SE3', 'SE4', 'SE5', 'SX', 'Profit target', 'Parabolic stop', 'Stop-Loss', 'Exit'):
             # Parse trade events
@@ -77,16 +77,14 @@ def parse_data(lines):
     signal_df = pd.DataFrame(signal_data)
 
     # Convert data types
-    datetime_format = "%Y-%m-%d %H:%M:%S"
-
-    trade_df['Timestamp'] = pd.to_datetime(trade_df['Timestamp'], format=datetime_format)
+    trade_df['Timestamp'] = pd.to_datetime(trade_df['Timestamp'])
     trade_df['Qty'] = pd.to_numeric(trade_df['Qty'], errors='coerce')
     trade_df['Price'] = pd.to_numeric(trade_df['Price'], errors='coerce')
 
-    indicator_df['Timestamp'] = pd.to_datetime(indicator_df['Timestamp'], format=datetime_format)
+    indicator_df['Timestamp'] = pd.to_datetime(indicator_df['Timestamp'])
     indicator_df['Indicator_Value'] = pd.to_numeric(indicator_df['Indicator_Value'], errors='coerce')
 
-    account_df['Timestamp'] = pd.to_datetime(account_df['Timestamp'], format=datetime_format)
+    account_df['Timestamp'] = pd.to_datetime(account_df['Timestamp'])
     account_df['Amount'] = pd.to_numeric(account_df['Amount'], errors='coerce')
 
     return trade_df, indicator_df, account_df, event_df, signal_df
